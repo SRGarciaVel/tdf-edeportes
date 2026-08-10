@@ -5,43 +5,41 @@
 
 ## Tarea actual
 
-Modelos SQLAlchemy + primera migración Alembic — COMPLETADA.
+CRUD de eventos + comentarios + auth JWT propia (sin Twitch OAuth todavía) — COMPLETADA.
 
 ## Qué se hizo
 
-- `app/models/user.py`, `role.py` (+ tabla asociativa `user_roles`), `event.py`,
-  `event_comment.py`, `quarterly_goal.py`, tal cual el esquema de `SPECS.md §5`.
-- `app/models/__init__.py` centraliza los imports para que `Base.metadata`
-  los conozca (necesario para que Alembic autogenere bien).
-- `alembic/env.py` ahora importa `app.models` explícitamente.
-- Migración `c7fff241f52a_modelo_inicial...py` generada por autogenerate.
+- `app/core/security.py`: `create_access_token` / `decode_access_token` (JWT propio).
+- `app/api/deps.py`: `get_current_user` (opcional, None si no hay token) y
+  `require_staff` (403 si no es staff autenticado) — implementa la regla
+  única de `SPECS.md §4`.
+- `app/schemas/user.py`, `event.py`, `comment.py` — Pydantic v2, `type` y
+  `visibility` como `Literal` (validación en capa de app, no ENUM de Postgres
+  — ver nota de diseño en el mensaje anterior).
+- `app/services/discord.py`: `notify_event_change`, sin cola de tareas, log si falla.
+- `app/api/events.py`: CRUD completo de `/events` + `/events/{id}/comments`,
+  filtra por `visibility` cuando no hay staff autenticado.
+- Router registrado en `main.py`.
 
-## Verificación real hecha
+## Verificación real hecha (contra Postgres local, no solo import)
 
-- [x] Los 5 modelos importan sin errores (`python -c "from app.models import ..."`).
-- [x] Postgres 16 local (fuera de Docker, por restricciones de red del entorno
-      donde armé esto) + `alembic revision --autogenerate` → detectó las 6
-      tablas correctamente, ninguna de más ni de menos.
-- [x] `alembic upgrade head` aplicado de verdad → se verificó con `\dt` que las
-      7 tablas existen (6 + `alembic_version`).
-- [x] `\d events` y `\d user_roles` confirmaron columnas, tipos, PKs y FKs
-      exactamente como en `SPECS.md`.
-- [x] `alembic downgrade base` → limpia todo sin dejar residuos, y
-      `alembic upgrade head` vuelve a aplicar sin error. Migración reversible confirmada.
-- [ ] **Pendiente de correr en tu WSL2:** lo mismo pero contra el Postgres del
-      `docker-compose.yml` real (`docker compose exec backend alembic upgrade head`).
-
-## Corrección hecha en el camino
-
-`alembic.ini` seguía apuntando a `script_location = alembic_init_tmp` — un
-resabio de cuando renombré esa carpeta durante el bootstrap y no actualicé el
-`.ini`. Sin este fix, `alembic revision --autogenerate` fallaba con
-"Path doesn't exist". Corregido a `script_location = alembic`.
+- [x] App importa con las 7 rutas nuevas registradas.
+- [x] Usuario staff de prueba + JWT emitido a mano (no es el seed oficial —
+      ese usa Twitch IDs reales, pendiente).
+- [x] Sin token → `POST /events` da 403.
+- [x] Con token staff → crea evento público y evento staff-only, ambos 201.
+- [x] Sin token → `GET /events` solo devuelve el evento público.
+- [x] Con token staff → `GET /events` devuelve ambos.
+- [x] `type` inválido → 422. `end_at` antes de `start_at` → 422 (validator).
+- [x] Comentario se crea y el `GET` de comentarios devuelve el `author` anidado.
+- [x] Datos de prueba limpiados de la DB después de verificar.
 
 ## Siguiente tarea
 
-Endpoints REST del CRUD de eventos + esquemas Pydantic (`app/schemas/`,
-`app/api/events.py`), antes de meterse con Twitch OAuth.
+Flujo completo de Twitch OAuth (`/auth/twitch/callback`, `/auth/me`,
+`/auth/logout`) que reemplace la emisión manual de JWT de esta prueba por el
+flujo real descrito en `SPECS.md §6`. Requiere que el `TWITCH_CLIENT_ID` /
+`TWITCH_CLIENT_SECRET` de la app ya registrada por Seba estén en el `.env`.
 
 ## Checklist de verificación antes de marcar como completa
 

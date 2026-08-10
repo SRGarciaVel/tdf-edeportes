@@ -17,8 +17,10 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
 - [ ] Auth: flujo Twitch OAuth completo (callback, upsert de usuario, JWT propio).
 - [ ] Seed inicial de staff (BF, Chubi, Sirxtias, Drachen, Zacen) con `is_staff = true`
       y sus roles asignados.
-- [ ] CRUD de eventos (`torneo`, `stream`, `reunion`, `otro`) con `visibility`.
-- [ ] Comentarios por evento.
+- [x] CRUD de eventos (`torneo`, `stream`, `reunion`, `otro`) con `visibility`.
+- [x] Comentarios por evento.
+- [x] Auth JWT propio: dependencias `get_current_user` / `require_staff`
+      (el flujo de Twitch OAuth que las alimenta es el siguiente bullet).
 - [ ] Vista de calendario en frontend (staff, con edición).
 - [ ] Vista pública de solo lectura: calendario + objetivos trimestrales.
 - [ ] CRUD de `quarterly_goals`.
