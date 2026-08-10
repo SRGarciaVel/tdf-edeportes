@@ -140,6 +140,9 @@ POST   /events/{id}/comments        -- requiere is_staff
 GET    /goals?year=&quarter=         -- público
 POST   /goals                       -- requiere is_staff
 PATCH  /goals/{id}                  -- requiere is_staff
+DELETE /goals/{id}                  -- requiere is_staff (no estaba en el
+                                        borrador original, agregado por
+                                        simetría con /events)
 
 GET    /roles                       -- catálogo
 GET    /users                       -- requiere is_staff (para asignar roles)

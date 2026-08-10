@@ -1,4 +1,4 @@
-import type { EventFormValues, EventItem, User } from "./types";
+import type { EventFormValues, EventItem, QuarterlyGoal, User } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -110,4 +110,10 @@ export async function deleteEvent(token: string, id: string): Promise<void> {
     headers: authHeaders(token),
   });
   if (!res.ok) throw new Error(`No se pudo borrar el evento (${res.status})`);
+}
+
+export async function listGoals(year?: number): Promise<QuarterlyGoal[]> {
+  const query = year ? `?year=${year}` : "";
+  const res = await fetch(`${API_URL}/goals${query}`);
+  return parseOrThrow<QuarterlyGoal[]>(res);
 }

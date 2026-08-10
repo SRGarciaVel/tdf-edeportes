@@ -5,47 +5,56 @@
 
 ## Tarea actual
 
-Vista de calendario del staff (`/dashboard`) — COMPLETADA.
+Vista pública de solo lectura + CRUD de `quarterly_goals` — COMPLETADA.
 
 ## Qué se hizo
 
-- `src/lib/calendar.ts`: utilidades puras (`getMonthGrid`, `dateKey`) sin
-  dependencias externas — no se agregó date-fns ni similar, el cálculo de
-  grilla mensual es simple y no lo justifica.
-- `src/lib/types.ts`: `EventItem`, `EventFormValues`, `EventType`, `EventVisibility`.
-- `src/lib/api.ts`: sumado `listEvents`, `createEvent`, `updateEvent`, `deleteEvent`.
-- `src/components/MonthCalendar.tsx`: grilla de 6x7, puntos de color por
-  tipo de evento, día actual resaltado, click para seleccionar.
-- `src/components/EventFormModal.tsx`: crear/editar, con botón "Borrar" solo
-  en modo edición.
-- `src/components/ProtectedRoute.tsx`: redirige a `/` si no hay staff logueado.
-- `src/pages/DashboardPage.tsx`: junta todo — calendario + lista del día
-  seleccionado + modal.
-- `src/App.tsx`: ruta `/dashboard` protegida, link visible en home solo si
-  `user.is_staff`.
+- `app/schemas/goal.py`: `GoalCreate`, `GoalUpdate`, `GoalRead`. `quarter`
+  validado 1-4, `year` 2020-2100 (`Field(ge=..., le=...)`).
+- `app/api/goals.py`: CRUD completo. `GET /goals` es 100% público (sin
+  `visibility`, a diferencia de eventos — los objetivos del club siempre
+  son públicos por diseño). Filtros opcionales `?year=&quarter=`.
+- Router registrado en `main.py`.
+- `src/lib/types.ts`: `QuarterlyGoal`.
+- `src/lib/api.ts`: `listGoals` (solo lectura — ver nota abajo).
+- `src/components/QuarterlyGoals.tsx`: objetivos agrupados por trimestre, Q1-Q4.
+- `App.tsx` reescrito: el home (`/`) ahora es la vista pública real —
+  `MonthCalendar` reutilizado en modo solo-lectura (sin botón de crear, sin
+  click-to-edit) con los eventos públicos, más la sección de objetivos
+  trimestrales debajo.
+
+## Alcance que quedó afuera a propósito
+
+Solo implementé `listGoals` en el frontend (lectura). NO hay UI para que el
+staff cree/edite/borre objetivos desde el dashboard — el backend ya lo
+soporta completo (`createGoal`/`updateGoal`/`deleteGoal` no existen todavía
+del lado del cliente). Lo dejé así porque el bullet de `ROADMAP.md` pedía
+"vista pública" primero; una UI de gestión de objetivos es la extensión
+natural pero no bloqueaba esta tarea. Si se necesita pronto, es agregar 3
+funciones a `api.ts` + un formulario simple, reusando el patrón de
+`EventFormModal.tsx`.
 
 ## Verificación real hecha
 
-- [x] `getMonthGrid` probado con `vite-node`/`tsx`: 42 celdas, arranca en
-      domingo, 1° de agosto 2026 cae sábado (confirmado independientemente
-      con `date -d`), relleno de días del mes anterior correcto.
-- [x] `npm run build` (`tsc -b && vite build`) sin errores con las 4 páginas/
-      componentes nuevos.
-- [x] Cliente API real (`createEvent`, `listEvents`, `updateEvent`,
-      `deleteEvent` de `src/lib/api.ts`, no una reimplementación) ejecutado
-      con `vite-node` contra un backend real: crear → aparece en el listado
-      → PATCH parcial no pisa otros campos → borrar → ya no aparece →
-      listado público sin token da 0 (correcto, era el único evento y lo
-      borramos).
-- [ ] **Pendiente de confirmar por Seba:** click-through real en el navegador
-      — abrir/cerrar el modal, seleccionar días, ver que los puntos de color
-      se vean bien, que el `datetime-local` interprete bien la zona horaria
-      de Chile.
+- [x] Backend: 7 casos con `TestClient` — crear sin token (403), crear con
+      staff (201), `quarter` inválido (422), listar sin token (público,
+      200), filtros `year`/`quarter` correctos, `PATCH` parcial no pisa el
+      resto de los campos, `DELETE` funciona y desaparece del listado.
+- [x] `npm run build` sin errores con la vista pública nueva.
+- [x] Cliente real (`listEvents(null)`, `listGoals`) probado con `vite-node`
+      contra el backend: un evento público creado aparece en
+      `listEvents(null)` tal cual lo vería un visitante sin login.
+- [ ] **Pendiente de confirmar por Seba:** que la vista pública en el
+      navegador se vea bien, sobre todo la sección de objetivos vacía (no
+      hay ningún objetivo cargado todavía en la base real).
 
 ## Siguiente tarea
 
-Vista pública de solo lectura (calendario + objetivos trimestrales, sin
-login) — el siguiente bullet de Fase 1 en `ROADMAP.md`.
+Webhook saliente a Discord al crear/modificar evento — es el último bullet
+grande de Fase 1 en `ROADMAP.md` antes del deploy inicial. El servicio
+(`app/services/discord.py`) ya existe desde la tarea de CRUD de eventos,
+pero nunca se probó con una URL de webhook real — falta que Seba cree un
+webhook en el Discord del club y lo pase para probarlo de punta a punta.
 
 ## Checklist de verificación antes de marcar como completa
 

@@ -25,8 +25,10 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
 - [x] Login con Twitch en el frontend (`AuthProvider`, botón de login,
       página de callback).
 - [x] Vista de calendario en frontend (staff, con edición).
-- [ ] Vista pública de solo lectura: calendario + objetivos trimestrales.
-- [ ] CRUD de `quarterly_goals`.
+- [x] Vista pública de solo lectura: calendario + objetivos trimestrales.
+- [x] CRUD de `quarterly_goals` (backend completo: GET/POST/PATCH/DELETE;
+      frontend solo lectura por ahora — sin UI de gestión para el staff,
+      ver nota en `tasks/todo.md`).
 - [ ] Webhook saliente a Discord al crear/modificar evento.
 - [ ] Placeholder de branding en `docs/assets/` mientras llega el manual de marca.
 - [ ] Deploy inicial (staging) y prueba end-to-end con al menos 2 miembros del staff real.

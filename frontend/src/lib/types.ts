@@ -32,3 +32,14 @@ export interface EventFormValues {
   external_url: string | null;
   visibility: EventVisibility;
 }
+
+export type GoalStatus = "en_progreso" | "cumplido" | "descartado";
+
+export interface QuarterlyGoal {
+  id: string;
+  quarter: number;
+  year: number;
+  title: string;
+  description: string | null;
+  status: GoalStatus;
+}
