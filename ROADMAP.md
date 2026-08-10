@@ -10,7 +10,7 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
 
 - [x] Bootstrap del proyecto: `docker-compose.yml`, esqueleto backend (FastAPI)
       y frontend (Vite + React + Tailwind), `.env.example`.
-- [ ] Modelo de datos y migraciones Alembic: `users`, `roles`, `user_roles`,
+- [x] Modelo de datos y migraciones Alembic: `users`, `roles`, `user_roles`,
       `events`, `event_comments`, `quarterly_goals`.
 - [ ] Auth: registro de app en Twitch Developer Console (decisión de
       titularidad pendiente — ver `SPECS.md §10`).

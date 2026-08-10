@@ -10,9 +10,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
+from app.models import Event, EventComment, QuarterlyGoal, Role, User, user_roles  # noqa: E402, F401
 
-# importar todos los modelos acá para que Base los conozca antes del autogenerate
-# (se van agregando a medida que se crean en app/models/)
+# importados arriba para que Base.metadata los conozca antes del autogenerate
 
 from alembic import context
 
