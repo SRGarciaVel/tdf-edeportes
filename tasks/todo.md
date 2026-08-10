@@ -5,56 +5,57 @@
 
 ## Tarea actual
 
-Vista pública de solo lectura + CRUD de `quarterly_goals` — COMPLETADA.
+Seed inicial de staff — COMPLETADA (lógica verificada con Twitch mockeado,
+falta que Seba la corra de verdad contra la API real).
 
 ## Qué se hizo
 
-- `app/schemas/goal.py`: `GoalCreate`, `GoalUpdate`, `GoalRead`. `quarter`
-  validado 1-4, `year` 2020-2100 (`Field(ge=..., le=...)`).
-- `app/api/goals.py`: CRUD completo. `GET /goals` es 100% público (sin
-  `visibility`, a diferencia de eventos — los objetivos del club siempre
-  son públicos por diseño). Filtros opcionales `?year=&quarter=`.
-- Router registrado en `main.py`.
-- `src/lib/types.ts`: `QuarterlyGoal`.
-- `src/lib/api.ts`: `listGoals` (solo lectura — ver nota abajo).
-- `src/components/QuarterlyGoals.tsx`: objetivos agrupados por trimestre, Q1-Q4.
-- `App.tsx` reescrito: el home (`/`) ahora es la vista pública real —
-  `MonthCalendar` reutilizado en modo solo-lectura (sin botón de crear, sin
-  click-to-edit) con los eventos públicos, más la sección de objetivos
-  trimestrales debajo.
+- `app/services/twitch.py`: sumado `get_app_access_token` (client
+  credentials grant, sin login de usuario) y `fetch_users_by_login` (resuelve
+  hasta 100 usernames a sus IDs reales de Twitch en un solo request).
+- `backend/scripts/seed_staff.py`: script standalone, idempotente. Mapeo
+  username de Twitch → rol:
+  - BazthyFreeman → CEO
+  - chubisxd → Artista
+  - Sirxtias1 → Caster y Programación
+  - l_DracheN_l → Contenido Multimedia
+  - zacenfg → Gestión de Recursos y TO
+  Crea el catálogo de 6 roles (los 5 de arriba + "Colaborador Externo" para
+  YH/Pochoclo23 cuando se sumen), precarga cada usuario con `is_staff=True`
+  usando su `twitch_id` real (no el username) como llave — así cuando la
+  persona haga login por primera vez, el upsert de `/auth/twitch/callback`
+  la reconoce por ese mismo `twitch_id` y no le pisa `is_staff`.
 
-## Alcance que quedó afuera a propósito
+## Por qué "mockeado" y no contra la Twitch API real
 
-Solo implementé `listGoals` en el frontend (lectura). NO hay UI para que el
-staff cree/edite/borre objetivos desde el dashboard — el backend ya lo
-soporta completo (`createGoal`/`updateGoal`/`deleteGoal` no existen todavía
-del lado del cliente). Lo dejé así porque el bullet de `ROADMAP.md` pedía
-"vista pública" primero; una UI de gestión de objetivos es la extensión
-natural pero no bloqueaba esta tarea. Si se necesita pronto, es agregar 3
-funciones a `api.ts` + un formulario simple, reusando el patrón de
-`EventFormModal.tsx`.
+El sandbox donde armo esto no tiene salida de red hacia `api.twitch.tv` (solo
+a pypi/npm/github, por restricciones del entorno). Lo que sí verifiqué con
+mocks que devuelven la forma exacta de la respuesta real de Twitch:
 
-## Verificación real hecha
+- [x] Primera corrida: crea los 4 usuarios simulados con su rol correcto,
+      avisa del que falta (simulé que "zacenfg" no aparecía en Twitch, a
+      propósito, para probar ese camino).
+- [x] Segunda corrida: idempotente — no duplica usuarios, no duplica roles,
+      detecta que ya son staff y no hace nada de más.
+- [x] Confirmado en la DB real: 6 roles en el catálogo, cada usuario con
+      `is_staff=true` y su fila en `user_roles` apuntando al rol correcto.
 
-- [x] Backend: 7 casos con `TestClient` — crear sin token (403), crear con
-      staff (201), `quarter` inválido (422), listar sin token (público,
-      200), filtros `year`/`quarter` correctos, `PATCH` parcial no pisa el
-      resto de los campos, `DELETE` funciona y desaparece del listado.
-- [x] `npm run build` sin errores con la vista pública nueva.
-- [x] Cliente real (`listEvents(null)`, `listGoals`) probado con `vite-node`
-      contra el backend: un evento público creado aparece en
-      `listEvents(null)` tal cual lo vería un visitante sin login.
-- [ ] **Pendiente de confirmar por Seba:** que la vista pública en el
-      navegador se vea bien, sobre todo la sección de objetivos vacía (no
-      hay ningún objetivo cargado todavía en la base real).
+## PENDIENTE — requiere que Seba lo corra en su entorno real
+
+```
+docker compose exec backend python scripts/seed_staff.py
+```
+
+Va a pegarle a la Twitch API real con tu `client_id`/`client_secret` ya
+cargados. Si algún username está mal escrito o esa persona nunca creó cuenta
+de Twitch con ese nombre exacto, el script lo va a avisar sin frenar a los
+demás.
 
 ## Siguiente tarea
 
-Webhook saliente a Discord al crear/modificar evento — es el último bullet
-grande de Fase 1 en `ROADMAP.md` antes del deploy inicial. El servicio
-(`app/services/discord.py`) ya existe desde la tarea de CRUD de eventos,
-pero nunca se probó con una URL de webhook real — falta que Seba cree un
-webhook en el Discord del club y lo pase para probarlo de punta a punta.
+A definir con Seba — quedan pendientes de Fase 1: placeholder de branding
+(pausado a pedido de Seba), deploy inicial (Supabase + Render/Fly.io a
+definir), y el webhook de Discord (pausado a pedido de Seba).
 
 ## Checklist de verificación antes de marcar como completa
 

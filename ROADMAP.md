@@ -16,7 +16,7 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
       cargados en `.env` por Seba).
 - [x] Auth: flujo Twitch OAuth completo (`GET /auth/twitch/login`,
       `POST /auth/twitch/callback`, `GET /auth/me`, `POST /auth/logout`).
-- [ ] Seed inicial de staff (BF, Chubi, Sirxtias, Drachen, Zacen) con `is_staff = true`
+- [x] Seed inicial de staff (BF, Chubi, Sirxtias, Drachen, Zacen) con `is_staff = true`
       y sus roles asignados.
 - [x] CRUD de eventos (`torneo`, `stream`, `reunion`, `otro`) con `visibility`.
 - [x] Comentarios por evento.
