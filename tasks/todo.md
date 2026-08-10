@@ -5,36 +5,47 @@
 
 ## Tarea actual
 
-Login con Twitch en el frontend — COMPLETADA (build verificado, falta que
-Seba confirme el click-through real en el navegador).
+Vista de calendario del staff (`/dashboard`) — COMPLETADA.
 
 ## Qué se hizo
 
-- `src/lib/types.ts`: tipo `User` compartido (evita import circular entre
-  `api.ts` y `auth.tsx`).
-- `src/lib/api.ts`: `getTwitchLoginUrl`, `exchangeTwitchCode`, `fetchMe`, `logout`.
-- `src/lib/auth.tsx`: `AuthProvider` + `useAuth()` — token en `localStorage`,
-  revalida contra `/auth/me` al cargar, descarta el token si quedó inválido.
-- `src/components/LoginButton.tsx`: botón "Entrar con Twitch" / info de
-  usuario logueado + badge "Staff" si corresponde + botón "Salir".
-- `src/pages/AuthCallbackPage.tsx`: recibe `code`/`state` de la URL, llama al
-  backend, guarda la sesión, redirige a `/`. Con guard contra el doble-mount
-  de React StrictMode en dev (si no, el segundo intento reusa un `code` ya
-  gastado y Twitch lo rechaza).
-- `src/App.tsx`: ahora con `react-router-dom` (`/` y `/auth/callback`),
-  envuelto en `AuthProvider`.
+- `src/lib/calendar.ts`: utilidades puras (`getMonthGrid`, `dateKey`) sin
+  dependencias externas — no se agregó date-fns ni similar, el cálculo de
+  grilla mensual es simple y no lo justifica.
+- `src/lib/types.ts`: `EventItem`, `EventFormValues`, `EventType`, `EventVisibility`.
+- `src/lib/api.ts`: sumado `listEvents`, `createEvent`, `updateEvent`, `deleteEvent`.
+- `src/components/MonthCalendar.tsx`: grilla de 6x7, puntos de color por
+  tipo de evento, día actual resaltado, click para seleccionar.
+- `src/components/EventFormModal.tsx`: crear/editar, con botón "Borrar" solo
+  en modo edición.
+- `src/components/ProtectedRoute.tsx`: redirige a `/` si no hay staff logueado.
+- `src/pages/DashboardPage.tsx`: junta todo — calendario + lista del día
+  seleccionado + modal.
+- `src/App.tsx`: ruta `/dashboard` protegida, link visible en home solo si
+  `user.is_staff`.
 
 ## Verificación real hecha
 
-- [x] `npm run build` (`tsc -b && vite build`) sin errores.
-- [x] `vite` dev server levanta y sirve `index.html` correctamente.
-- [ ] **Pendiente de confirmar por Seba:** click real en "Entrar con Twitch"
-      desde `http://localhost:5173`, login completo, sesión persistida.
+- [x] `getMonthGrid` probado con `vite-node`/`tsx`: 42 celdas, arranca en
+      domingo, 1° de agosto 2026 cae sábado (confirmado independientemente
+      con `date -d`), relleno de días del mes anterior correcto.
+- [x] `npm run build` (`tsc -b && vite build`) sin errores con las 4 páginas/
+      componentes nuevos.
+- [x] Cliente API real (`createEvent`, `listEvents`, `updateEvent`,
+      `deleteEvent` de `src/lib/api.ts`, no una reimplementación) ejecutado
+      con `vite-node` contra un backend real: crear → aparece en el listado
+      → PATCH parcial no pisa otros campos → borrar → ya no aparece →
+      listado público sin token da 0 (correcto, era el único evento y lo
+      borramos).
+- [ ] **Pendiente de confirmar por Seba:** click-through real en el navegador
+      — abrir/cerrar el modal, seleccionar días, ver que los puntos de color
+      se vean bien, que el `datetime-local` interprete bien la zona horaria
+      de Chile.
 
 ## Siguiente tarea
 
-Vista de calendario del staff (listar/crear/editar eventos usando el token
-de sesión ya armado) — el próximo bullet grande de Fase 1 en `ROADMAP.md`.
+Vista pública de solo lectura (calendario + objetivos trimestrales, sin
+login) — el siguiente bullet de Fase 1 en `ROADMAP.md`.
 
 ## Checklist de verificación antes de marcar como completa
 

@@ -1,4 +1,4 @@
-import type { User } from "./types";
+import type { EventFormValues, EventItem, User } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -57,4 +57,57 @@ export async function logout(token: string): Promise<void> {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+function authHeaders(token: string | null): HeadersInit {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function parseOrThrow<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const detail = Array.isArray(body.detail)
+      ? body.detail.map((d: { msg: string }) => d.msg).join(", ")
+      : (body.detail ?? `Error ${res.status}`);
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
+export async function listEvents(token: string | null): Promise<EventItem[]> {
+  const res = await fetch(`${API_URL}/events`, { headers: authHeaders(token) });
+  return parseOrThrow<EventItem[]>(res);
+}
+
+export async function createEvent(
+  token: string,
+  payload: EventFormValues
+): Promise<EventItem> {
+  const res = await fetch(`${API_URL}/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(payload),
+  });
+  return parseOrThrow<EventItem>(res);
+}
+
+export async function updateEvent(
+  token: string,
+  id: string,
+  payload: Partial<EventFormValues>
+): Promise<EventItem> {
+  const res = await fetch(`${API_URL}/events/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(payload),
+  });
+  return parseOrThrow<EventItem>(res);
+}
+
+export async function deleteEvent(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/events/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`No se pudo borrar el evento (${res.status})`);
 }

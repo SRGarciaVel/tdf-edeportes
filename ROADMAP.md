@@ -24,7 +24,7 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
       (el flujo de Twitch OAuth que las alimenta es el siguiente bullet).
 - [x] Login con Twitch en el frontend (`AuthProvider`, botón de login,
       página de callback).
-- [ ] Vista de calendario en frontend (staff, con edición).
+- [x] Vista de calendario en frontend (staff, con edición).
 - [ ] Vista pública de solo lectura: calendario + objetivos trimestrales.
 - [ ] CRUD de `quarterly_goals`.
 - [ ] Webhook saliente a Discord al crear/modificar evento.
