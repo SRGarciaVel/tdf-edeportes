@@ -7,7 +7,7 @@ export default function SectionLabel({
 }) {
   return (
     <p className="hud-label mb-2">
-      // {index} — {children}
+      // {index}: {children}
     </p>
   );
 }

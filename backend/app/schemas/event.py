@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -29,7 +29,16 @@ class EventBase(BaseModel):
 
 
 class EventCreate(EventBase):
-    pass
+    @field_validator("start_at")
+    @classmethod
+    def start_not_in_past(cls, v: datetime) -> datetime:
+        # margen de 5 min para no romper por latencia de red o reloj
+        # levemente desincronizado entre el navegador y el servidor
+        now = datetime.now(timezone.utc)
+        v_utc = v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+        if v_utc < now - timedelta(minutes=5):
+            raise ValueError("No se puede agendar un evento en el pasado")
+        return v
 
 
 class EventUpdate(BaseModel):

@@ -42,7 +42,7 @@ export default function QuarterlyGoals({ goals }: { goals: QuarterlyGoal[] }) {
               </li>
             ))}
             {(byQuarter.get(q) ?? []).length === 0 && (
-              <li className="text-xs text-gray-700">—</li>
+              <li className="text-xs text-gray-700">N/D</li>
             )}
           </ul>
         </div>

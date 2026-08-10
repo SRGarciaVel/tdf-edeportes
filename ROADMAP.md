@@ -40,6 +40,11 @@ para tener un molde consistente donde seguir incorporando contenido real.
 
 - [x] Dirección visual Tactical Telemetry (ver `SPECS.md §11`), tokens de
       Tailwind, tipografía (Rajdhani + JetBrains Mono).
+- [x] Capa de acento street/graffiti sobre la base HUD: paneles con esquina
+      cortada, glow en divisores, textura spray, marca splatter en el
+      calendario, fuente de acento en wordmarks — aplicada vía componentes
+      compartidos (`.hud-frame`, `SectionLabel`), así que se propaga sola a
+      todas las páginas que ya los usan.
 - [x] Layout compartido: `Navbar` + `Footer` en todas las páginas públicas.
 - [x] Sitemap completo: `/`, `/calendario`, `/torneos`, `/jugadores`,
       `/objetivos`, `/nosotros` — con contenido real donde ya existe el

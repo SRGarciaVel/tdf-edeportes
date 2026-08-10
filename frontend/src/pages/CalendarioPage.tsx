@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import EventFormModal from "../components/EventFormModal";
 import Layout from "../components/Layout";
 import MonthCalendar from "../components/MonthCalendar";
 import SectionLabel from "../components/SectionLabel";
-import { listEvents } from "../lib/api";
+import { createEvent, deleteEvent, listEvents, updateEvent } from "../lib/api";
 import { dateKey } from "../lib/calendar";
-import type { EventItem } from "../lib/types";
+import { useAuth } from "../lib/auth";
+import type { EventFormValues, EventItem } from "../lib/types";
 
 const TYPE_LABEL: Record<string, string> = {
   torneo: "Torneo",
@@ -14,15 +16,40 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export default function CalendarioPage() {
+  const { token, user } = useAuth();
+  const isStaff = Boolean(user?.is_staff);
+
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth());
   const [year, setYear] = useState(today.getFullYear());
   const [selectedKey, setSelectedKey] = useState<string | null>(dateKey(today));
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+
+  async function refresh() {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      // con token de staff, el backend ya devuelve también los eventos
+      // staff-only; sin token o sin ser staff, solo los públicos
+      const data = await listEvents(token);
+      setEvents(data);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Error al cargar eventos");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    listEvents(null).then(setEvents).catch(() => setEvents([]));
-  }, []);
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const selectedDayEvents = useMemo(
     () =>
@@ -52,10 +79,56 @@ export default function CalendarioPage() {
     }
   }
 
+  function openCreateModal() {
+    setEditingEvent(null);
+    setModalOpen(true);
+  }
+
+  function openEditModal(event: EventItem) {
+    if (!isStaff) return;
+    setEditingEvent(event);
+    setModalOpen(true);
+  }
+
+  async function handleSubmit(values: EventFormValues) {
+    if (!token) return;
+    if (editingEvent) {
+      await updateEvent(token, editingEvent.id, values);
+    } else {
+      await createEvent(token, values);
+    }
+    setModalOpen(false);
+    await refresh();
+  }
+
+  async function handleDelete() {
+    if (!token || !editingEvent) return;
+    if (!window.confirm(`¿Borrar "${editingEvent.title}"? No se puede deshacer.`)) {
+      return;
+    }
+    await deleteEvent(token, editingEvent.id);
+    setModalOpen(false);
+    await refresh();
+  }
+
   return (
     <Layout>
-      <SectionLabel index="03">Itinerario</SectionLabel>
-      <h1 className="text-3xl font-bold mb-6">Calendario</h1>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <SectionLabel index="03">Itinerario</SectionLabel>
+          <h1 className="text-3xl font-bold">Calendario</h1>
+        </div>
+        {isStaff && (
+          <button
+            onClick={openCreateModal}
+            className="bg-tdf-purple hover:bg-tdf-magenta transition-colors font-mono text-sm uppercase px-4 py-2"
+          >
+            + Nuevo evento
+          </button>
+        )}
+      </div>
+
+      {loadError && <p className="text-red-400 text-sm mb-4">{loadError}</p>}
 
       <MonthCalendar
         year={year}
@@ -68,40 +141,72 @@ export default function CalendarioPage() {
       />
 
       <div className="mt-6">
-        <h2 className="font-mono text-sm text-gray-400 mb-3">{selectedKey}</h2>
-        {selectedDayEvents.length === 0 && (
-          <p className="text-sm text-gray-600">Sin eventos públicos este día.</p>
+        <h2 className="font-mono text-sm text-gray-400 mb-3">
+          {selectedKey} {loading && "(cargando...)"}
+        </h2>
+        {selectedDayEvents.length === 0 && !loading && (
+          <p className="text-sm text-gray-600">
+            Sin eventos {isStaff ? "" : "públicos "}este día.
+          </p>
         )}
         <ul className="flex flex-col gap-2">
           {selectedDayEvents.map((event) => (
-            <li
-              key={event.id}
-              className="hud-frame bg-tdf-charcoal px-4 py-3 flex items-center justify-between"
-            >
-              <div>
-                <p className="font-medium">{event.title}</p>
-                <p className="font-mono text-xs text-gray-500">
-                  {TYPE_LABEL[event.type]} ·{" "}
-                  {new Date(event.start_at).toLocaleTimeString("es-CL", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-              {event.external_url && (
-                <a
-                  href={event.external_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta underline"
+            <li key={event.id}>
+              {isStaff ? (
+                <button
+                  onClick={() => openEditModal(event)}
+                  className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta w-full text-left px-4 py-3 flex items-center justify-between transition-colors"
                 >
-                  Ver bracket →
-                </a>
+                  <div>
+                    <p className="font-medium">{event.title}</p>
+                    <p className="font-mono text-xs text-gray-500">
+                      {TYPE_LABEL[event.type]} ·{" "}
+                      {new Date(event.start_at).toLocaleTimeString("es-CL", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {event.visibility === "publico" && " · Público"}
+                    </p>
+                  </div>
+                </button>
+              ) : (
+                <div className="hud-frame bg-tdf-charcoal px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{event.title}</p>
+                    <p className="font-mono text-xs text-gray-500">
+                      {TYPE_LABEL[event.type]} ·{" "}
+                      {new Date(event.start_at).toLocaleTimeString("es-CL", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  {event.external_url && (
+                    <a
+                      href={event.external_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta underline"
+                    >
+                      Ver bracket →
+                    </a>
+                  )}
+                </div>
               )}
             </li>
           ))}
         </ul>
       </div>
+
+      {modalOpen && (
+        <EventFormModal
+          initialDate={selectedKey}
+          editingEvent={editingEvent}
+          onSubmit={handleSubmit}
+          onDelete={editingEvent ? handleDelete : undefined}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </Layout>
   );
 }

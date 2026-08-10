@@ -37,10 +37,10 @@ function PlayerCard({ player }: { player: PlayerEntry }) {
 export default function JugadoresPage() {
   return (
     <Layout>
-      <SectionLabel index="05">Street Fighter 6 — CFN</SectionLabel>
+      <SectionLabel index="05">Street Fighter 6 CFN</SectionLabel>
       <h1 className="text-3xl font-bold mb-2">Jugadores</h1>
       <p className="text-gray-500 mb-10 max-w-xl">
-        Rango, LP y personaje principal en vivo — en construcción. Por ahora,
+        Rango, LP y personaje principal en vivo (en construcción). Por ahora,
         estos son los jugadores que vamos a trackear.
       </p>
 

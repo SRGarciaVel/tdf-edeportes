@@ -29,6 +29,7 @@ STAFF: dict[str, str] = {
     "Sirxtias1": "Caster y Programación",
     "l_DracheN_l": "Contenido Multimedia",
     "zacenfg": "Gestión de Recursos y TO",
+    "AckermanFG": "Programador",
 }
 
 ROLE_CATALOG = [
@@ -37,6 +38,7 @@ ROLE_CATALOG = [
     "Caster y Programación",
     "Contenido Multimedia",
     "Gestión de Recursos y TO",
+    "Programador",
     "Colaborador Externo",
 ]
 

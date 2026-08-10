@@ -2,8 +2,8 @@ import { getMonthGrid, MONTH_NAMES, WEEKDAY_NAMES, dateKey } from "../lib/calend
 import type { EventItem } from "../lib/types";
 
 const TYPE_DOT_COLOR: Record<string, string> = {
-  torneo: "bg-tdf-magenta",
-  stream: "bg-tdf-purple",
+  torneo: "bg-tdf-magenta shadow-[0_0_6px_1px_rgba(196,20,122,0.8)]",
+  stream: "bg-tdf-purple shadow-[0_0_6px_1px_rgba(91,42,134,0.8)]",
   reunion: "bg-gray-400",
   otro: "bg-gray-600",
 };
@@ -39,28 +39,28 @@ export default function MonthCalendar({
   }
 
   return (
-    <div className="border border-white/10">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+    <div className="hud-frame bg-tdf-charcoal">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-tdf-line">
         <button
           onClick={onPrevMonth}
-          className="text-gray-400 hover:text-white px-2"
+          className="font-mono text-gray-400 hover:text-tdf-magenta transition-colors px-2"
           aria-label="Mes anterior"
         >
           ←
         </button>
-        <h2 className="font-semibold text-white">
+        <h2 className="font-display font-bold uppercase tracking-wide text-white">
           {MONTH_NAMES[month]} {year}
         </h2>
         <button
           onClick={onNextMonth}
-          className="text-gray-400 hover:text-white px-2"
+          className="font-mono text-gray-400 hover:text-tdf-magenta transition-colors px-2"
           aria-label="Mes siguiente"
         >
           →
         </button>
       </div>
 
-      <div className="grid grid-cols-7 text-center text-xs text-gray-500 border-b border-white/10">
+      <div className="grid grid-cols-7 text-center font-mono text-xs uppercase text-gray-500 border-b border-tdf-line">
         {WEEKDAY_NAMES.map((day) => (
           <div key={day} className="py-2">
             {day}
@@ -78,16 +78,19 @@ export default function MonthCalendar({
             <button
               key={cell.key}
               onClick={() => onSelectDate(cell.key)}
-              className={`aspect-square border-b border-r border-white/5 p-1.5 text-left flex flex-col gap-1 transition-colors ${
-                cell.isCurrentMonth ? "text-white" : "text-gray-600"
-              } ${isSelected ? "bg-tdf-purple/30" : "hover:bg-white/5"}`}
+              className={`aspect-square border-b border-r border-tdf-line/60 p-1.5 text-left flex flex-col gap-1 transition-colors relative ${
+                cell.isCurrentMonth ? "text-white" : "text-gray-700"
+              } ${isSelected ? "" : "hover:bg-white/5"}`}
             >
+              {isSelected && <span className="spray-mark absolute inset-0" aria-hidden />}
               <span
-                className={`text-xs ${isToday ? "font-bold text-tdf-magenta" : ""}`}
+                className={`relative z-10 font-mono text-xs ${
+                  isToday ? "font-bold text-tdf-magenta" : ""
+                }`}
               >
                 {cell.date.getDate()}
               </span>
-              <div className="flex flex-wrap gap-0.5">
+              <div className="relative z-10 flex flex-wrap gap-1">
                 {dayEvents.slice(0, 4).map((e) => (
                   <span
                     key={e.id}

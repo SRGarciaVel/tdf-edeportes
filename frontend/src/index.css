@@ -17,19 +17,67 @@
   .hud-label {
     @apply font-mono text-xs uppercase tracking-[0.2em] text-tdf-magenta;
   }
-  /* marco con esquinas, para paneles/cards que quieren sentirse HUD */
+
+  /* panel con esquinas cortadas en diagonal, estilo cabinet/HUD de SF6 —
+     reemplaza el rectángulo plano que teníamos antes. Un solo clip-path
+     reutilizado en toda la web para consistencia (cards de nav, eventos,
+     jugadores, staff, modal). */
   .hud-frame {
     @apply border border-tdf-line relative;
+    clip-path: polygon(
+      0 14px, 14px 0,
+      100% 0, 100% calc(100% - 14px),
+      calc(100% - 14px) 100%, 0 100%
+    );
+    box-shadow: 0 8px 28px -16px rgba(196, 20, 122, 0.45);
   }
-  .hud-frame::before,
-  .hud-frame::after {
+
+  /* textura tipo halftone/spray, en forma de nube que se desvanece hacia
+     los bordes — para usar detrás de heroes/headers, nunca como fondo
+     de página completa (mucho ruido visual mataría la legibilidad). */
+  .spray-bg {
+    @apply relative;
+  }
+  .spray-bg::before {
     content: "";
-    @apply absolute w-2 h-2 border-tdf-magenta;
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(196, 20, 122, 0.5) 1.5px, transparent 1.5px);
+    background-size: 16px 16px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 75%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 75%);
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 0;
   }
-  .hud-frame::before {
-    @apply top-0 left-0 border-t-2 border-l-2;
+
+  /* marca tipo splatter detrás del día seleccionado en el calendario */
+  .spray-mark {
+    @apply relative;
   }
-  .hud-frame::after {
-    @apply bottom-0 right-0 border-b-2 border-r-2;
+  .spray-mark::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    background:
+      radial-gradient(circle at 35% 40%, rgba(196, 20, 122, 0.55) 0%, transparent 55%),
+      radial-gradient(circle at 65% 60%, rgba(91, 42, 134, 0.55) 0%, transparent 50%),
+      radial-gradient(circle at 50% 50%, rgba(196, 20, 122, 0.3) 0%, transparent 65%);
+    border-radius: 9999px;
+    filter: blur(3px);
+    z-index: 0;
+  }
+
+  /* línea divisoria neón, para separar secciones grandes sin usar un
+     <hr> plano */
+  .glow-divider {
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      theme("colors.tdf.magenta"),
+      transparent
+    );
+    box-shadow: 0 0 12px 2px rgba(196, 20, 122, 0.55);
   }
 }

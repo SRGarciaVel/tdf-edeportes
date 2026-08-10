@@ -66,7 +66,7 @@ roles                                    -- catálogo, no jerarquía
   id                  UUID PK
   name                TEXT UNIQUE NOT NULL
       -- CEO, Artista, Caster/Programación, Contenido Multimedia,
-      -- Gestión de Recursos/TO, Colaborador Externo
+      -- Gestión de Recursos/TO, Programador, Colaborador Externo
 
 user_roles                               -- N:M
   user_id             UUID FK -> users.id
@@ -178,16 +178,29 @@ club (overlay morado con llamas) y con el lenguaje visual propio de un juego
 de pelea (HUD, barras de vida, contadores). Un solo arquetipo, sin mezclar
 con Swiss Industrial Print.
 
+**Capa de acento street/graffiti (agregada tras revisar referencias reales
+de la UI de SF6 Type Arcade):** paneles con esquinas cortadas en diagonal
+(`clip-path`, no rectángulos planos), líneas divisorias con glow neón,
+textura halftone tipo spray detrás de heroes/headers (`spray-bg`), marca
+tipo splatter para el día seleccionado del calendario (`spray-mark`), y una
+fuente de acento tipo pintura (`Rubik Wet Paint`) usada *solo* en el wordmark
+más grande de cada página — nunca en texto de lectura, pierde legibilidad.
+Colores: se mantiene la paleta propia de TDF (morado/magenta), no se
+importan los colores de SF6 (naranja/rojo) — se toma la forma, no la marca
+ajena.
+
 Sitemap público:
 - `/` — Home
-- `/calendario` — itinerario público (ya implementado)
+- `/calendario` — pública, y staff-aware: si estás logueado como staff, la
+  misma página muestra los controles de crear/editar/borrar (ver
+  `tasks/lessons.md`, se fusionó con lo que iba a ser `/dashboard` — una
+  sola página en vez de dos calendarios casi idénticos en paralelo)
 - `/torneos` — página propia, foco en brackets/link a start.gg (torneos son
   eventos que organiza el club, no su foco principal — TDF se define primero
   como comunidad de streaming)
 - `/jugadores` — CFN de TDF y de la escena chilena (ver §12)
 - `/objetivos` — objetivos trimestrales (ya implementado)
 - `/nosotros` — quiénes son, incluye al staff organizador
-- `/dashboard` — staff (ya implementado, se re-skinea sin cambios funcionales)
 
 Layout compartido (`Navbar` + `Footer`) envolviendo todas las páginas
 públicas — antes cada página armaba su propio header suelto.

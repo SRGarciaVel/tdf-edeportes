@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="border-t border-tdf-line mt-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="font-mono text-xs text-gray-500">
-          TDF e-deportes © {new Date().getFullYear()} — Comunidad de Fighting Games
+          TDF e-deportes © {new Date().getFullYear()} · Comunidad de Fighting Games
         </p>
         <div className="flex gap-4 font-mono text-xs uppercase text-gray-500">
           <a

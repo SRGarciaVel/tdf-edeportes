@@ -18,6 +18,9 @@ export default {
       fontFamily: {
         display: ["Rajdhani", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
+        // acento tipo "spray" — solo para el wordmark hero, no para uso
+        // general (una fuente de impacto se usa poco, o pierde impacto)
+        graffiti: ["Rubik Wet Paint", "cursive"],
       },
     },
   },

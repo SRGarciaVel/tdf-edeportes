@@ -7,6 +7,7 @@ const STAFF = [
   { name: "Sirxtias", role: "Caster y Programación" },
   { name: "Drachen", role: "Contenido Multimedia" },
   { name: "Zacen", role: "Gestión de Recursos y TO" },
+  { name: "AckermanFG", role: "Programador" },
 ];
 
 export default function NosotrosPage() {
@@ -17,10 +18,11 @@ export default function NosotrosPage() {
 
       <p className="text-gray-400 max-w-2xl mb-10 leading-relaxed">
         TDF e-deportes es, antes que nada, una <strong className="text-white">comunidad</strong>.
-        Streameamos fighting games — Street Fighter 6, Third Strike, Alpha 2 y
-        lo que se cruce — para que la gente se sume, mire, comente y forme
-        parte. Organizamos torneos abiertos a toda la comunidad, pero eso es
-        un evento más de lo que hacemos, no el centro de por qué existimos.
+        Streameamos fighting games, jugando Third Strike, Street Fighter 6 y
+        cualquier otro FG que se cruce, para que la gente se sume, mire,
+        comente y forme parte. Organizamos torneos abiertos a toda la
+        comunidad, pero eso es un evento más de lo que hacemos, no el centro
+        de por qué existimos.
       </p>
 
       <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">Staff</h2>

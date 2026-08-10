@@ -2,6 +2,10 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
+// No está wireado a ninguna ruta por ahora (el calendario se volvió
+// staff-aware en vez de vivir en una página aparte protegida, ver
+// lessons.md). Se deja disponible para el próximo caso que sí necesite
+// una página exclusiva de staff.
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
 

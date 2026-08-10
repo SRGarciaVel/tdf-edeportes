@@ -1,9 +1,7 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./lib/auth";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import CalendarioPage from "./pages/CalendarioPage";
-import DashboardPage from "./pages/DashboardPage";
 import HomePage from "./pages/HomePage";
 import JugadoresPage from "./pages/JugadoresPage";
 import NosotrosPage from "./pages/NosotrosPage";
@@ -22,14 +20,9 @@ export default function App() {
           <Route path="/objetivos" element={<ObjetivosPage />} />
           <Route path="/nosotros" element={<NosotrosPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* el dashboard se fusionó con /calendario (ver lessons.md) —
+              esto es solo para no romper un link viejo guardado */}
+          <Route path="/dashboard" element={<Navigate to="/calendario" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

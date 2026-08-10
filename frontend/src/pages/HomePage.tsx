@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
+import TwitchEmbed from "../components/TwitchEmbed";
 import { listEvents } from "../lib/api";
 import type { EventItem } from "../lib/types";
 
@@ -19,37 +20,56 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <section className="py-12 flex flex-col gap-6">
-        <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
-        <h1 className="text-5xl sm:text-6xl font-bold text-white leading-none">
-          TDF <span className="text-tdf-magenta">e-deportes</span>
-        </h1>
-        <p className="text-lg text-gray-400 max-w-xl">
-          Streams, torneos y una comunidad que crece jugando Street Fighter 6,
-          Third Strike, Alpha 2 y lo que se cruce. Somos comunidad primero —
-          los torneos son un evento más, no el centro.
-        </p>
-        <div className="flex flex-wrap gap-4 font-mono text-sm uppercase">
+      <section className="spray-bg py-12">
+        <div className="relative z-10 flex flex-col gap-6">
+          <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
+          <h1 className="text-6xl sm:text-7xl font-graffiti text-white leading-none normal-case">
+            TDF <span className="text-tdf-magenta">e-deportes</span>
+          </h1>
+          <p className="text-lg text-gray-400 max-w-xl">
+            Streams, torneos y una comunidad que crece jugando Third Strike,
+            Street Fighter 6 y cualquier otro FG que se cruce.
+          </p>
+          <div className="flex flex-wrap gap-4 font-mono text-sm uppercase">
+            <a
+              href="https://www.twitch.tv/tdfedeportes"
+              target="_blank"
+              rel="noreferrer"
+              className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-5 py-3 text-white"
+            >
+              Ver stream en Twitch →
+            </a>
+            <Link
+              to="/calendario"
+              className="border border-tdf-line hover:border-tdf-magenta transition-colors px-5 py-3"
+            >
+              Ver calendario
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <div className="glow-divider mb-12" />
+
+      <section className="mb-12">
+        <SectionLabel index="02">En vivo</SectionLabel>
+        <TwitchEmbed />
+        <p className="font-mono text-xs text-gray-500 mt-2">
+          También puedes verlo directo en{" "}
           <a
             href="https://www.twitch.tv/tdfedeportes"
             target="_blank"
             rel="noreferrer"
-            className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-5 py-3 text-white"
+            className="text-tdf-magenta hover:text-white underline"
           >
-            Ver stream en Twitch →
+            twitch.tv/tdfedeportes
           </a>
-          <Link
-            to="/calendario"
-            className="border border-tdf-line hover:border-tdf-magenta transition-colors px-5 py-3"
-          >
-            Ver calendario
-          </Link>
-        </div>
+        </p>
       </section>
 
       {nextEvent && (
         <section className="hud-frame bg-tdf-charcoal px-6 py-5 mb-12">
-          <SectionLabel index="02">Próximo evento</SectionLabel>
+          <SectionLabel index="03">Próximo evento</SectionLabel>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-xl font-semibold">{nextEvent.title}</p>

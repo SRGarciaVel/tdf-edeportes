@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import LoginButton from "./LoginButton";
-import { useAuth } from "../lib/auth";
 
 const LINKS = [
   { to: "/", label: "Inicio" },
@@ -13,13 +12,12 @@ const LINKS = [
 ];
 
 export default function Navbar() {
-  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   return (
     <header className="border-b border-tdf-line bg-tdf-charcoal/60 backdrop-blur sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <NavLink to="/" className="text-xl font-bold text-tdf-magenta tracking-wider">
+        <NavLink to="/" className="text-xl font-graffiti text-tdf-magenta tracking-wider">
           TDF <span className="text-white/60 text-sm font-mono font-normal">e-deportes</span>
         </NavLink>
 
@@ -41,14 +39,6 @@ export default function Navbar() {
 
         <div className="hidden md:flex items-center gap-3">
           <LoginButton />
-          {user?.is_staff && (
-            <NavLink
-              to="/dashboard"
-              className="font-mono text-xs uppercase text-gray-400 hover:text-white underline"
-            >
-              Dashboard
-            </NavLink>
-          )}
         </div>
 
         <button
@@ -76,11 +66,6 @@ export default function Navbar() {
           ))}
           <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
             <LoginButton />
-            {user?.is_staff && (
-              <NavLink to="/dashboard" className="text-gray-400 underline">
-                Dashboard
-              </NavLink>
-            )}
           </div>
         </nav>
       )}

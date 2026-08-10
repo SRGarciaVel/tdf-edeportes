@@ -16,7 +16,6 @@ function toLocalInputValue(iso: string | null): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
 export default function EventFormModal({
   initialDate,
   editingEvent,
@@ -64,32 +63,32 @@ export default function EventFormModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
       <form
         onSubmit={handleSubmit}
-        className="bg-tdf-dark border border-white/10 w-full max-w-md p-6 flex flex-col gap-4"
+        className="hud-frame spray-bg bg-tdf-charcoal w-full max-w-md p-6 flex flex-col gap-4"
       >
-        <h3 className="text-lg font-semibold text-tdf-magenta">
+        <h3 className="relative z-10 text-xl font-graffiti normal-case text-tdf-magenta">
           {editingEvent ? "Editar evento" : "Nuevo evento"}
         </h3>
 
-        <label className="flex flex-col gap-1 text-sm text-gray-300">
+        <label className="relative z-10 flex flex-col gap-1 text-sm text-gray-300">
           Título
           <input
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="bg-black/40 border border-white/10 px-3 py-2 text-white"
+            className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white transition-colors"
           />
         </label>
 
-        <div className="flex gap-3">
+        <div className="relative z-10 flex gap-3">
           <label className="flex flex-col gap-1 text-sm text-gray-300 flex-1">
             Tipo
             <select
               value={type}
               onChange={(e) => setType(e.target.value as EventType)}
-              className="bg-black/40 border border-white/10 px-3 py-2 text-white"
+              className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white transition-colors"
             >
               <option value="torneo">Torneo</option>
               <option value="stream">Stream</option>
@@ -103,7 +102,7 @@ export default function EventFormModal({
             <select
               value={visibility}
               onChange={(e) => setVisibility(e.target.value as EventVisibility)}
-              className="bg-black/40 border border-white/10 px-3 py-2 text-white"
+              className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white transition-colors"
             >
               <option value="staff">Solo staff</option>
               <option value="publico">Público</option>
@@ -111,7 +110,7 @@ export default function EventFormModal({
           </label>
         </div>
 
-        <div className="flex gap-3">
+        <div className="relative z-10 flex gap-3">
           <label className="flex flex-col gap-1 text-sm text-gray-300 flex-1">
             Inicio
             <input
@@ -119,7 +118,8 @@ export default function EventFormModal({
               type="datetime-local"
               value={startAt}
               onChange={(e) => setStartAt(e.target.value)}
-              className="bg-black/40 border border-white/10 px-3 py-2 text-white"
+              min={editingEvent ? undefined : toLocalInputValue(new Date().toISOString())}
+              className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white transition-colors"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm text-gray-300 flex-1">
@@ -128,33 +128,33 @@ export default function EventFormModal({
               type="datetime-local"
               value={endAt}
               onChange={(e) => setEndAt(e.target.value)}
-              className="bg-black/40 border border-white/10 px-3 py-2 text-white"
+              className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white transition-colors"
             />
           </label>
         </div>
 
-        <label className="flex flex-col gap-1 text-sm text-gray-300">
+        <label className="relative z-10 flex flex-col gap-1 text-sm text-gray-300">
           Link externo (start.gg, etc.)
           <input
             value={externalUrl}
             onChange={(e) => setExternalUrl(e.target.value)}
-            className="bg-black/40 border border-white/10 px-3 py-2 text-white"
+            className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white transition-colors"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-gray-300">
+        <label className="relative z-10 flex flex-col gap-1 text-sm text-gray-300">
           Descripción
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="bg-black/40 border border-white/10 px-3 py-2 text-white resize-none"
+            className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white resize-none transition-colors"
           />
         </label>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="relative z-10 text-sm text-red-400">{error}</p>}
 
-        <div className="flex justify-between items-center pt-2">
+        <div className="relative z-10 flex justify-between items-center pt-2">
           <div>
             {editingEvent && onDelete && (
               <button
