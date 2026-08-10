@@ -145,6 +145,13 @@ GET    /roles                       -- catálogo
 GET    /users                       -- requiere is_staff (para asignar roles)
 ```
 
+Además `GET /auth/twitch/login` (agregado durante la implementación, no
+estaba en el borrador original): devuelve `authorize_url` + `state`, para
+que el `TWITCH_CLIENT_ID` quede solo en el backend y no en el bundle del
+frontend. El `state` es un JWT autocontenido de 10 minutos (sin sesión
+server-side) validado en el callback como protección anti-CSRF estándar del
+flujo OAuth.
+
 ## 8. Integración Discord (saliente)
 
 Al crear o modificar un evento con `visibility = staff` o `publico`, el backend

@@ -46,3 +46,15 @@ def require_staff(
             detail="Requiere ser parte del staff del club",
         )
     return user
+
+
+def require_authenticated(
+    user: Annotated[User | None, Depends(get_current_user)],
+) -> User:
+    """Para endpoints que solo requieren estar logueado (cualquier usuario
+    con cuenta de Twitch vinculada), no necesariamente staff."""
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="No autenticado"
+        )
+    return user

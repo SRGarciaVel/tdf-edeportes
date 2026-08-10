@@ -5,41 +5,65 @@
 
 ## Tarea actual
 
-CRUD de eventos + comentarios + auth JWT propia (sin Twitch OAuth todavía) — COMPLETADA.
+Flujo completo de Twitch OAuth — COMPLETADA (backend). Falta la prueba
+interactiva real en el navegador de Seba (ver más abajo).
 
 ## Qué se hizo
 
-- `app/core/security.py`: `create_access_token` / `decode_access_token` (JWT propio).
-- `app/api/deps.py`: `get_current_user` (opcional, None si no hay token) y
-  `require_staff` (403 si no es staff autenticado) — implementa la regla
-  única de `SPECS.md §4`.
-- `app/schemas/user.py`, `event.py`, `comment.py` — Pydantic v2, `type` y
-  `visibility` como `Literal` (validación en capa de app, no ENUM de Postgres
-  — ver nota de diseño en el mensaje anterior).
-- `app/services/discord.py`: `notify_event_change`, sin cola de tareas, log si falla.
-- `app/api/events.py`: CRUD completo de `/events` + `/events/{id}/comments`,
-  filtra por `visibility` cuando no hay staff autenticado.
-- Router registrado en `main.py`.
+- `app/services/twitch.py`: `build_authorize_url`, `exchange_code_for_token`,
+  `fetch_twitch_user` — habla con `id.twitch.tv` y `api.twitch.tv/helix`.
+- `app/core/security.py`: sumado `create_oauth_state` / `verify_oauth_state`
+  (JWT autocontenido de 10 min, protección anti-CSRF sin sesión server-side).
+- `app/schemas/auth.py`: `TwitchLoginResponse`, `TwitchCallbackRequest`, `TokenResponse`.
+- `app/api/auth.py`: `GET /auth/twitch/login`, `POST /auth/twitch/callback`,
+  `GET /auth/me`, `POST /auth/logout`.
+- `app/api/deps.py`: sumado `require_authenticated` (login sin requerir staff).
+- `SPECS.md §7` actualizado con el endpoint de login que no estaba en el borrador.
 
-## Verificación real hecha (contra Postgres local, no solo import)
+## Verificación real hecha (con Twitch mockeado — ver por qué abajo)
 
-- [x] App importa con las 7 rutas nuevas registradas.
-- [x] Usuario staff de prueba + JWT emitido a mano (no es el seed oficial —
-      ese usa Twitch IDs reales, pendiente).
-- [x] Sin token → `POST /events` da 403.
-- [x] Con token staff → crea evento público y evento staff-only, ambos 201.
-- [x] Sin token → `GET /events` solo devuelve el evento público.
-- [x] Con token staff → `GET /events` devuelve ambos.
-- [x] `type` inválido → 422. `end_at` antes de `start_at` → 422 (validator).
-- [x] Comentario se crea y el `GET` de comentarios devuelve el `author` anidado.
-- [x] Datos de prueba limpiados de la DB después de verificar.
+- [x] Las 4 rutas de auth quedan registradas en la app.
+- [x] `GET /auth/twitch/login` arma la `authorize_url` con `client_id`,
+      `redirect_uri` y `scope` correctos, y un `state` nuevo cada vez.
+- [x] `state` inválido/falsificado → 400 en el callback (anti-CSRF funcionando).
+- [x] Callback con datos de Twitch simulados → crea usuario nuevo con
+      `is_staff=False` (nunca se auto-otorga staff, SPECS.md §6).
+- [x] `/auth/me` con el token recién emitido → devuelve el usuario correcto.
+- [x] Un staff promovió a mano `is_staff=True` en la DB → un segundo login
+      del mismo usuario **no lo pisa** (el callback solo actualiza datos de
+      perfil, nunca `is_staff`). Este era el caso que más me importaba probar.
+- [x] `/auth/me` sin token → 401.
+- [x] `/auth/logout` → 204.
+
+## Por qué "Twitch mockeado" y no 100% real
+
+No puedo completar un login interactivo real de Twitch desde este entorno
+(requiere abrir un navegador, loguearse con una cuenta real de Twitch, y que
+Twitch redirija con un `code` de un solo uso que expira en minutos — eso
+solo lo puede hacer una persona). Lo que sí verifiqué es todo lo que no
+depende de esa interacción humana: construcción de URLs, seguridad del
+`state`, y —lo más importante— la lógica de upsert de usuario con datos de
+Twitch simulados pero con la forma real de la respuesta de la Helix API.
+
+## PENDIENTE — requiere que Seba lo haga en su navegador
+
+1. Levantar `docker compose up`, abrir `http://localhost:8000/docs`.
+2. Probar `GET /auth/twitch/login`, copiar `authorize_url`, abrirla en el navegador.
+3. Loguearse con Twitch de verdad, autorizar la app.
+4. Twitch redirige a `http://localhost:5173/auth/callback?code=...&state=...`
+   (**esto va a dar 404 todavía** — el frontend no tiene esa ruta armada,
+   es la próxima tarea). Copiar el `code` y el `state` de la URL a mano.
+5. Con esos dos valores, probar `POST /auth/twitch/callback` desde `/docs` o `curl`.
+6. Confirmar que devuelve un `access_token` y que `GET /auth/me` con ese
+   token funciona.
 
 ## Siguiente tarea
 
-Flujo completo de Twitch OAuth (`/auth/twitch/callback`, `/auth/me`,
-`/auth/logout`) que reemplace la emisión manual de JWT de esta prueba por el
-flujo real descrito en `SPECS.md §6`. Requiere que el `TWITCH_CLIENT_ID` /
-`TWITCH_CLIENT_SECRET` de la app ya registrada por Seba estén en el `.env`.
+Pantalla de login en el frontend: botón "Entrar con Twitch" que pide
+`/auth/twitch/login`, redirige, y una ruta `/auth/callback` que reciba
+`code`/`state`, llame a `POST /auth/twitch/callback`, y guarde el token
+(en memoria/React state por ahora — decidir si se persiste en algo más
+durable se deja para cuando haya sesión real que mantener entre refrescos).
 
 ## Checklist de verificación antes de marcar como completa
 

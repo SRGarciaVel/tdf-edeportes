@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import events, health
+from app.api import auth, events, health
 from app.core.config import settings
 
 app = FastAPI(title="TDF e-deportes API")
@@ -15,4 +15,5 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(events.router)

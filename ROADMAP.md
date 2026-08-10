@@ -12,9 +12,10 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
       y frontend (Vite + React + Tailwind), `.env.example`.
 - [x] Modelo de datos y migraciones Alembic: `users`, `roles`, `user_roles`,
       `events`, `event_comments`, `quarterly_goals`.
-- [ ] Auth: registro de app en Twitch Developer Console (decisión de
-      titularidad pendiente — ver `SPECS.md §10`).
-- [ ] Auth: flujo Twitch OAuth completo (callback, upsert de usuario, JWT propio).
+- [x] Auth: registro de app en Twitch Developer Console (Client ID/Secret ya
+      cargados en `.env` por Seba).
+- [x] Auth: flujo Twitch OAuth completo (`GET /auth/twitch/login`,
+      `POST /auth/twitch/callback`, `GET /auth/me`, `POST /auth/logout`).
 - [ ] Seed inicial de staff (BF, Chubi, Sirxtias, Drachen, Zacen) con `is_staff = true`
       y sus roles asignados.
 - [x] CRUD de eventos (`torneo`, `stream`, `reunion`, `otro`) con `visibility`.
