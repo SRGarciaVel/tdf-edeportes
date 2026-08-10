@@ -5,57 +5,59 @@
 
 ## Tarea actual
 
-Seed inicial de staff — COMPLETADA (lógica verificada con Twitch mockeado,
-falta que Seba la corra de verdad contra la API real).
+Molde completo del sitio público (Fase 1.5) — COMPLETADA.
 
 ## Qué se hizo
 
-- `app/services/twitch.py`: sumado `get_app_access_token` (client
-  credentials grant, sin login de usuario) y `fetch_users_by_login` (resuelve
-  hasta 100 usernames a sus IDs reales de Twitch en un solo request).
-- `backend/scripts/seed_staff.py`: script standalone, idempotente. Mapeo
-  username de Twitch → rol:
-  - BazthyFreeman → CEO
-  - chubisxd → Artista
-  - Sirxtias1 → Caster y Programación
-  - l_DracheN_l → Contenido Multimedia
-  - zacenfg → Gestión de Recursos y TO
-  Crea el catálogo de 6 roles (los 5 de arriba + "Colaborador Externo" para
-  YH/Pochoclo23 cuando se sumen), precarga cada usuario con `is_staff=True`
-  usando su `twitch_id` real (no el username) como llave — así cuando la
-  persona haga login por primera vez, el upsert de `/auth/twitch/callback`
-  la reconoce por ese mismo `twitch_id` y no le pisa `is_staff`.
+- Dirección visual "Tactical Telemetry" (skill `industrial-brutalist-ui`,
+  ver `SPECS.md §11`): oscuro, tipografía Rajdhani (headings) + JetBrains
+  Mono (metadata/datos), acentos morado/magenta del club — sin mezclar con
+  el otro arquetipo del skill (Swiss Industrial Print).
+- `tailwind.config.js`: paleta ampliada (`tdf.charcoal`, `tdf.line`),
+  `fontFamily.display`/`fontFamily.mono`.
+- `src/index.css`: clases utilitarias `.hud-label` y `.hud-frame` (marco con
+  esquinas tipo panel táctico), reutilizadas en toda la web.
+- `src/components/Navbar.tsx`, `Footer.tsx`, `Layout.tsx`, `SectionLabel.tsx`:
+  layout compartido — antes cada página armaba su propio header suelto.
+- 6 páginas públicas nuevas/reorganizadas:
+  - `HomePage`: landing con foco en comunidad (no en torneos), próximo
+    evento destacado con datos reales.
+  - `CalendarioPage`: el calendario público, ahora en su propia ruta.
+  - `TorneosPage`: **datos reales**, no placeholder — filtra eventos
+    `type=torneo` de la API y linkea a su `external_url` (start.gg).
+  - `JugadoresPage`: placeholder con los 8 nombres/CFN IDs reales que pasó
+    Seba (4 TDF + 4 escena chilena), stats "Próximamente".
+  - `ObjetivosPage`: los objetivos trimestrales, en su propia ruta con
+    selector de año.
+  - `NosotrosPage`: misión del club ("comunidad primero") + staff real.
+- `App.tsx` reescrito con las 8 rutas totales (6 públicas + callback + dashboard).
 
-## Por qué "mockeado" y no contra la Twitch API real
+## Decisión de arquitectura documentada (no implementada todavía)
 
-El sandbox donde armo esto no tiene salida de red hacia `api.twitch.tv` (solo
-a pypi/npm/github, por restricciones del entorno). Lo que sí verifiqué con
-mocks que devuelven la forma exacta de la respuesta real de Twitch:
+CFN tracker (`SPECS.md §12`): Python + Playwright, no un microservicio en
+Go, para que Seba pueda mantener esa pieza sin depender de un lenguaje que
+no usa en el resto del proyecto. Queda como tarea propia, no bloqueante.
 
-- [x] Primera corrida: crea los 4 usuarios simulados con su rol correcto,
-      avisa del que falta (simulé que "zacenfg" no aparecía en Twitch, a
-      propósito, para probar ese camino).
-- [x] Segunda corrida: idempotente — no duplica usuarios, no duplica roles,
-      detecta que ya son staff y no hace nada de más.
-- [x] Confirmado en la DB real: 6 roles en el catálogo, cada usuario con
-      `is_staff=true` y su fila en `user_roles` apuntando al rol correcto.
+## Verificación real hecha
 
-## PENDIENTE — requiere que Seba lo corra en su entorno real
-
-```
-docker compose exec backend python scripts/seed_staff.py
-```
-
-Va a pegarle a la Twitch API real con tu `client_id`/`client_secret` ya
-cargados. Si algún username está mal escrito o esa persona nunca creó cuenta
-de Twitch con ese nombre exacto, el script lo va a avisar sin frenar a los
-demás.
+- [x] `npm run build` (`tsc -b && vite build`) sin errores con las 6 páginas
+      nuevas + componentes de layout.
+- [x] `vite preview` sirviendo el build real: `GET /`, `GET /calendario`,
+      `GET /jugadores` devuelven 200 (fallback SPA funcionando para rutas
+      que no son archivos reales).
+- [ ] **Pendiente de confirmar por Seba:** revisión visual en el navegador —
+      no tengo browser headless disponible en este sandbox (Playwright
+      necesita descargar binarios de una CDN fuera de los dominios
+      permitidos acá), así que el build limpio es la verificación más fuerte
+      que puedo dar. Ojo particularmente a: que las fuentes de Google Fonts
+      carguen bien, que el menú mobile (hamburguesa) funcione, y que el link
+      de Discord en el footer sea el correcto (lo reconstruí de un texto con
+      salto de línea en una captura vieja — confirmar que sea
+      `discord.gg/t6gkWX6j6M` de verdad).
 
 ## Siguiente tarea
 
-A definir con Seba — quedan pendientes de Fase 1: placeholder de branding
-(pausado a pedido de Seba), deploy inicial (Supabase + Render/Fly.io a
-definir), y el webhook de Discord (pausado a pedido de Seba).
+A definir con Seba.
 
 ## Checklist de verificación antes de marcar como completa
 

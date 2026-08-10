@@ -169,7 +169,76 @@ Assets extraídos de las capturas ya compartidas se usan como placeholder en
 `docs/assets/` hasta que el club (Chubi) entregue el manual de marca oficial
 (logo en alta resolución, paleta hex). Ver nota en `README.md`.
 
-## 10. Deuda técnica conocida / decisiones pendientes
+## 11. Frontend público — molde de sitio (Fase 1.5)
+
+Dirección visual: **Tactical Telemetry / CRT Terminal** (uno de los dos
+arquetipos del skill `industrial-brutalist-ui`) — oscuro, monoespaciado en
+metadata, alta densidad de datos. Encaja con la identidad ya existente del
+club (overlay morado con llamas) y con el lenguaje visual propio de un juego
+de pelea (HUD, barras de vida, contadores). Un solo arquetipo, sin mezclar
+con Swiss Industrial Print.
+
+Sitemap público:
+- `/` — Home
+- `/calendario` — itinerario público (ya implementado)
+- `/torneos` — página propia, foco en brackets/link a start.gg (torneos son
+  eventos que organiza el club, no su foco principal — TDF se define primero
+  como comunidad de streaming)
+- `/jugadores` — CFN de TDF y de la escena chilena (ver §12)
+- `/objetivos` — objetivos trimestrales (ya implementado)
+- `/nosotros` — quiénes son, incluye al staff organizador
+- `/dashboard` — staff (ya implementado, se re-skinea sin cambios funcionales)
+
+Layout compartido (`Navbar` + `Footer`) envolviendo todas las páginas
+públicas — antes cada página armaba su propio header suelto.
+
+## 12. CFN tracker — decisión técnica (implementación pendiente)
+
+Objetivo: mostrar rango/LP/MR/personaje de jugadores conocidos de Street
+Fighter 6, tanto de TDF como de la escena chilena en general.
+
+**Jugadores a trackear (CFN ID numérico):**
+- TDF: Sirxtias `2844671427`, Drachen `2908057346`, BF `4100957688`,
+  AckermanFG `1733837998`
+- Escena chilena: Younghou `1027356162`, Pochoclo23 `3987753314`,
+  Craime `1009159858`, Blaz `3381453962`
+
+**Por qué no es una integración simple:** Buckler's Boot Camp (la web de
+Capcom donde vive esta info) no es pública — hace falta autenticarse con un
+Capcom ID que tenga SF6 vinculado antes de poder consultar el perfil de
+cualquier jugador. Es scraping de un endpoint no documentado, no una API
+oficial. El proyecto de referencia (`williamsjokvist/cfn-tracker`, MIT) lo
+resuelve con **Go + Rod** (controla un Chromium headless real, no un cliente
+HTTP simple) — el login de Capcom probablemente tiene protecciones que
+exigen un navegador real.
+
+**Decisión: reimplementar en Python con Playwright**, no wrappear el
+proyecto de Go como microservicio aparte. Se evaluaron ambas opciones — la
+razón de fondo para descartar Go: mantener todo el proyecto en un stack que
+Seba pueda debuggear y extender solo, sin depender de terceros para tocar
+esa pieza el día que Capcom cambie algo en su web (motivo explícito del
+proyecto: autonomía de desarrollo).
+
+Costo asumido: imagen de Docker más pesada por el Chromium headless de
+Playwright; y como el código fuente de Go no expone el detalle interno del
+login (solo firmas de función públicas), la lógica exacta de autenticación
+hay que reconstruirla empíricamente (grabando un login real a Buckler's Boot
+Camp con el inspector de Playwright) cuando se implemente.
+
+**Cuenta "visora":** Seba usa su propia cuenta de Capcom ID (tiene SF6
+vinculado) — variables `CFN_EMAIL`/`CFN_PASSWORD` en `.env`, mismo criterio
+de manejo de secretos que `TWITCH_CLIENT_SECRET`.
+
+**Cacheo:** refresco cada 1 hora (no en vivo por request) — reduce la carga
+sobre la cuenta visora y el riesgo de que Capcom note actividad inusual.
+Implica una tabla `cfn_profiles` (cache) y un job programado, no una consulta
+directa en el endpoint público.
+
+**Estado actual:** NO implementado. La página `/jugadores` se construye con
+los 8 nombres reales y placeholder de stats ("Próximamente") hasta que esta
+tarea se aborde por separado.
+
+## 13. Deuda técnica conocida / decisiones pendientes
 
 - Titularidad de la app de Twitch Developer Console: pendiente que el CEO
   decida si la registra con una cuenta institucional o se registra

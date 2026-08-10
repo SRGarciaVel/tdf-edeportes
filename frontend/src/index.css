@@ -1,3 +1,35 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-tdf-dark text-white font-display;
+    letter-spacing: 0.01em;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display font-bold uppercase tracking-wide;
+  }
+}
+
+@layer utilities {
+  /* etiqueta tipo "// SECCIÓN 01" — usada por <SectionLabel> */
+  .hud-label {
+    @apply font-mono text-xs uppercase tracking-[0.2em] text-tdf-magenta;
+  }
+  /* marco con esquinas, para paneles/cards que quieren sentirse HUD */
+  .hud-frame {
+    @apply border border-tdf-line relative;
+  }
+  .hud-frame::before,
+  .hud-frame::after {
+    content: "";
+    @apply absolute w-2 h-2 border-tdf-magenta;
+  }
+  .hud-frame::before {
+    @apply top-0 left-0 border-t-2 border-l-2;
+  }
+  .hud-frame::after {
+    @apply bottom-0 right-0 border-b-2 border-r-2;
+  }
+}

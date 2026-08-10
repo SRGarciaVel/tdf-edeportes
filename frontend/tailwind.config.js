@@ -4,13 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // placeholder extraído de las capturas del overlay actual del club —
-        // reemplazar cuando Chubi entregue el manual de marca oficial (SPECS.md #9)
+        // paleta real del club (extraída del overlay/logo actuales) —
+        // reemplazar cuando Chubi entregue el manual de marca oficial
+        // (SPECS.md #9). Base oscura con matices, no negro puro.
         tdf: {
           purple: "#5B2A86",
           magenta: "#C4147A",
           dark: "#0D0710",
+          charcoal: "#14101a",
+          line: "#2a2230",
         },
+      },
+      fontFamily: {
+        display: ["Rajdhani", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
       },
     },
   },

@@ -33,6 +33,22 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
 - [ ] Placeholder de branding en `docs/assets/` mientras llega el manual de marca.
 - [ ] Deploy inicial (staging) y prueba end-to-end con al menos 2 miembros del staff real.
 
+## Fase 1.5 — Molde de sitio público
+
+**Objetivo:** estructura visual completa del sitio (no solo el dashboard),
+para tener un molde consistente donde seguir incorporando contenido real.
+
+- [x] Dirección visual Tactical Telemetry (ver `SPECS.md §11`), tokens de
+      Tailwind, tipografía (Rajdhani + JetBrains Mono).
+- [x] Layout compartido: `Navbar` + `Footer` en todas las páginas públicas.
+- [x] Sitemap completo: `/`, `/calendario`, `/torneos`, `/jugadores`,
+      `/objetivos`, `/nosotros` — con contenido real donde ya existe el
+      backend (calendario, torneos con link a start.gg, objetivos) y
+      placeholder prolijo donde falta (jugadores/CFN, nosotros).
+- [ ] CFN tracker real (`/jugadores`): decisión técnica ya tomada
+      (Python + Playwright, ver `SPECS.md §12`) — implementación pendiente,
+      requiere reconstruir el flujo de login de Capcom empíricamente.
+
 ## Mediano plazo — Fase 2: Cara pública y comunidad
 
 **Objetivo:** todo lo que ve y usa la comunidad, no solo el staff.
