@@ -42,8 +42,15 @@ def exchange_code_for_token(code: str) -> str:
             timeout=10,
         )
         response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        # Twitch manda el motivo real en el body (invalid code, redirect_uri
+        # mismatch, etc.) — lo propagamos en vez de esconderlo detrás del
+        # status HTTP genérico, si no es imposible debuggear desde afuera.
+        raise TwitchAuthError(
+            f"Twitch rechazó el intercambio ({exc.response.status_code}): {exc.response.text}"
+        ) from exc
     except httpx.HTTPError as exc:
-        raise TwitchAuthError(f"No se pudo intercambiar el code: {exc}") from exc
+        raise TwitchAuthError(f"No se pudo contactar a Twitch: {exc}") from exc
 
     data = response.json()
     access_token = data.get("access_token")
@@ -64,8 +71,12 @@ def fetch_twitch_user(access_token: str) -> dict:
             timeout=10,
         )
         response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise TwitchAuthError(
+            f"Twitch rechazó la consulta de usuario ({exc.response.status_code}): {exc.response.text}"
+        ) from exc
     except httpx.HTTPError as exc:
-        raise TwitchAuthError(f"No se pudo consultar el usuario: {exc}") from exc
+        raise TwitchAuthError(f"No se pudo contactar a Twitch: {exc}") from exc
 
     users = response.json().get("data", [])
     if not users:
