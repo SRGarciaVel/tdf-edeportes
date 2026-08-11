@@ -13,7 +13,7 @@ interface PlayerEntry {
 const TDF_PLAYERS: PlayerEntry[] = [
   { name: "Sirxtias", cfnId: "2844671427" },
   { name: "Drachen", cfnId: "2908057346" },
-  { name: "BF", cfnId: "4100957688" },
+  { name: "BazthyFreeman", cfnId: "4100957688" },
   { name: "AckermanFG", cfnId: "1733837998" },
 ];
 
