@@ -19,3 +19,12 @@ app.include_router(auth.router)
 app.include_router(events.router)
 app.include_router(goals.router)
 app.include_router(cfn.router)
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    # sin esto, algunos chequeos automáticos (ej. el health check por
+    # defecto de Render, que pega a "/" salvo que se configure otra ruta)
+    # ven el 404 de una API sin endpoint raíz y asumen que el servicio
+    # está caído, aunque /health esté perfecto
+    return {"status": "ok", "docs": "/docs"}
