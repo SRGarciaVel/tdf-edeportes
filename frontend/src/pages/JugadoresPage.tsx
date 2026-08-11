@@ -7,6 +7,7 @@ import type { CFNProfile } from "../lib/types";
 interface PlayerEntry {
   name: string;
   cfnId: string;
+  liquipediaUrl?: string;
 }
 
 const TDF_PLAYERS: PlayerEntry[] = [
@@ -16,18 +17,20 @@ const TDF_PLAYERS: PlayerEntry[] = [
   { name: "AckermanFG", cfnId: "1733837998" },
 ];
 
+// los 4 tienen perfil propio en Liquipedia como jugadores competitivos —
+// se linkea por respeto a su trayectoria, no todos los de la escena lo tienen
 const SCENE_PLAYERS: PlayerEntry[] = [
-  { name: "Younghou", cfnId: "1027356162" },
-  { name: "Pochoclo23", cfnId: "3987753314" },
-  { name: "Craime", cfnId: "1009159858" },
-  { name: "Blaz", cfnId: "3381453962" },
+  { name: "Younghou", cfnId: "1027356162", liquipediaUrl: "https://liquipedia.net/fighters/Younghou" },
+  { name: "Pochoclo23", cfnId: "3987753314", liquipediaUrl: "https://liquipedia.net/fighters/Pochoclo23" },
+  { name: "Craime", cfnId: "1009159858", liquipediaUrl: "https://liquipedia.net/fighters/Craime" },
+  { name: "Blaz", cfnId: "3381453962", liquipediaUrl: "https://liquipedia.net/fighters/Blaz" },
 ];
 
 function PlayerCard({ player, profile }: { player: PlayerEntry; profile?: CFNProfile }) {
   const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
 
-  return (
-    <div className="hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between">
+  const content = (
+    <>
       <div>
         <p className="font-semibold">{player.name}</p>
         <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
@@ -51,8 +54,24 @@ function PlayerCard({ player, profile }: { player: PlayerEntry; profile?: CFNPro
           Próximamente
         </span>
       )}
-    </div>
+    </>
   );
+
+  const className =
+    "hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between transition-all duration-200" +
+    (player.liquipediaUrl
+      ? " hover:border-tdf-magenta hover:shadow-[0_0_20px_-4px_rgba(196,20,122,0.7)] cursor-pointer"
+      : "");
+
+  if (player.liquipediaUrl) {
+    return (
+      <a href={player.liquipediaUrl} target="_blank" rel="noreferrer" className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }
 
 export default function JugadoresPage() {
@@ -86,6 +105,9 @@ export default function JugadoresPage() {
         <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">
           Escena chilena
         </h2>
+        <p className="font-mono text-[11px] text-gray-600 mb-3">
+          Click en una card para ver su perfil competitivo en Liquipedia →
+        </p>
         <div className="grid sm:grid-cols-2 gap-3">
           {SCENE_PLAYERS.map((p) => (
             <PlayerCard key={p.cfnId} player={p} profile={profiles.get(p.cfnId)} />
