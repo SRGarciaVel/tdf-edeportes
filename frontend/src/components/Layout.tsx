@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
+import TwitchChatPanel from "./TwitchChatPanel";
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +11,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <Footer />
+      <TwitchChatPanel />
     </div>
   );
 }
