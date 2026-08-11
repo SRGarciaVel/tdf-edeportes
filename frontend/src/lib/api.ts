@@ -1,4 +1,10 @@
-import type { EventFormValues, EventItem, QuarterlyGoal, User } from "./types";
+import type {
+  EventFormValues,
+  EventItem,
+  QuarterlyGoal,
+  User,
+  CFNProfile,
+} from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -116,4 +122,9 @@ export async function listGoals(year?: number): Promise<QuarterlyGoal[]> {
   const query = year ? `?year=${year}` : "";
   const res = await fetch(`${API_URL}/goals${query}`);
   return parseOrThrow<QuarterlyGoal[]>(res);
+}
+
+export async function listCfnPlayers(): Promise<CFNProfile[]> {
+  const res = await fetch(`${API_URL}/cfn/players`);
+  return parseOrThrow<CFNProfile[]>(res);
 }

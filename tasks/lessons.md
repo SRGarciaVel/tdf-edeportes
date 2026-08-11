@@ -114,3 +114,142 @@ misma pantalla con permisos distintos — la mayoría de las veces sí lo es, y
 una sola implementación staff-aware es más simple de mantener que dos
 sincronizadas a mano. `/dashboard` quedó como redirect a `/calendario` por
 si alguien tenía el link guardado.
+
+## `--force-recreate` no reconstruye la imagen, solo el contenedor
+
+**Qué pasó:** se agregó `playwright` a `requirements.txt` y se cambió el
+`Dockerfile` (instalación de Chromium), pero `docker compose up -d
+--force-recreate backend` siguió usando la imagen vieja sin esos cambios —
+`ModuleNotFoundError: No module named 'playwright'` al correr el script.
+
+**Por qué:** `--force-recreate` fuerza que el contenedor se recree (útil
+para que tome variables de entorno nuevas, como ya vimos), pero no dispara
+un rebuild de la imagen. Si cambió `requirements.txt`, el `Dockerfile`, o
+cualquier archivo que se copia durante el build, hace falta `--build`
+además.
+
+**Regla:** cambios en `.env` → `--force-recreate` alcanza. Cambios en
+`requirements.txt`/`package.json`/`Dockerfile` → hace falta `--build`
+(se puede combinar: `up -d --build --force-recreate <servicio>`).
+
+## `python:3.12-slim` corre sobre Debian trixie, y Playwright todavía no lo soporta
+
+**Qué pasó:** `playwright install --with-deps chromium` falló durante el
+build con `Package 'ttf-unifont' has no installation candidate` — el
+instalador de Playwright no tiene una lista de dependencias oficial para
+Debian trixie (la versión que hoy trae la tag "slim" de la imagen de
+Python), y cae a un fallback pensado para Ubuntu 20.04 con nombres de
+paquete que ya no existen.
+
+**Por qué:** instalar Chromium + sus dependencias de sistema a mano sobre
+una imagen genérica es frágil — depende de que el instalador de Playwright
+tenga soporte explícito para la distro/versión exacta de esa imagen en ese
+momento, y eso cambia con el tiempo sin que nosotros toquemos nada.
+
+**Regla:** para cualquier dependencia que necesite un navegador headless
+(Playwright, Puppeteer, etc.), usar la imagen Docker oficial del proyecto
+(`mcr.microsoft.com/playwright/python:v<version>-<codename ubuntu>`) en vez
+de instalar el navegador a mano sobre una imagen genérica — viene
+versionada y probada junto con la librería, evita este tipo de
+incompatibilidad silenciosa. Mantener la versión de la imagen sincronizada
+con la versión de `playwright` en `requirements.txt`.
+
+## `headless=False` no funciona dentro de un contenedor Docker
+
+**Qué pasó:** el modo `--debug` de `refresh_cfn.py` intentaba lanzar
+Chromium con `headless=False` para que Seba "viera" el navegador — reventó
+con `Missing X server or $DISPLAY` al primer intento real.
+
+**Por qué:** un contenedor Docker no tiene servidor gráfico (X server), y
+aunque lo tuviera, `docker compose exec` no reenvía ventanas a la pantalla
+de quien ejecuta el comando. Diseñé el modo debug pensando en cómo se vería
+corriendo en una laptop normal, sin considerar que esto corre dentro de un
+contenedor.
+
+**Regla:** cualquier automatización de navegador que corra dentro de
+Docker va siempre `headless=True`, sin excepción. Para debuggear, lo único
+que sirve ahí adentro es capturar evidencia (screenshots, HTML, logs), no
+una ventana visible — que es exactamente lo que `_debug_dump()` ya hacía
+bien, el error estaba en la línea de al lado.
+
+## Capcom bloquea Chromium automatizado con un 403 de CloudFront, antes de llegar al login
+
+**Qué pasó:** la primera corrida real llegó hasta el 403 en el paso más
+temprano posible — ni siquiera cargó el formulario de login, CloudFront
+cortó la petición completa con "Request blocked".
+
+**Por qué:** Playwright con configuración por defecto deja huellas de
+automatización fácilmente detectables (navigator.webdriver=true, el flag
+--enable-automation, headers en un orden no-humano). Sitios grandes con
+WAF (CloudFront + probablemente AWS WAF bot control, en este caso) filtran
+eso antes de servir contenido.
+
+**Regla / mitigación aplicada:** `playwright-stealth` (v2.x, la v1.0.6
+está rota — depende de `pkg_resources` que las versiones nuevas de
+setuptools ya no incluyen) envuelto sobre `sync_playwright()`, un User-Agent
+de navegador real explícito, locale/timezone/viewport de un usuario real
+(es-CL, America/Santiago), el flag `--disable-blink-features=
+AutomationControlled`, y "calentar" la sesión entrando primero a la home
+del sitio antes de ir directo al login. Ninguna de estas técnicas es
+garantía contra un WAF moderno — es la mejor práctica estándar, puede
+seguir sin alcanzar.
+
+## El login de Capcom ID está detrás de Cloudflare Turnstile — no se automatiza
+
+**Qué pasó:** tras resolver el 403 de CloudFront con stealth, el siguiente
+paso del login (auth.cid.capcom.com) mostró un checkbox de Cloudflare
+Turnstile ("Verifique que es un ser humano"). No es fingerprinting pasivo,
+es un desafío de verificación humana activo.
+
+**Decisión:** no se automatiza resolver Turnstile. Es un límite deliberado,
+no una limitación técnica — hay servicios de terceros que "resuelven"
+CAPTCHAs automáticamente, pero construir eso es circunvalar a propósito un
+sistema anti-bot ajeno, y eso no se hace acá sin importar cuán inocente sea
+el uso final.
+
+**Solución:** reuso de sesión autenticada manualmente por un humano (Seba
+se loguea normal, exporta cookies con Cookie-Editor, el scraper las carga
+en vez de loguearse). Ver SPECS.md §12 para el paso a paso completo. La
+sesión vence eventualmente y hay que repetir el export a mano — costo
+aceptable para un proyecto de este tamaño.
+
+**Regla:** cuando un scraper se topa con un CAPTCHA/challenge de
+verificación humana real (no solo detección de fingerprint), la respuesta
+correcta es reusar una sesión autenticada por un humano, no intentar
+resolver el challenge programáticamente.
+
+## El rango de SF6 (MASTER, GRAND MASTER, etc.) se renderiza como imagen, no texto
+
+**Qué pasó:** con los HTML reales de los 8 perfiles, se confirmó que
+`league_rank` no tiene forma limpia de extraerse — el nombre del rango no
+es texto en el DOM, es un `<img>` (`rank36_s.png`, `alt=""`). El MR y el LP
+sí son texto real, y se verificaron exactos contra los 8 perfiles.
+
+**Por qué:** decisión de diseño de Capcom, no algo que dependa de nuestro
+selector — el badge visual del rango es una imagen, el número de MR/LP
+sí vive como texto plano.
+
+**Regla:** no perseguir `league_rank` como texto — mostrar MR/LP
+directamente en la UI, que es información igual de útil (cualquiera de la
+escena de FGC sabe leer esos números) y sí es extraíble de forma confiable.
+El campo `league_rank` queda en el modelo por si algún día se arma un mapeo
+manual ícono→nombre, pero no se lo trata como requerido para mostrar datos.
+
+## `wait_until="networkidle"` cuelga en páginas con widgets de fondo
+
+**Qué pasó:** `refresh_cfn.py` empezó a fallar con `Timeout 30000ms
+exceeded` en `page.goto(..., wait_until="networkidle")` para varios
+jugadores, después de haber andado bien una vez antes.
+
+**Por qué:** `networkidle` espera a que no haya ninguna conexión de red
+por 500ms seguidos. La página de perfil tiene un widget de cookies
+(Cookiebot) y probablemente analytics/telemetría corriendo en el fondo que
+nunca la dejan del todo "quieta" — a veces cae dentro de la ventana de
+30s por casualidad, a veces no. Es un timing flaky, no un problema
+determinístico del selector ni de la sesión.
+
+**Regla:** para páginas con actividad de red de fondo continua (widgets de
+terceros, analytics, polling), usar `wait_until="domcontentloaded"` en vez
+de `"networkidle"`, y esperar puntualmente por el elemento específico que
+se necesita con `locator.wait_for()` — es más rápido y más confiable que
+esperar a que toda la red se calle, que puede no pasar nunca.

@@ -1,3 +1,4 @@
+from app.models.cfn_profile import CFNProfile
 from app.models.event import Event
 from app.models.event_comment import EventComment
 from app.models.quarterly_goal import QuarterlyGoal
@@ -11,4 +12,5 @@ __all__ = [
     "Event",
     "EventComment",
     "QuarterlyGoal",
+    "CFNProfile",
 ]

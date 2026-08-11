@@ -238,18 +238,53 @@ login (solo firmas de función públicas), la lógica exacta de autenticación
 hay que reconstruirla empíricamente (grabando un login real a Buckler's Boot
 Camp con el inspector de Playwright) cuando se implemente.
 
-**Cuenta "visora":** Seba usa su propia cuenta de Capcom ID (tiene SF6
-vinculado) — variables `CFN_EMAIL`/`CFN_PASSWORD` en `.env`, mismo criterio
-de manejo de secretos que `TWITCH_CLIENT_SECRET`.
+**Actualización tras la primera corrida real:** el intercambio automático
+de `CFN_EMAIL`/`CFN_PASSWORD` no llegó a implementarse como login — Capcom
+protege `auth.cid.capcom.com` (donde vive el login real) con Cloudflare
+Turnstile, un desafío interactivo de verificación humana. **Decisión
+deliberada: no se automatiza resolver eso.** No es una limitación técnica,
+es un límite que no se cruza — automatizar la evasión de un sistema
+anti-bot de un tercero no es algo que este proyecto haga, sin importar lo
+inocente del uso final.
+
+**Solución adoptada: reuso de sesión manual.** Seba se loguea una vez como
+humano normal en su navegador (resuelve el Turnstile él mismo, como
+cualquier persona), exporta las cookies de esa sesión ya autenticada con
+una extensión tipo "Cookie-Editor" (Chrome/Firefox), y las guarda en
+`backend/cfn_session.json` (gitignored, son credenciales). El scraper carga
+esas cookies en el contexto de Playwright en vez de intentar loguearse.
+
+Paso a paso para Seba (repetir cuando la sesión venza):
+1. Ir a `https://www.streetfighter.com/6/buckler/en/profile/auth` en un
+   navegador normal y loguearse con Capcom ID (resolviendo el Turnstile
+   normalmente).
+2. Con la extensión Cookie-Editor, exportar las cookies del dominio
+   `capcom.com` (incluye subdominios como `auth.cid.capcom.com`) como JSON.
+3. Guardar ese JSON como `backend/cfn_session.json`.
+4. Correr `docker compose exec backend python scripts/refresh_cfn.py --debug`.
+
+Cuando la sesión venza, `_verify_session` en `app/services/cfn_scraper.py`
+lo detecta (Buckler's Boot Camp muestra el botón de login en vez del
+perfil) y tira un error explícito pidiendo repetir el export — nunca falla
+en silencio sirviendo datos viejos como si fueran actuales.
+
+`playwright-stealth` (v2.x — la v1.0.6 está rota, depende de
+`pkg_resources` que las versiones nuevas de `setuptools` ya no traen) se
+mantiene igual, para las páginas de perfil públicas que sí están detrás de
+CloudFront (ahí no hay Turnstile, solo detección de fingerprint, que sí es
+razonable mitigar sin cruzar ninguna línea).
 
 **Cacheo:** refresco cada 1 hora (no en vivo por request) — reduce la carga
 sobre la cuenta visora y el riesgo de que Capcom note actividad inusual.
 Implica una tabla `cfn_profiles` (cache) y un job programado, no una consulta
 directa en el endpoint público.
 
-**Estado actual:** NO implementado. La página `/jugadores` se construye con
-los 8 nombres reales y placeholder de stats ("Próximamente") hasta que esta
-tarea se aborde por separado.
+**Estado actual:** Implementado y **verificado contra los 8 perfiles
+reales** — el login manual con reuso de sesión funcionó, y los selectores
+de extracción se ajustaron contra el HTML real (character_name, master_rating,
+league_points confirmados exactos contra las capturas de Seba). El rango
+en texto (`league_rank`) no se extrae — Capcom lo renderiza como imagen,
+sin nombre en el DOM; se prioriza mostrar MR/LP en su lugar.
 
 ## 13. Deuda técnica conocida / decisiones pendientes
 

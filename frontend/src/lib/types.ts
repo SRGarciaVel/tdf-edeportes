@@ -43,3 +43,14 @@ export interface QuarterlyGoal {
   description: string | null;
   status: GoalStatus;
 }
+
+export interface CFNProfile {
+  cfn_id: string;
+  display_name: string | null;
+  league_rank: string | null;
+  league_points: number | null;
+  master_rating: number | null;
+  character_name: string | null;
+  updated_at: string;
+  last_error: string | null;
+}

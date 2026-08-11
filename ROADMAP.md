@@ -50,9 +50,9 @@ para tener un molde consistente donde seguir incorporando contenido real.
       `/objetivos`, `/nosotros` — con contenido real donde ya existe el
       backend (calendario, torneos con link a start.gg, objetivos) y
       placeholder prolijo donde falta (jugadores/CFN, nosotros).
-- [ ] CFN tracker real (`/jugadores`): decisión técnica ya tomada
-      (Python + Playwright, ver `SPECS.md §12`) — implementación pendiente,
-      requiere reconstruir el flujo de login de Capcom empíricamente.
+- [x] CFN tracker real (`/jugadores`): implementado (Python + Playwright,
+      ver `SPECS.md §12`) — pendiente que Seba lo corra por primera vez con
+      sus credenciales reales, casi seguro necesita ajuste de selectores.
 
 ## Mediano plazo — Fase 2: Cara pública y comunidad
 

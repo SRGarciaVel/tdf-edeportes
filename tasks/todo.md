@@ -5,59 +5,43 @@
 
 ## Tarea actual
 
-Molde completo del sitio público (Fase 1.5) — COMPLETADA.
+CFN tracker real — COMPLETADO Y VERIFICADO contra los 8 perfiles reales.
 
-## Qué se hizo
+## Qué se hizo (resumen de todo el camino)
 
-- Dirección visual "Tactical Telemetry" (skill `industrial-brutalist-ui`,
-  ver `SPECS.md §11`): oscuro, tipografía Rajdhani (headings) + JetBrains
-  Mono (metadata/datos), acentos morado/magenta del club — sin mezclar con
-  el otro arquetipo del skill (Swiss Industrial Print).
-- `tailwind.config.js`: paleta ampliada (`tdf.charcoal`, `tdf.line`),
-  `fontFamily.display`/`fontFamily.mono`.
-- `src/index.css`: clases utilitarias `.hud-label` y `.hud-frame` (marco con
-  esquinas tipo panel táctico), reutilizadas en toda la web.
-- `src/components/Navbar.tsx`, `Footer.tsx`, `Layout.tsx`, `SectionLabel.tsx`:
-  layout compartido — antes cada página armaba su propio header suelto.
-- 6 páginas públicas nuevas/reorganizadas:
-  - `HomePage`: landing con foco en comunidad (no en torneos), próximo
-    evento destacado con datos reales.
-  - `CalendarioPage`: el calendario público, ahora en su propia ruta.
-  - `TorneosPage`: **datos reales**, no placeholder — filtra eventos
-    `type=torneo` de la API y linkea a su `external_url` (start.gg).
-  - `JugadoresPage`: placeholder con los 8 nombres/CFN IDs reales que pasó
-    Seba (4 TDF + 4 escena chilena), stats "Próximamente".
-  - `ObjetivosPage`: los objetivos trimestrales, en su propia ruta con
-    selector de año.
-  - `NosotrosPage`: misión del club ("comunidad primero") + staff real.
-- `App.tsx` reescrito con las 8 rutas totales (6 públicas + callback + dashboard).
-
-## Decisión de arquitectura documentada (no implementada todavía)
-
-CFN tracker (`SPECS.md §12`): Python + Playwright, no un microservicio en
-Go, para que Seba pueda mantener esa pieza sin depender de un lenguaje que
-no usa en el resto del proyecto. Queda como tarea propia, no bloqueante.
+1. Decisión técnica: Python + Playwright, no un microservicio en Go.
+2. Primer intento de login automático → bloqueado por CloudFront (403).
+3. Se sumó `playwright-stealth` + señales de navegador real → pasó el 403,
+   pero se topó con Cloudflare Turnstile en `auth.cid.capcom.com`.
+4. **Decisión deliberada: no se automatiza resolver Turnstile.** Se
+   pivoteó a reuso de sesión — Seba se loguea manualmente, exporta cookies
+   con Cookie-Editor a `backend/cfn_session.json` (gitignored).
+5. Con la sesión real cargada, `refresh_cfn.py` corrió contra los 8
+   jugadores sin error — encontró personaje principal de cada uno.
+6. Con los HTML reales de los 8 perfiles, se ajustaron los selectores de
+   extracción con precisión total (antes eran adivinados).
 
 ## Verificación real hecha
 
-- [x] `npm run build` (`tsc -b && vite build`) sin errores con las 6 páginas
-      nuevas + componentes de layout.
-- [x] `vite preview` sirviendo el build real: `GET /`, `GET /calendario`,
-      `GET /jugadores` devuelven 200 (fallback SPA funcionando para rutas
-      que no son archivos reales).
-- [ ] **Pendiente de confirmar por Seba:** revisión visual en el navegador —
-      no tengo browser headless disponible en este sandbox (Playwright
-      necesita descargar binarios de una CDN fuera de los dominios
-      permitidos acá), así que el build limpio es la verificación más fuerte
-      que puedo dar. Ojo particularmente a: que las fuentes de Google Fonts
-      carguen bien, que el menú mobile (hamburguesa) funcione, y que el link
-      de Discord en el footer sea el correcto (lo reconstruí de un texto con
-      salto de línea en una captura vieja — confirmar que sea
-      `discord.gg/t6gkWX6j6M` de verdad).
+- [x] Los 8 perfiles reales verificados con `lxml`/`cssselect` contra los
+      selectores exactos del código — personaje, MR y LP coinciden 100%
+      con lo visible en las capturas de Seba para los 8 jugadores.
+- [x] Caso `--- MR` (jugadores sin master rating numérico, ej. Drachen y
+      BF) manejado correctamente → `None`, no crashea.
+- [x] `npm run build` sin errores con `JugadoresPage.tsx` actualizado para
+      mostrar MR/LP en vez de esperar `league_rank` (que nunca llega —
+      Capcom lo renderiza como imagen, no texto).
+- [ ] **Pendiente:** correr `refresh_cfn.py` (sin `--debug`) una vez más
+      con los selectores ya ajustados, confirmar que el endpoint
+      `/cfn/players` sirve los datos reales, y que `/jugadores` en el
+      navegador se ve bien.
 
 ## Siguiente tarea
 
-A definir con Seba.
+Deploy real (Supabase + Render/Fly.io) — es lo que Seba dijo que seguía en
+cuanto "tuviéramos algo bueno" acá, y ya lo tenemos. **CONFIRMADO por
+Seba:** los 8 jugadores devuelven datos reales sin error
+(`refresh_cfn.py` corrido en su entorno, 10-08-2026).
 
 ## Checklist de verificación antes de marcar como completa
 
