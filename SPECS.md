@@ -286,7 +286,31 @@ league_points confirmados exactos contra las capturas de Seba). El rango
 en texto (`league_rank`) no se extrae — Capcom lo renderiza como imagen,
 sin nombre en el DOM; se prioriza mostrar MR/LP en su lugar.
 
-## 13. Deuda técnica conocida / decisiones pendientes
+## 13. Sistema de puntos — molde visual, sin mecánica real
+
+`/puntos` existe como página (podio top 3 + tabla completa), con datos
+placeholder — no hay ninguna acumulación real de puntos detrás todavía.
+
+**Confirmado por el CEO** (Fase 2 del levantamiento de requerimientos):
+"Minijuegos para rankeds de SF y canjes con TTS" — o sea, los puntos sí
+tienen vida real, no son solo un mockup permanente. Falta definir:
+
+- **Cómo se acumulan.** A diferencia del CFN tracker (que consulta un
+  perfil público), esto necesita trackear actividad de cada espectador en
+  tiempo real (tiempo viendo el stream, mensajes en el chat) — implica un
+  bot propio o una extensión de navegador (referencia: cómo lo resuelve
+  Elmiillor), no algo que se resuelva con un scrape puntual.
+- **Dónde se guardan.** Tabla de usuarios de Twitch con su saldo de
+  puntos — nueva pieza de modelo de datos, todavía no diseñada.
+- **Para qué sirven.** El CEO ya confirmó canjes con TTS como mecánica de
+  interés; falta el resto de la conversación con el staff sobre qué otros
+  canjes tiene sentido (ver también notas de rewards en el levantamiento
+  de requerimientos original).
+
+No se avanza en la implementación real hasta tener esa definición — el
+molde visual sirve para no bloquear el resto del sitio mientras tanto.
+
+## 14. Deuda técnica conocida / decisiones pendientes
 
 - Titularidad de la app de Twitch Developer Console: pendiente que el CEO
   decida si la registra con una cuenta institucional o se registra

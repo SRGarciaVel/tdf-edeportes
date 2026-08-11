@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import CommunityLinks from "./CommunityLinks";
 import LoginButton from "./LoginButton";
 
 const LINKS = [
@@ -9,6 +10,7 @@ const LINKS = [
   { to: "/jugadores", label: "Jugadores" },
   { to: "/objetivos", label: "Objetivos" },
   { to: "/nosotros", label: "Nosotros" },
+  { to: "/puntos", label: "Puntos" },
 ];
 
 export default function Navbar() {
@@ -37,7 +39,8 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-4">
+          <CommunityLinks />
           <LoginButton />
         </div>
 
@@ -65,6 +68,7 @@ export default function Navbar() {
             </NavLink>
           ))}
           <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
+            <CommunityLinks />
             <LoginButton />
           </div>
         </nav>

@@ -53,6 +53,14 @@ para tener un molde consistente donde seguir incorporando contenido real.
 - [x] CFN tracker real (`/jugadores`): implementado (Python + Playwright,
       ver `SPECS.md §12`) — pendiente que Seba lo corra por primera vez con
       sus credenciales reales, casi seguro necesita ajuste de selectores.
+- [x] Reproductor y chat de Twitch embebidos (video en el home, panel de
+      chat deslizable disponible en todo el sitio).
+- [x] Links a Liquipedia para jugadores de la escena chilena con perfil
+      competitivo propio.
+- [x] Chips de comunidad (Twitch/Discord/7TV) en el navbar.
+- [x] `/puntos`: molde visual (podio + tabla), sin mecánica real todavía —
+      ver `SPECS.md §13`, requiere definir con el CEO/staff cómo se
+      acumulan los puntos antes de implementar de verdad.
 
 ## Mediano plazo — Fase 2: Cara pública y comunidad
 
