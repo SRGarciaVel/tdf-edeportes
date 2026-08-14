@@ -5,8 +5,8 @@
 
 ## Tarea actual
 
-Cron del CFN tracker en producción (GitHub Actions) — implementado, sin
-probar en vivo todavía.
+Cron del CFN tracker en producción (GitHub Actions) — CONFIRMADO
+FUNCIONANDO EN VIVO.
 
 ## Qué se hizo
 
@@ -17,16 +17,27 @@ probar en vivo todavía.
 - YAML validado (y corregida la trampa clásica de `on:` interpretándose
   como booleano en vez de string — se puso entre comillas).
 - `SPECS.md §14` actualizado con la decisión.
+- **Bug real encontrado y corregido por Seba**: el secret `DATABASE_URL`
+  en GitHub tenía la URL de Postgres local (`db`, el nombre del servicio
+  en `docker-compose.yml`), no la de Supabase — corregido a mano en el
+  dashboard de GitHub (no requirió cambio de código, era un dato mal
+  cargado).
 
 ## Verificación real hecha
 
 - [x] Sintaxis YAML válida (`yaml.safe_load` sin errores, `on` confirmado
       como string, no booleano).
-- [ ] **Pendiente:** correr el workflow de verdad — necesita que Seba
-      cargue los secrets `CFN_SESSION_JSON` y `DATABASE_URL` en GitHub
-      (Settings del repo → Secrets and variables → Actions), y dispare una
-      corrida manual (`workflow_dispatch`) para confirmar antes de dejarlo
-      en piloto automático cada hora.
+- [x] **Corrida real en GitHub Actions, exitosa** (`workflow_dispatch`
+      manual): los 8 pasos con éxito, "Refrescar stats" completó en 49s.
+- [x] Confirmado el error real de un secret mal cargado (host `db` en vez
+      del de Supabase) — quedó como caso de aprendizaje, no bug de código.
+
+## Siguiente tarea
+
+A definir con Seba. Pendiente de Fase 1 que sigue abierto: el bullet de
+Discord (webhook, en pausa), branding real (en pausa). El sistema de
+puntos real queda esperando las respuestas del CEO al documento
+`TDF_Sistema_de_Puntos_Preguntas.docx`.
 
 ## PENDIENTE de Fase 1 (actualizado)
 

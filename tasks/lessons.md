@@ -354,3 +354,20 @@ tiene que pensar en términos de rango (`start_at` a `end_at`), no de una
 fecha puntual, desde el diseño inicial — se agregó `eventDateKeys()` como
 utilidad centralizada para esto, reusada en el grid del calendario y en la
 lista de eventos del día.
+
+## Un secret de GitHub Actions tenía la DATABASE_URL local, no la de Supabase
+
+**Qué pasó:** la primera corrida del cron en GitHub Actions falló con
+`could not translate host name "db"` — un error de conexión, pero contra
+un host que no existe fuera de Docker local.
+
+**Por qué:** al cargar el secret `DATABASE_URL` en GitHub, se pegó por
+error la URL de `docker-compose.yml` (`db`, el nombre del servicio de
+Postgres dentro de la red interna de Docker), en vez de la connection
+string real del Session pooler de Supabase.
+
+**Regla:** cuando un mismo nombre de variable (`DATABASE_URL`) tiene que
+cargarse en varios lugares (local `.env`, Render, GitHub Secrets), no dar
+por sentado que se copió el valor correcto a cada uno — confirmar
+explícitamente cuál de las 2-3 URLs posibles (local, Supabase directo,
+Supabase pooler) corresponde a cada destino antes de darlo por cargado.
