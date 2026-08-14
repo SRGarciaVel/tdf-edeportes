@@ -1,0 +1,36 @@
+name: Refrescar CFN tracker
+
+"on":
+  schedule:
+    # cada hora, en el minuto 0 (SPECS.md #12: cachear, no en vivo)
+    - cron: "0 * * * *"
+  workflow_dispatch: {} # permite correrlo a mano desde la pestaña Actions, útil para probar
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Instalar Chromium (Playwright)
+        run: playwright install --with-deps chromium
+
+      - name: Escribir la sesión de CFN
+        # backend/cfn_session.json es gitignored (son credenciales) — se
+        # reconstruye acá desde un secret de GitHub en cada corrida
+        run: echo '${{ secrets.CFN_SESSION_JSON }}' > cfn_session.json
+
+      - name: Refrescar stats
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/refresh_cfn.py

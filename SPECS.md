@@ -368,10 +368,14 @@ mensaje de error justo después de invocarlo) — nunca se reprodujo local.
 `--noEmit` hace el mismo chequeo de tipos sin el modo incremental, más
 simple y más predecible entre entornos.
 
-**CFN tracker en producción:** `backend/cfn_session.json` (credenciales de
-sesión, gitignored) no puede subir por git — en Render se sube como
-"Secret File" desde su dashboard. Todavía no configurado en producción
-(solo se probó local).
+**CFN tracker en producción:** cron via **GitHub Actions**
+(`.github/workflows/refresh-cfn.yml`), no Render Cron Job — la capa Free de
+Render no soporta "one-off jobs", y GitHub Actions es gratis para repos
+públicos sin ese límite. Corre cada hora, instala Chromium en cada corrida
+(no hay estado persistente entre ejecuciones, cada una es una VM nueva),
+reconstruye `cfn_session.json` desde el secret `CFN_SESSION_JSON` de
+GitHub (nunca se commitea) y usa el secret `DATABASE_URL` (Session pooler
+de Supabase) para escribir el resultado en la base real.
 
 ## 15. Deuda técnica conocida / decisiones pendientes
 
