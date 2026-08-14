@@ -310,7 +310,70 @@ tienen vida real, no son solo un mockup permanente. Falta definir:
 No se avanza en la implementación real hasta tener esa definición — el
 molde visual sirve para no bloquear el resto del sitio mientras tanto.
 
-## 14. Deuda técnica conocida / decisiones pendientes
+## 14. Deploy (staging)
+
+**Topología:** Supabase (Postgres) + Render (backend/API) + Vercel
+(frontend). Elegido sobre Fly.io por costo — Fly.io eliminó su capa
+gratuita en 2024, Render sigue siendo gratis de verdad (con límites:
+512MB RAM, se duerme a los 15 min sin tráfico, ~1 min de cold start).
+
+**URLs reales (staging):**
+- Frontend: `https://tdf-edeportes-gamma.vercel.app`
+- Backend: `https://tdf-edeportes-backend.onrender.com`
+- Base de datos: Supabase, proyecto `tdf-edeportes`, región São Paulo
+
+**Supabase — conexión:** usar el **Session pooler**, no "Direct
+connection". La conexión directa de Supabase resuelve solo por IPv6 salvo
+que se pague el add-on de IPv4, y muchos entornos (WSL2/Docker incluidos)
+no resuelven esos hosts — da `could not translate host name`. El Session
+pooler es compatible con IPv4 sin configuración extra. El usuario en esa
+connection string lleva el ID del proyecto pegado
+(`postgres.PROJECT_ID`, no solo `postgres`) — es así a propósito.
+
+**Render — variables de entorno del Web Service:** `DATABASE_URL` (Session
+pooler de Supabase), `JWT_SECRET` (uno nuevo, generado para producción —
+nunca reusar el de `.env` local), `JWT_EXPIRATION_MINUTES`,
+`TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_REDIRECT_URI` (con el
+dominio de Vercel), `DISCORD_WEBHOOK_URL` (vacío, sigue en pausa),
+`CORS_ORIGINS` (lista JSON con el dominio de Vercel).
+
+**Render — health check:** hay que fijar explícitamente el "Health Check
+Path" a `/health` en Settings del servicio. Por defecto Render pega a `/`,
+y como nuestra API no tenía nada ahí, devolvía 404 y Render mataba el
+contenedor en loop pensando que estaba caído — se agregó además un
+endpoint `GET /` de cortesía en `app/main.py` para no depender solo de esa
+configuración.
+
+**Render — límite conocido:** la capa Free no soporta "one-off jobs" según
+su propio dashboard — esto es relevante para cuando se configure el Cron
+Job del refresh de CFN (`scripts/refresh_cfn.py`), todavía no armado en
+producción. Puede requerir plan pago para esa pieza puntual, o buscar otra
+vuelta (ej. GitHub Actions con cron, pegándole al endpoint o corriendo el
+script aparte).
+
+**Vercel — configuración del proyecto:** Root Directory = `frontend`,
+Framework Preset = Vite, variable `VITE_API_URL` apuntando al backend de
+Render.
+
+**Vercel — SPA routing:** hace falta `frontend/vercel.json` con un rewrite
+de todas las rutas a `/index.html` — sin esto, cualquier navegación directa
+a una ruta de React Router que no sea `/` (recargar con F5, o Twitch
+redirigiendo a `/auth/callback`) da 404 servido por Vercel mismo, antes de
+que React tenga oportunidad de cargar.
+
+**Frontend — build command:** `tsc --noEmit && vite build`, no
+`tsc -b`. El modo `-b` (build/project references) de TypeScript falló en
+silencio en el entorno de build de Vercel (el log se cortaba sin ningún
+mensaje de error justo después de invocarlo) — nunca se reprodujo local.
+`--noEmit` hace el mismo chequeo de tipos sin el modo incremental, más
+simple y más predecible entre entornos.
+
+**CFN tracker en producción:** `backend/cfn_session.json` (credenciales de
+sesión, gitignored) no puede subir por git — en Render se sube como
+"Secret File" desde su dashboard. Todavía no configurado en producción
+(solo se probó local).
+
+## 15. Deuda técnica conocida / decisiones pendientes
 
 - Titularidad de la app de Twitch Developer Console: pendiente que el CEO
   decida si la registra con una cuenta institucional o se registra

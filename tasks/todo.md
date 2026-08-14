@@ -5,43 +5,50 @@
 
 ## Tarea actual
 
-CFN tracker real — COMPLETADO Y VERIFICADO contra los 8 perfiles reales.
+Deploy a staging (Supabase + Render + Vercel) — COMPLETADO Y EN VIVO.
 
-## Qué se hizo (resumen de todo el camino)
+## Qué se hizo
 
-1. Decisión técnica: Python + Playwright, no un microservicio en Go.
-2. Primer intento de login automático → bloqueado por CloudFront (403).
-3. Se sumó `playwright-stealth` + señales de navegador real → pasó el 403,
-   pero se topó con Cloudflare Turnstile en `auth.cid.capcom.com`.
-4. **Decisión deliberada: no se automatiza resolver Turnstile.** Se
-   pivoteó a reuso de sesión — Seba se loguea manualmente, exporta cookies
-   con Cookie-Editor a `backend/cfn_session.json` (gitignored).
-5. Con la sesión real cargada, `refresh_cfn.py` corrió contra los 8
-   jugadores sin error — encontró personaje principal de cada uno.
-6. Con los HTML reales de los 8 perfiles, se ajustaron los selectores de
-   extracción con precisión total (antes eran adivinados).
+- Repo publicado en GitHub (`SRGarciaVel/tdf-edeportes`, público).
+- Base de datos migrada a Supabase (Session pooler, no Direct connection).
+- Backend deployado en Render (`tdf-edeportes-backend.onrender.com`),
+  variables de entorno cargadas, health check corregido, endpoint raíz
+  agregado.
+- Frontend deployado en Vercel (`tdf-edeportes-gamma.vercel.app`), fix de
+  `tsc -b` → `tsc --noEmit`, `vercel.json` con rewrite de SPA.
+- Twitch OAuth funcionando en producción (Redirect URI agregada en el
+  Developer Console, `CORS_ORIGINS`/`TWITCH_REDIRECT_URI` actualizados en
+  Render).
+- Dos fixes post-deploy encontrados por Seba probando en vivo:
+  - Eventos de varios días ahora marcan todo el rango en el calendario
+    (`eventDateKeys()`), no solo el día de inicio.
+  - Layout del calendario: panel de eventos del día como sidebar sticky a
+    la derecha en desktop, en vez de debajo (requería scroll).
+- Documentación puesta al día en `SPECS.md §14` (topología completa de
+  deploy) y `tasks/lessons.md` (5 lecciones nuevas del proceso).
 
 ## Verificación real hecha
 
-- [x] Los 8 perfiles reales verificados con `lxml`/`cssselect` contra los
-      selectores exactos del código — personaje, MR y LP coinciden 100%
-      con lo visible en las capturas de Seba para los 8 jugadores.
-- [x] Caso `--- MR` (jugadores sin master rating numérico, ej. Drachen y
-      BF) manejado correctamente → `None`, no crashea.
-- [x] `npm run build` sin errores con `JugadoresPage.tsx` actualizado para
-      mostrar MR/LP en vez de esperar `league_rank` (que nunca llega —
-      Capcom lo renderiza como imagen, no texto).
-- [ ] **Pendiente:** correr `refresh_cfn.py` (sin `--debug`) una vez más
-      con los selectores ya ajustados, confirmar que el endpoint
-      `/cfn/players` sirve los datos reales, y que `/jugadores` en el
-      navegador se ve bien.
+- [x] Login con Twitch funcionando en producción de punta a punta
+      (confirmado por Seba con capturas).
+- [x] Calendario cargando eventos reales desde el backend en Render contra
+      la base de Supabase.
+- [x] `/jugadores` sirviendo datos reales del CFN tracker (probado antes
+      del deploy, no reconfirmado en producción todavía — el cron de
+      refresh no está armado en Render aún).
+- [x] Creación/edición de eventos desde producción (capturas de Seba
+      muestran el modal funcionando, evento "CEO 2026" creado y guardado).
+- [ ] **Pendiente:** cron de `refresh_cfn.py` en Render (bloqueado por el
+      límite de "one-off jobs" no soportados en el plan Free — ver
+      `SPECS.md §14`, necesita decisión: pagar esa pieza puntual, o buscar
+      alternativa tipo GitHub Actions).
+- [ ] **Pendiente:** que alguien del staff real (no Seba) pruebe el login
+      y el dashboard en producción — el bullet del roadmap pide "al menos
+      2 miembros del staff real".
 
 ## Siguiente tarea
 
-Deploy real (Supabase + Render/Fly.io) — es lo que Seba dijo que seguía en
-cuanto "tuviéramos algo bueno" acá, y ya lo tenemos. **CONFIRMADO por
-Seba:** los 8 jugadores devuelven datos reales sin error
-(`refresh_cfn.py` corrido en su entorno, 10-08-2026).
+A definir con Seba.
 
 ## Checklist de verificación antes de marcar como completa
 

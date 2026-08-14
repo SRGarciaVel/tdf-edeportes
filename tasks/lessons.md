@@ -253,3 +253,104 @@ terceros, analytics, polling), usar `wait_until="domcontentloaded"` en vez
 de `"networkidle"`, y esperar puntualmente por el elemento específico que
 se necesita con `locator.wait_for()` — es más rápido y más confiable que
 esperar a que toda la red se calle, que puede no pasar nunca.
+
+## El volumen anónimo de node_modules sobrevive a rebuilds con --no-cache
+
+**Qué pasó:** después de agregar `react-icons` a `package.json` y correr
+`docker compose build --no-cache frontend`, el contenedor seguía sin tener
+el paquete instalado — `Failed to resolve import "react-icons/si"`.
+
+**Por qué:** `docker-compose.yml` monta `/app/node_modules` como volumen
+anónimo (separado del bind mount de `./frontend:/app`) para que el
+`node_modules` de dentro del contenedor no se pise con el del host. Ese
+volumen se crea una vez y Docker Compose lo **reutiliza** en cada `up`,
+independientemente de que la imagen se reconstruya desde cero — el
+`node_modules` fresco que quedó en la imagen nueva nunca llega a verse,
+tapado por el volumen viejo.
+
+**Regla:** cuando se agrega/cambia una dependencia de `package.json`, el
+rebuild de imagen NO alcanza por sí solo — hace falta
+`docker compose up -d --force-recreate --renew-anon-volumes <servicio>`
+para que el volumen anónimo de `node_modules` también se recree. Nunca usar
+`docker compose down -v` para esto — borra también los volúmenes con
+nombre (como el de Postgres), no solo los anónimos.
+
+## Supabase "Direct connection" es solo IPv6 sin el add-on pago de IPv4
+
+**Qué pasó:** `alembic upgrade head` contra la connection string de "Direct
+connection" de Supabase dio `could not translate host name`, con
+credenciales correctas.
+
+**Por qué:** Supabase resuelve esa conexión solo por IPv6 salvo que se
+pague el add-on de IPv4 — y bastantes entornos (WSL2/Docker entre ellos) no
+tienen IPv6 bien configurado, así que el hostname nunca resuelve.
+
+**Regla:** usar siempre el **Session pooler** de Supabase para conexiones
+desde entornos que no garanticen IPv6 (prácticamente todos). El usuario de
+esa connection string lleva el ID del proyecto pegado
+(`postgres.PROJECT_ID`), es así a propósito, no es un error de copiado.
+
+## Render mata el contenedor en loop si el health check por defecto (`/`) da 404
+
+**Qué pasó:** el backend se desplegó bien ("Live"), pero el log mostraba
+"Shutting down" segundos después, en un ciclo — no era el sleep por
+inactividad (eso tarda 15 min).
+
+**Por qué:** Render pega por defecto a `/` para el health check. Nuestra
+API no tenía ningún endpoint ahí (solo `/health`), así que devolvía 404 y
+Render interpretaba eso como "el servicio no está sano".
+
+**Regla:** en cualquier deploy en Render, configurar explícitamente el
+"Health Check Path" en Settings a una ruta que sí devuelva 200 — y además,
+buena práctica general, que la API tenga *algo* en `/` (aunque sea un
+mensaje básico) para no depender de un solo punto de configuración externo.
+
+## `tsc -b` falla en silencio en el entorno de build de Vercel
+
+**Qué pasó:** el build de Vercel se cortaba sin ningún mensaje de error
+justo después de invocar `tsc -b`, tanto la primera vez como reintentando
+— nunca se reprodujo local ni en Docker.
+
+**Por qué:** no queda claro del todo (Vercel no dio ningún log adicional),
+pero `-b` es el modo de "project references" de TypeScript, pensado para
+proyectos con múltiples sub-proyectos — nuestro `tsconfig.json` es de un
+solo proyecto plano, así que usar `-b` era innecesariamente más complejo
+de lo que el proyecto necesita.
+
+**Regla:** usar `tsc --noEmit` para chequeo de tipos en el build de una
+SPA de un solo proyecto — hace lo mismo sin el modo incremental/build que
+resultó frágil entre entornos.
+
+## Una SPA en Vercel necesita un rewrite explícito o cualquier ruta que no sea "/" da 404
+
+**Qué pasó:** Twitch redirigía correctamente a
+`.../auth/callback?code=...`, pero Vercel devolvía su propio 404 antes de
+que React Router pudiera cargar la página.
+
+**Por qué:** Vercel sirve archivos estáticos — sin configuración adicional,
+busca un archivo real en `/auth/callback` (no existe, es una ruta que
+React Router resuelve en el navegador) y da 404 antes de servir
+`index.html`. Pasa con cualquier navegación "dura" a una ruta que no sea
+la raíz: F5 en `/calendario`, un link compartido directo, o un redirect
+externo como el de Twitch.
+
+**Regla:** cualquier SPA deployada en Vercel necesita un `vercel.json` con
+un rewrite de todas las rutas a `/index.html`:
+```json
+{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
+```
+
+## El calendario solo marcaba el día de inicio de un evento, ignorando el rango completo
+
+**Qué pasó:** un evento de varios días (ej. un torneo viernes a domingo)
+solo aparecía marcado en el calendario el día de inicio.
+
+**Por qué:** el agrupamiento de eventos por día comparaba únicamente
+`start_at` contra cada celda del calendario, sin considerar `end_at` para
+nada — ni en los puntos del calendario ni en la lista del día seleccionado.
+
+**Regla:** cualquier feature de calendario que muestre eventos "por día"
+tiene que pensar en términos de rango (`start_at` a `end_at`), no de una
+fecha puntual, desde el diseño inicial — se agregó `eventDateKeys()` como
+utilidad centralizada para esto, reusada en el grid del calendario y en la
+lista de eventos del día.

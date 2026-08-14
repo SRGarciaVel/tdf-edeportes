@@ -31,7 +31,10 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
       ver nota en `tasks/todo.md`).
 - [ ] Webhook saliente a Discord al crear/modificar evento.
 - [ ] Placeholder de branding en `docs/assets/` mientras llega el manual de marca.
-- [ ] Deploy inicial (staging) y prueba end-to-end con al menos 2 miembros del staff real.
+- [x] Deploy inicial (staging): Supabase (Postgres) + Render (backend) +
+      Vercel (frontend). Ver `SPECS.md §14` para topología y URLs reales.
+      Pendiente la "prueba end-to-end con al menos 2 miembros del staff
+      real" — solo Seba lo probó hasta ahora.
 
 ## Fase 1.5 — Molde de sitio público
 
