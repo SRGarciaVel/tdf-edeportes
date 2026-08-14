@@ -286,6 +286,52 @@ league_points confirmados exactos contra las capturas de Seba). El rango
 en texto (`league_rank`) no se extrae — Capcom lo renderiza como imagen,
 sin nombre en el DOM; se prioriza mostrar MR/LP en su lugar.
 
+### 12.1 Historial de partidas (win rate por rango de días) — en progreso
+
+Objetivo: mostrar win rate y personajes usados en las últimas 24h/72h por
+jugador, no solo el estado actual del perfil. Requiere datos partido por
+partido (personaje, rival, resultado, fecha), que viven en la pestaña
+"History" del perfil de Buckler's Boot Camp — una página/pestaña distinta
+a la que ya scrapeamos, con su propia estructura HTML todavía no vista.
+
+**Por qué se guarda en nuestra propia tabla y no se consulta en vivo:**
+Buckler's Boot Camp probablemente solo muestra las últimas N partidas — si
+alguien no juega seguido, "los últimos 3 días" podrían no estar completos
+en su página en el momento en que consultamos. Guardando cada partida que
+vemos, corrida a corrida del cron, armamos nuestro propio historial
+confiable con el tiempo, independiente de cuánta ventana muestre el sitio.
+
+**Modelo:** `cfn_matches` (`app/models/cfn_match.py`) — cfn_id, personaje
+usado, nombre y personaje del rival, resultado (`won`, nullable si no se
+pudo determinar), `played_at` (fecha real de la partida, no la fecha en
+que la guardamos). Constraint único en (`cfn_id`, `played_at`,
+`opponent_name`) para no duplicar la misma partida entre corridas del
+cron, que van a ver partidas repetidas cada vez que el sitio muestra su
+ventana de "últimas N".
+
+**Estado actual:** modelo, migración, y **extracción de partidas
+implementada y verificada** — los selectores se confirmaron exactos
+contra el HTML real de 10 partidas (fecha, rival, resultado, personaje
+propio y del rival), incluyendo el caso de cambio de personaje a mitad de
+sesión. La integración a `refresh_cfn.py` está probada de punta a punta
+contra Postgres real: primera corrida guarda las partidas nuevas, segunda
+corrida las reconoce como ya vistas y no duplica nada (constraint único
+por `cfn_id` + `played_at` + `opponent_name`).
+
+**Sin verificar todavía (necesita a Seba):** ~~que `get_match_history`
+corra contra el sitio real~~ — **CONFIRMADO:** corrida real completa
+contra el sitio en vivo, 80 partidas encontradas entre los 8 jugadores,
+guardadas sin error en Postgres (después de aplicar la migración pendiente
+también al Postgres local, que solo se había migrado en Supabase — ver
+`lessons.md`). Segunda corrida a confirmar que dedupe correctamente contra
+datos reales (ya se probó la lógica con datos mockeados, falta la
+confirmación en vivo).
+
+**Pendiente:** el endpoint de agregación
+(`GET /cfn/players/{id}/matches?days=N`, calculando win rate y conteo de
+personajes desde `cfn_matches`) y la UI del filtro de días — quedan para
+la siguiente sesión, tal como se planeó desde el principio de esta tarea.
+
 ## 13. Sistema de puntos — molde visual, sin mecánica real
 
 `/puntos` existe como página (podio top 3 + tabla completa), con datos

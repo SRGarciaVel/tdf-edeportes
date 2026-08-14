@@ -27,6 +27,7 @@ cada paso en `debug_output/` y ajustarlos contra lo real.
 import json
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from playwright.sync_api import BrowserContext, Page, TimeoutError as PlaywrightTimeout, sync_playwright
@@ -34,9 +35,17 @@ from playwright_stealth import Stealth
 
 logger = logging.getLogger(__name__)
 
+# el header del sitio muestra "UTC-4" (confirmado en captura) — se asume
+# que las fechas del historial de partidas están en ese huso
+_SITE_TIMEZONE = timezone(timedelta(hours=-4))
+
 BASE_URL = "https://www.streetfighter.com/6/buckler"
 PROFILE_AUTH_URL = f"{BASE_URL}/profile/auth"
 PROFILE_URL_TEMPLATE = BASE_URL + "/profile/{cfn_id}"
+# confirmado en el HTML real (history_01_after_click): la pestaña
+# "History" es un link directo, no un tab que se abre por JS — no hace
+# falta clickear nada, se navega derecho a esta URL
+BATTLELOG_URL_TEMPLATE = BASE_URL + "/profile/{cfn_id}/battlelog"
 
 # CFN de AckermanFG (Seba) — es la cuenta dueña de la sesión que se carga,
 # así que sirve para confirmar que el login "prendió" antes de consultar
@@ -195,10 +204,82 @@ def get_player_stats(context: BrowserContext, cfn_id: str, debug: bool = False) 
     return result
 
 
-def refresh_all_players(cfn_ids: list[str], debug: bool = False) -> list[dict]:
+def get_match_history(context: BrowserContext, cfn_id: str, debug: bool = False) -> list[dict]:
+    """Extrae las partidas de la primera página del historial
+    (/profile/{cfn_id}/battlelog). No pagina — la primera página alcanza
+    para calcular win rate de 1-3 días si el cron corre cada hora, no hace
+    falta ir más atrás.
+
+    Selectores confirmados contra HTML real (capturas de Seba, 11-08-2026):
+    cada partida vive en un contenedor con clase
+    `battle_data_inner_log__*`, con el nombre/fecha en
+    `battle_data_name_space__*` y el resultado + personaje propio en
+    `battle_data_player1__*` (el rival en `battle_data_player2__*`). El
+    resultado se lee de la clase CSS del contenedor player1
+    (`battle_data_win__*` / `battle_data_lose__*`), no del texto — más
+    confiable si el sitio cambia de idioma. El personaje sale del `alt`
+    de su imagen, no de texto visible.
+    """
+    page = context.new_page()
+    matches: list[dict] = []
+    try:
+        page.goto(
+            BATTLELOG_URL_TEMPLATE.format(cfn_id=cfn_id),
+            wait_until="domcontentloaded",
+            timeout=45000,
+        )
+        _debug_dump(page, f"battlelog_{cfn_id}", debug)
+
+        rows = page.locator('[class*="battle_data_inner_log__"]')
+        for i in range(rows.count()):
+            row = rows.nth(i)
+            try:
+                date_text = row.locator('[class*="battle_data_date__"]').inner_text(timeout=3000).strip()
+                played_at = datetime.strptime(date_text, "%m/%d/%Y %H:%M").replace(tzinfo=_SITE_TIMEZONE)
+
+                opponent_name = row.locator(
+                    '[class*="battle_data_name_p2__"] [class*="battle_data_name__"]'
+                ).inner_text(timeout=3000).strip()
+
+                p1 = row.locator('[class*="battle_data_player1__"]').first
+                p1_class = p1.get_attribute("class") or ""
+                won = True if "battle_data_win__" in p1_class else (
+                    False if "battle_data_lose__" in p1_class else None
+                )
+                character_name = p1.locator(
+                    '[class*="battle_data_character__"] img'
+                ).first.get_attribute("alt")
+
+                p2 = row.locator('[class*="battle_data_player2__"]').first
+                opponent_character = p2.locator(
+                    '[class*="battle_data_character__"] img'
+                ).first.get_attribute("alt")
+
+                matches.append(
+                    {
+                        "cfn_id": cfn_id,
+                        "played_at": played_at,
+                        "character_name": character_name,
+                        "opponent_name": opponent_name,
+                        "opponent_character": opponent_character,
+                        "won": won,
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001 — una fila rara no debe tirar abajo el resto
+                logger.warning("No se pudo parsear la partida %d de %s: %s", i, cfn_id, exc)
+                continue
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("get_match_history falló para %s: %s", cfn_id, exc)
+    finally:
+        page.close()
+    return matches
+
+
+def refresh_all_players(cfn_ids: list[str], debug: bool = False) -> tuple[list[dict], list[dict]]:
     """Carga la sesión guardada una sola vez y consulta todos los CFN IDs
     con ella — evita repetir el login (que ni siquiera se automatiza) por
-    jugador.
+    jugador. Devuelve (perfiles, partidas) — un solo browser/sesión para
+    ambos, no se abre una sesión aparte para el historial.
 
     `debug` solo controla si se guardan screenshots/HTML de cada paso en
     DEBUG_DIR — el navegador siempre corre headless. Un contenedor Docker
@@ -228,7 +309,11 @@ def refresh_all_players(cfn_ids: list[str], debug: bool = False) -> list[dict]:
         finally:
             page.close()
 
-        results = [get_player_stats(context, cfn_id, debug) for cfn_id in cfn_ids]
+        profiles = []
+        matches = []
+        for cfn_id in cfn_ids:
+            profiles.append(get_player_stats(context, cfn_id, debug))
+            matches.extend(get_match_history(context, cfn_id, debug))
 
         browser.close()
-        return results
+        return profiles, matches

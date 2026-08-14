@@ -5,52 +5,66 @@
 
 ## Tarea actual
 
-Cron del CFN tracker en producción (GitHub Actions) — CONFIRMADO
-FUNCIONANDO EN VIVO.
+Extracción de historial de partidas — COMPLETADA Y CONFIRMADA EN VIVO
+(80 partidas reales guardadas sin error).
 
-## Qué se hizo
+## Qué se hizo (resumen del camino completo)
 
-- `.github/workflows/refresh-cfn.yml`: corre `scripts/refresh_cfn.py`
-  cada hora vía GitHub Actions (Render Free no soporta cron jobs).
-  Reconstruye `cfn_session.json` desde el secret `CFN_SESSION_JSON`,
-  usa el secret `DATABASE_URL` (Session pooler de Supabase).
-- YAML validado (y corregida la trampa clásica de `on:` interpretándose
-  como booleano en vez de string — se puso entre comillas).
-- `SPECS.md §14` actualizado con la decisión.
-- **Bug real encontrado y corregido por Seba**: el secret `DATABASE_URL`
-  en GitHub tenía la URL de Postgres local (`db`, el nombre del servicio
-  en `docker-compose.yml`), no la de Supabase — corregido a mano en el
-  dashboard de GitHub (no requirió cambio de código, era un dato mal
-  cargado).
+1. Modelo `CFNMatch` + migración `cfn_matches` — verificado local.
+2. Primer intento de click en la pestaña "History" → falló por banner de
+   cookies interceptando clicks.
+3. Segundo intento (aceptando cookies + force=True) → el click "funcionaba"
+   pero clickeaba el "History" equivocado (mismo nombre de clase CSS
+   reusado en un menú del header, no en el tab del perfil).
+4. Se encontró que la pestaña es en realidad un link real
+   (`/profile/{cfn_id}/battlelog`) — se descartó el click por completo,
+   se navega directo.
+5. Con el HTML real de esa página, se escribió `get_match_history()` en
+   `cfn_scraper.py` — selectores exactos (fecha, rival, resultado por
+   clase CSS win/lose, personaje por atributo `alt` de imagen).
+6. `refresh_all_players()` ahora devuelve (perfiles, partidas) — una sola
+   sesión de navegador para ambos, no se duplica el costo de login.
+7. `refresh_cfn.py` guarda las partidas nuevas, saltea las repetidas
+   (mismo `cfn_id` + `played_at` + `opponent_name` = ya vista).
+8. Se eliminó `scripts/debug_cfn_history.py` y `dump_match_history_debug`
+   — ya cumplieron su función, dejarlos hubiera sido código muerto.
 
 ## Verificación real hecha
 
-- [x] Sintaxis YAML válida (`yaml.safe_load` sin errores, `on` confirmado
-      como string, no booleano).
-- [x] **Corrida real en GitHub Actions, exitosa** (`workflow_dispatch`
-      manual): los 8 pasos con éxito, "Refrescar stats" completó en 49s.
-- [x] Confirmado el error real de un secret mal cargado (host `db` en vez
-      del de Supabase) — quedó como caso de aprendizaje, no bug de código.
+- [x] Extracción probada con `lxml`/`cssselect` contra el HTML real de 10
+      partidas — los 10 resultados (fecha, WIN/LOSE, rival, personaje)
+      coinciden exactamente con la captura de pantalla de Seba, incluido
+      el cambio de personaje Jamie→Yasmine a mitad de sesión.
+- [x] `refresh_cfn.py` completo probado contra Postgres real con esos 10
+      partidos reales (mockeando solo el scraping en sí, no la lógica de
+      guardado): primera corrida guarda 10, segunda corrida detecta las
+      10 como ya vistas y no duplica — conteos de wins/loses/personajes
+      verificados exactos.
+
+## PENDIENTE — requiere que Seba lo corra en su entorno real
+
+```
+docker compose exec backend python scripts/refresh_cfn.py
+```
+
+Esta va a ser la primera corrida real de `get_match_history` contra el
+sitio en vivo (antes solo probamos con el HTML ya capturado). Si falla,
+mandar el error — puede que haya algo distinto entre el HTML estático que
+tengo y lo que carga en vivo (aunque no debería, ya que navegar directo a
+la URL es mucho más simple que lo que fallaba antes).
+
+Confirmar en la base:
+```
+docker compose exec db psql -U tdf -d tdf_edeportes -c "SELECT cfn_id, count(*) FROM cfn_matches GROUP BY cfn_id;"
+```
 
 ## Siguiente tarea
 
-A definir con Seba. Pendiente de Fase 1 que sigue abierto: el bullet de
-Discord (webhook, en pausa), branding real (en pausa). El sistema de
-puntos real queda esperando las respuestas del CEO al documento
-`TDF_Sistema_de_Puntos_Preguntas.docx`.
-
-## PENDIENTE de Fase 1 (actualizado)
-
-- [ ] **Pendiente:** cron de `refresh_cfn.py` en Render (bloqueado por el
-      límite de "one-off jobs" no soportados en el plan Free — ver
-      `SPECS.md §14`, necesita decisión: pagar esa pieza puntual, o buscar
-      alternativa tipo GitHub Actions).
-- [x] **Confirmado por Seba:** el login y el dashboard fueron probados en
-      producción y funcionan.
-
-## Siguiente tarea
-
-A definir con Seba.
+Con las partidas ya guardándose solas cada hora, **confirmado en
+producción-local** (80 partidas reales, 0 errores, deduplicación
+funcionando): el endpoint de agregación
+(`GET /cfn/players/{id}/matches?days=N`) y la UI del filtro de días en
+`/jugadores` — quedan para la próxima sesión.
 
 ## Checklist de verificación antes de marcar como completa
 

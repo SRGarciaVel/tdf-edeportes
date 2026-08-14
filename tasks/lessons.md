@@ -371,3 +371,93 @@ cargarse en varios lugares (local `.env`, Render, GitHub Secrets), no dar
 por sentado que se copió el valor correcto a cada uno — confirmar
 explícitamente cuál de las 2-3 URLs posibles (local, Supabase directo,
 Supabase pooler) corresponde a cada destino antes de darlo por cargado.
+
+## El banner de cookies (Cookiebot) bloquea clicks aunque ya no se vea en pantalla
+
+**Qué pasó:** `dump_match_history_debug` falló repetidas veces intentando
+clickear la pestaña "History" — Playwright encontraba el elemento
+correcto, pero distintos elementos (`intercepts pointer events`) tapaban
+el click cada vez que reintentaba.
+
+**Por qué:** la primera captura (antes del click) muestra el banner de
+consentimiento de cookies (Cookiebot) tapando buena parte de la página. En
+capturas posteriores ya no se ve, pero el DOM/la posición de otros
+elementos seguía interfiriendo con la coordenada del click — típico de un
+banner que "desaparece visualmente" (se desvanece, se scrollea) sin que su
+nodo deje de ocupar espacio o de interceptar eventos.
+
+**Regla:** en cualquier scraping de un sitio con banner de cookies,
+aceptarlo/cerrarlo explícitamente ANTES de intentar cualquier otra
+interacción — con un timeout corto y sin frenar el flujo si no aparece
+(algunos usuarios/sesiones ya lo tienen aceptado). Como red de seguridad
+adicional, si un click normal falla por intercepción después de eso,
+reintentar con `force=True` — válido acá porque ya se confirmó por
+capturas anteriores que el elemento es el correcto, no una adivinanza.
+
+## Un mismo nombre de clase CSS se repite en el header y en el contenido — el selector agarró el elemento equivocado
+
+**Qué pasó:** el click a "History" no tiraba error (con `force=True`
+"funcionaba"), pero la pantalla seguía mostrando la pestaña "Overview" —
+el click no estaba fallando, estaba clickeando otra cosa.
+
+**Por qué:** la clase `backler_header_text__yq0mF` se reutiliza en TODO
+el sitio, no solo en la barra de pestañas del perfil — también está en
+los ítems del menú desplegable "AVATAR ROOM" del header, que también
+tiene un link que dice "History" (pero es el historial de personalización
+del avatar, nada que ver). `get_by_text("History", exact=True).first`
+agarró el primero que aparece en el DOM, que resultó ser ese, no la
+pestaña del perfil.
+
+**La solución real, mejor que arreglar el selector:** inspeccionando el
+HTML se encontró que la pestaña "History" del perfil es en realidad un
+link con href real (`/profile/{cfn_id}/battlelog`), no un tab controlado
+por JS. Navegar directo ahí es más simple y más confiable que cualquier
+selector de texto — cero ambigüedad, cero problema de banners de cookies
+o elementos que interceptan el click.
+
+**Regla:** antes de simular un click en algo que "parece" un tab, revisar
+el HTML real primero — capaz es un link normal con URL propia, y navegar
+directo ahí es siempre más robusto que clickear. Y cuando un selector por
+texto sea ambiguo (mismo texto en varios lugares de la página), preferir
+algo más específico que ".first" a ciegas — `.first` toma lo que sea que
+aparezca primero en el DOM, no necesariamente lo que se ve primero en
+pantalla ni lo que uno tiene en mente.
+
+## La verificación con lxml/cssselect contra HTML real capturado sirve como red de seguridad antes de tocar producción
+
+**Qué pasó:** para `get_match_history()`, en vez de escribir los
+selectores y esperar a que Seba los probara en vivo (como pasó varias
+veces con el perfil), se probaron primero con `lxml`/`cssselect` contra el
+HTML real que ya había mandado — confirmando los 10 resultados exactos
+contra la captura de pantalla antes de integrar nada a `refresh_cfn.py`.
+
+**Por qué vale la pena como práctica:** cada iteración con Seba cuesta un
+build, un comando, y una vuelta de mensajes — cuando ya se tiene HTML real
+capturado (aunque sea de una corrida anterior con otro propósito), probar
+los selectores contra ese HTML estático con lxml antes de pedir otra
+corrida real ahorra una vuelta completa, y a veces dos.
+
+**Regla:** cuando exista HTML real ya capturado de un intento anterior
+(aunque haya sido para otra cosa), probar cualquier selector nuevo contra
+ese HTML con lxml/cssselect antes de pedirle a Seba que corra algo de
+nuevo — es gratis, rápido, y agarra errores de sintaxis/lógica del
+selector sin gastar una vuelta de ida y vuelta.
+
+## La migración se aplicó a Supabase pero no al Postgres local — dos bases, dos estados
+
+**Qué pasó:** `refresh_cfn.py` corriendo localmente (`docker compose exec
+backend ...`, sin override de `DATABASE_URL`) falló con
+`relation "cfn_matches" does not exist` — la tabla sí existía en Supabase
+(donde se corrió la migración con `-e DATABASE_URL=...`), pero nunca se
+aplicó al Postgres local del `docker-compose.yml`.
+
+**Por qué:** desde que el proyecto tiene dos bases (local para desarrollo,
+Supabase para producción), cada `alembic upgrade head` migra una sola de
+las dos según qué `DATABASE_URL` esté activo en ese momento — no hay nada
+que las mantenga sincronizadas automáticamente.
+
+**Regla:** cada vez que se genera una migración nueva, aplicarla
+explícitamente en **ambas** bases — el comando normal
+(`docker compose exec backend alembic upgrade head`) para local, y el
+comando con `-e DATABASE_URL=...` para Supabase — no asumir que una
+implica la otra.
