@@ -461,3 +461,26 @@ explícitamente en **ambas** bases — el comando normal
 (`docker compose exec backend alembic upgrade head`) para local, y el
 comando con `-e DATABASE_URL=...` para Supabase — no asumir que una
 implica la otra.
+
+## Archivos de debug se colaron a un repo público porque el .gitignore era demasiado específico
+
+**Qué pasó:** `git add -A` subió `debug_output/debug_output/history_*.html`
+y `.png` al repo público de GitHub — capturas y HTML de debug que nunca
+debieron commitearse.
+
+**Por qué:** el `.gitignore` tenía `backend/debug_output/`, pensado para
+cuando esa carpeta vive dentro de `backend/` (que es donde el propio
+código la crea, vía `DEBUG_DIR` en `cfn_scraper.py`). Pero
+`docker compose cp backend:/app/debug_output ./debug_output` se corrió
+parado en la raíz del repo, así que la copia local terminó en
+`~/tdf-edeportes/debug_output/` — una ruta que el patrón específico no
+cubría.
+
+**Regla:** para carpetas de artefactos/debug que pueden terminar en más de
+un lugar según desde dónde se corra un comando, usar un patrón de
+`.gitignore` sin prefijo de ruta (`debug_output/` en vez de
+`backend/debug_output/`) — cubre la carpeta sin importar en qué nivel
+aparezca. No es sensible en este caso (son capturas de pantalla, no
+credenciales), pero igual no debería vivir en el repo — repos públicos en
+particular no deberían acumular basura de debug, más si se usan de
+portafolio.

@@ -15,7 +15,9 @@ dist/
 
 # CFN tracker: sesión exportada manualmente, son credenciales (SPECS.md #12)
 backend/cfn_session.json
-backend/debug_output/
+# sin el prefijo backend/ — puede terminar en la raíz del repo según desde
+# dónde se corra `docker compose cp` (ver tasks/lessons.md)
+debug_output/
 
 # OS
 .DS_Store
