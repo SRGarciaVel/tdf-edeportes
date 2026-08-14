@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import { listCfnPlayers } from "../lib/api";
@@ -13,7 +13,7 @@ interface PlayerEntry {
 const TDF_PLAYERS: PlayerEntry[] = [
   { name: "Sirxtias", cfnId: "2844671427" },
   { name: "Drachen", cfnId: "2908057346" },
-  { name: "BazthyFreeman", cfnId: "4100957688" },
+  { name: "BF", cfnId: "4100957688" },
   { name: "AckermanFG", cfnId: "1733837998" },
 ];
 
@@ -26,11 +26,34 @@ const SCENE_PLAYERS: PlayerEntry[] = [
   { name: "Blaz", cfnId: "3381453962", liquipediaUrl: "https://liquipedia.net/fighters/Blaz" },
 ];
 
-function PlayerCard({ player, profile }: { player: PlayerEntry; profile?: CFNProfile }) {
+/** Ordena de mayor a menor LP — los que todavía no tienen stats quedan al
+ * final, en el orden original en que los definimos arriba. */
+function sortByLp(players: PlayerEntry[], profiles: Map<string, CFNProfile>): PlayerEntry[] {
+  return [...players].sort((a, b) => {
+    const lpA = profiles.get(a.cfnId)?.league_points ?? -1;
+    const lpB = profiles.get(b.cfnId)?.league_points ?? -1;
+    return lpB - lpA;
+  });
+}
+
+function PlayerCard({
+  player,
+  profile,
+  isTopMr,
+}: {
+  player: PlayerEntry;
+  profile?: CFNProfile;
+  isTopMr: boolean;
+}) {
   const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
 
   const content = (
     <>
+      {isTopMr && (
+        <span className="absolute -top-2 left-3 bg-tdf-dark px-2 font-mono text-[10px] uppercase text-tdf-magenta">
+          // Top MR
+        </span>
+      )}
       <div>
         <p className="font-semibold">{player.name}</p>
         <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
@@ -58,7 +81,8 @@ function PlayerCard({ player, profile }: { player: PlayerEntry; profile?: CFNPro
   );
 
   const className =
-    "hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between transition-all duration-200" +
+    "hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between transition-all duration-200 relative" +
+    (isTopMr ? " border-tdf-magenta" : "") +
     (player.liquipediaUrl
       ? " hover:border-tdf-magenta hover:shadow-[0_0_20px_-4px_rgba(196,20,122,0.7)] cursor-pointer"
       : "");
@@ -83,20 +107,57 @@ export default function JugadoresPage() {
       .catch(() => setProfiles(new Map()));
   }, []);
 
+  const sortedTdf = useMemo(() => sortByLp(TDF_PLAYERS, profiles), [profiles]);
+  const sortedScene = useMemo(() => sortByLp(SCENE_PLAYERS, profiles), [profiles]);
+
+  const topMrCfnId = useMemo(() => {
+    let best: { cfnId: string; mr: number } | null = null;
+    for (const p of profiles.values()) {
+      if (p.master_rating != null && (!best || p.master_rating > best.mr)) {
+        best = { cfnId: p.cfn_id, mr: p.master_rating };
+      }
+    }
+    return best?.cfnId ?? null;
+  }, [profiles]);
+
+  const mostPlayedCharacter = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of profiles.values()) {
+      if (!p.character_name) continue;
+      counts.set(p.character_name, (counts.get(p.character_name) ?? 0) + 1);
+    }
+    let best: { name: string; count: number } | null = null;
+    for (const [name, count] of counts) {
+      if (!best || count > best.count) best = { name, count };
+    }
+    return best;
+  }, [profiles]);
+
   return (
     <Layout>
       <SectionLabel index="05">Street Fighter 6 CFN</SectionLabel>
       <h1 className="text-3xl font-bold mb-2">Jugadores</h1>
-      <p className="text-gray-500 mb-10 max-w-xl">
+      <p className="text-gray-500 mb-2 max-w-xl">
         Rango, LP y personaje principal de la escena. Se actualiza cada
         hora, no en vivo.
       </p>
+      {mostPlayedCharacter && (
+        <p className="font-mono text-xs text-tdf-purple mb-10">
+          // El personaje más jugado del grupo: {mostPlayedCharacter.name} (
+          {mostPlayedCharacter.count} de {profiles.size})
+        </p>
+      )}
 
       <div className="mb-10">
         <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">TDF</h2>
         <div className="grid sm:grid-cols-2 gap-3">
-          {TDF_PLAYERS.map((p) => (
-            <PlayerCard key={p.cfnId} player={p} profile={profiles.get(p.cfnId)} />
+          {sortedTdf.map((p) => (
+            <PlayerCard
+              key={p.cfnId}
+              player={p}
+              profile={profiles.get(p.cfnId)}
+              isTopMr={p.cfnId === topMrCfnId}
+            />
           ))}
         </div>
       </div>
@@ -109,8 +170,13 @@ export default function JugadoresPage() {
           Click en una card para ver su perfil competitivo en Liquipedia →
         </p>
         <div className="grid sm:grid-cols-2 gap-3">
-          {SCENE_PLAYERS.map((p) => (
-            <PlayerCard key={p.cfnId} player={p} profile={profiles.get(p.cfnId)} />
+          {sortedScene.map((p) => (
+            <PlayerCard
+              key={p.cfnId}
+              player={p}
+              profile={profiles.get(p.cfnId)}
+              isTopMr={p.cfnId === topMrCfnId}
+            />
           ))}
         </div>
       </div>
