@@ -130,72 +130,74 @@ export default function CalendarioPage() {
 
       {loadError && <p className="text-red-400 text-sm mb-4">{loadError}</p>}
 
-      <MonthCalendar
-        year={year}
-        month={month}
-        events={events}
-        selectedKey={selectedKey}
-        onSelectDate={setSelectedKey}
-        onPrevMonth={goToPrevMonth}
-        onNextMonth={goToNextMonth}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+        <MonthCalendar
+          year={year}
+          month={month}
+          events={events}
+          selectedKey={selectedKey}
+          onSelectDate={setSelectedKey}
+          onPrevMonth={goToPrevMonth}
+          onNextMonth={goToNextMonth}
+        />
 
-      <div className="mt-6">
-        <h2 className="font-mono text-sm text-gray-400 mb-3">
-          {selectedKey} {loading && "(cargando...)"}
-        </h2>
-        {selectedDayEvents.length === 0 && !loading && (
-          <p className="text-sm text-gray-600">
-            Sin eventos {isStaff ? "" : "públicos "}este día.
-          </p>
-        )}
-        <ul className="flex flex-col gap-2">
-          {selectedDayEvents.map((event) => (
-            <li key={event.id}>
-              {isStaff ? (
-                <button
-                  onClick={() => openEditModal(event)}
-                  className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta w-full text-left px-4 py-3 flex items-center justify-between transition-colors"
-                >
-                  <div>
-                    <p className="font-medium">{event.title}</p>
-                    <p className="font-mono text-xs text-gray-500">
-                      {TYPE_LABEL[event.type]} ·{" "}
-                      {new Date(event.start_at).toLocaleTimeString("es-CL", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {event.visibility === "publico" && " · Público"}
-                    </p>
+        <div className="lg:sticky lg:top-20">
+          <h2 className="font-mono text-sm text-gray-400 mb-3">
+            {selectedKey} {loading && "(cargando...)"}
+          </h2>
+          {selectedDayEvents.length === 0 && !loading && (
+            <p className="text-sm text-gray-600">
+              Sin eventos {isStaff ? "" : "públicos "}este día.
+            </p>
+          )}
+          <ul className="flex flex-col gap-2">
+            {selectedDayEvents.map((event) => (
+              <li key={event.id}>
+                {isStaff ? (
+                  <button
+                    onClick={() => openEditModal(event)}
+                    className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta w-full text-left px-4 py-3 flex items-center justify-between transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium">{event.title}</p>
+                      <p className="font-mono text-xs text-gray-500">
+                        {TYPE_LABEL[event.type]} ·{" "}
+                        {new Date(event.start_at).toLocaleTimeString("es-CL", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        {event.visibility === "publico" && " · Público"}
+                      </p>
+                    </div>
+                  </button>
+                ) : (
+                  <div className="hud-frame bg-tdf-charcoal px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{event.title}</p>
+                      <p className="font-mono text-xs text-gray-500">
+                        {TYPE_LABEL[event.type]} ·{" "}
+                        {new Date(event.start_at).toLocaleTimeString("es-CL", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    {event.external_url && (
+                      <a
+                        href={event.external_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta underline"
+                      >
+                        Ver bracket →
+                      </a>
+                    )}
                   </div>
-                </button>
-              ) : (
-                <div className="hud-frame bg-tdf-charcoal px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{event.title}</p>
-                    <p className="font-mono text-xs text-gray-500">
-                      {TYPE_LABEL[event.type]} ·{" "}
-                      {new Date(event.start_at).toLocaleTimeString("es-CL", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  {event.external_url && (
-                    <a
-                      href={event.external_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta underline"
-                    >
-                      Ver bracket →
-                    </a>
-                  )}
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
 
       {modalOpen && (
