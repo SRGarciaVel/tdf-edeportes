@@ -1,3 +1,4 @@
+import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 
@@ -24,30 +25,6 @@ const PLACEHOLDER_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 10, username: "donjavierlive", points: 39500 },
 ];
 
-const AVATAR_COLORS = [
-  "bg-tdf-magenta",
-  "bg-tdf-purple",
-  "bg-emerald-700",
-  "bg-amber-700",
-  "bg-sky-700",
-];
-
-function avatarColor(username: string): string {
-  const sum = [...username].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
-}
-
-function InitialsAvatar({ username, size = 12 }: { username: string; size?: number }) {
-  return (
-    <div
-      className={`${avatarColor(username)} rounded-full flex items-center justify-center font-bold text-white shrink-0`}
-      style={{ width: size * 4, height: size * 4, fontSize: size * 1.3 }}
-    >
-      {username.slice(0, 2).toUpperCase()}
-    </div>
-  );
-}
-
 function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 3 }) {
   const isFirst = place === 1;
   return (
@@ -57,7 +34,7 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
       }`}
     >
       <span className="font-mono text-xs text-gray-500">#{place}</span>
-      <InitialsAvatar username={entry.username} size={isFirst ? 16 : 12} />
+      <InitialsAvatar seed={entry.username} size={isFirst ? 16 : 12} />
       <p className="font-semibold text-center">{entry.username}</p>
       <p className="font-mono text-tdf-magenta font-bold text-lg">
         {entry.points.toLocaleString("es-CL")}
@@ -103,7 +80,7 @@ export default function PuntosPage() {
               <tr key={entry.username} className="border-b border-tdf-line/60 last:border-0">
                 <td className="px-4 py-3 font-mono text-gray-500">{entry.rank}</td>
                 <td className="px-4 py-3 flex items-center gap-3">
-                  <InitialsAvatar username={entry.username} size={7} />
+                  <InitialsAvatar seed={entry.username} size={7} />
                   {entry.username}
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-tdf-magenta">

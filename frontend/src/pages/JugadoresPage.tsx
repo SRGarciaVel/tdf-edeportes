@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import { listCfnPlayers } from "../lib/api";
@@ -36,44 +37,74 @@ function sortByLp(players: PlayerEntry[], profiles: Map<string, CFNProfile>): Pl
   });
 }
 
+/** "hace 12 min" / "hace 3 h" / "hace 2 d" — a partir de updated_at. */
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "recién";
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days} d`;
+}
+
 function PlayerCard({
   player,
   profile,
   isTopMr,
+  maxLpInGroup,
 }: {
   player: PlayerEntry;
   profile?: CFNProfile;
   isTopMr: boolean;
+  maxLpInGroup: number;
 }) {
   const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
+  const lpBarPct =
+    hasStats && profile.league_points != null && maxLpInGroup > 0
+      ? Math.max(4, Math.round((profile.league_points / maxLpInGroup) * 100))
+      : 0;
 
   const content = (
     <>
       {isTopMr && (
-        <span className="absolute -top-2 left-3 bg-tdf-dark px-2 font-mono text-[10px] uppercase text-tdf-magenta">
+        <span className="absolute -top-2.5 left-3 bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-magenta z-10">
           // Top MR
         </span>
       )}
-      <div>
-        <p className="font-semibold">{player.name}</p>
-        <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
-        {hasStats && profile.character_name && (
-          <p className="font-mono text-xs text-tdf-purple mt-1">{profile.character_name}</p>
-        )}
+      <div className="flex items-center gap-3 min-w-0">
+        <InitialsAvatar seed={player.name} size={10} />
+        <div className="min-w-0">
+          <p className="font-semibold truncate">{player.name}</p>
+          <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
+          {hasStats && profile.character_name && (
+            <p className="font-mono text-xs text-tdf-purple mt-1">{profile.character_name}</p>
+          )}
+        </div>
       </div>
       {hasStats ? (
-        <div className="text-right">
+        <div className="text-right shrink-0">
           {profile.master_rating != null && (
             <span className="font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta/40 px-2 py-1">
               {profile.master_rating} MR
             </span>
           )}
           {profile.league_points != null && (
-            <p className="font-mono text-xs text-gray-500 mt-1">{profile.league_points} LP</p>
+            <>
+              <p className="font-mono text-xs text-gray-500 mt-1">{profile.league_points} LP</p>
+              <div className="w-24 h-1 bg-tdf-line mt-1 ml-auto overflow-hidden">
+                <div
+                  className="h-full bg-tdf-magenta"
+                  style={{ width: `${lpBarPct}%` }}
+                />
+              </div>
+            </>
           )}
+          <p className="font-mono text-[10px] text-gray-700 mt-1">{relativeTime(profile.updated_at)}</p>
         </div>
       ) : (
-        <span className="font-mono text-xs uppercase text-gray-600 border border-tdf-line px-2 py-1">
+        <span className="font-mono text-xs uppercase text-gray-600 border border-tdf-line px-2 py-1 shrink-0">
           Próximamente
         </span>
       )}
@@ -81,7 +112,7 @@ function PlayerCard({
   );
 
   const className =
-    "hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between transition-all duration-200 relative" +
+    "hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between gap-3 transition-all duration-200 relative" +
     (isTopMr ? " border-tdf-magenta" : "") +
     (player.liquipediaUrl
       ? " hover:border-tdf-magenta hover:shadow-[0_0_20px_-4px_rgba(196,20,122,0.7)] cursor-pointer"
@@ -109,6 +140,15 @@ export default function JugadoresPage() {
 
   const sortedTdf = useMemo(() => sortByLp(TDF_PLAYERS, profiles), [profiles]);
   const sortedScene = useMemo(() => sortByLp(SCENE_PLAYERS, profiles), [profiles]);
+
+  const maxLpTdf = useMemo(
+    () => Math.max(0, ...TDF_PLAYERS.map((p) => profiles.get(p.cfnId)?.league_points ?? 0)),
+    [profiles]
+  );
+  const maxLpScene = useMemo(
+    () => Math.max(0, ...SCENE_PLAYERS.map((p) => profiles.get(p.cfnId)?.league_points ?? 0)),
+    [profiles]
+  );
 
   const topMrCfnId = useMemo(() => {
     let best: { cfnId: string; mr: number } | null = null;
@@ -148,15 +188,16 @@ export default function JugadoresPage() {
         </p>
       )}
 
-      <div className="mb-10">
+      <div className="mb-14">
         <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">TDF</h2>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-2 gap-3 pt-3">
           {sortedTdf.map((p) => (
             <PlayerCard
               key={p.cfnId}
               player={p}
               profile={profiles.get(p.cfnId)}
               isTopMr={p.cfnId === topMrCfnId}
+              maxLpInGroup={maxLpTdf}
             />
           ))}
         </div>
@@ -166,16 +207,17 @@ export default function JugadoresPage() {
         <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">
           Escena chilena
         </h2>
-        <p className="font-mono text-[11px] text-gray-600 mb-3">
+        <p className="font-mono text-[11px] text-gray-600 mb-6">
           Click en una card para ver su perfil competitivo en Liquipedia →
         </p>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-2 gap-3 pt-3">
           {sortedScene.map((p) => (
             <PlayerCard
               key={p.cfnId}
               player={p}
               profile={profiles.get(p.cfnId)}
               isTopMr={p.cfnId === topMrCfnId}
+              maxLpInGroup={maxLpScene}
             />
           ))}
         </div>
