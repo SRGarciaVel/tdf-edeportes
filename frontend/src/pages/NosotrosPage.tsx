@@ -2,7 +2,7 @@ import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 
 const STAFF = [
-  { name: "BF", role: "CEO" },
+  { name: "BazthyFreeman", role: "CEO" },
   { name: "Chubi", role: "Artista" },
   { name: "Sirxtias", role: "Caster y Programación" },
   { name: "Drachen", role: "Contenido Multimedia" },
