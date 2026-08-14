@@ -1,4 +1,4 @@
-import { getMonthGrid, MONTH_NAMES, WEEKDAY_NAMES, dateKey } from "../lib/calendar";
+import { getMonthGrid, MONTH_NAMES, WEEKDAY_NAMES, dateKey, eventDateKeys } from "../lib/calendar";
 import type { EventItem } from "../lib/types";
 
 const TYPE_DOT_COLOR: Record<string, string> = {
@@ -32,10 +32,11 @@ export default function MonthCalendar({
 
   const eventsByDay = new Map<string, EventItem[]>();
   for (const event of events) {
-    const key = dateKey(new Date(event.start_at));
-    const list = eventsByDay.get(key) ?? [];
-    list.push(event);
-    eventsByDay.set(key, list);
+    for (const key of eventDateKeys(event.start_at, event.end_at)) {
+      const list = eventsByDay.get(key) ?? [];
+      list.push(event);
+      eventsByDay.set(key, list);
+    }
   }
 
   return (

@@ -4,7 +4,7 @@ import Layout from "../components/Layout";
 import MonthCalendar from "../components/MonthCalendar";
 import SectionLabel from "../components/SectionLabel";
 import { createEvent, deleteEvent, listEvents, updateEvent } from "../lib/api";
-import { dateKey } from "../lib/calendar";
+import { dateKey, eventDateKeys } from "../lib/calendar";
 import { useAuth } from "../lib/auth";
 import type { EventFormValues, EventItem } from "../lib/types";
 
@@ -55,7 +55,7 @@ export default function CalendarioPage() {
     () =>
       selectedKey
         ? events
-            .filter((e) => dateKey(new Date(e.start_at)) === selectedKey)
+            .filter((e) => selectedKey !== null && eventDateKeys(e.start_at, e.end_at).includes(selectedKey))
             .sort((a, b) => a.start_at.localeCompare(b.start_at))
         : [],
     [events, selectedKey]

@@ -13,6 +13,27 @@ export function dateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Todas las claves YYYY-MM-DD que cubre un evento, de start_at a end_at
+ * inclusive (por día calendario local, sin importar la hora exacta). Si no
+ * hay end_at, devuelve solo el día de inicio — mismo comportamiento que
+ * antes para eventos de un día. */
+export function eventDateKeys(startIso: string, endIso: string | null): string[] {
+  const start = new Date(startIso);
+  const end = endIso ? new Date(endIso) : start;
+
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+  const keys: string[] = [];
+  // tope de seguridad: nunca iterar más de un año, para no colgar el
+  // navegador si algún evento llega con end_at mal cargado muy lejos
+  for (let i = 0; cursor <= endDay && i < 366; i++) {
+    keys.push(dateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return keys;
+}
+
 /** Grilla de 42 celdas (6 semanas x 7 días, domingo a sábado) que cubre el
  * mes completo, con los días de relleno de los meses adyacentes. */
 export function getMonthGrid(year: number, month: number): CalendarCell[] {
