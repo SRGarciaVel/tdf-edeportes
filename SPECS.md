@@ -212,7 +212,7 @@ Fighter 6, tanto de TDF como de la escena chilena en general.
 
 **Jugadores a trackear (CFN ID numérico):**
 - TDF: Sirxtias `2844671427`, Drachen `2908057346`, BF `4100957688`,
-  AckermanFG `1733837998`
+  AckermanFG `1733837998`, TDF Super Ñema `1964247128`
 - Escena chilena: Younghou `1027356162`, Pochoclo23 `3987753314`,
   Craime `1009159858`, Blaz `3381453962`
 

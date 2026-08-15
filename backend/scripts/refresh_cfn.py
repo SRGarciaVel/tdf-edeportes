@@ -31,6 +31,7 @@ PLAYERS: dict[str, str] = {
     "2908057346": "Drachen",
     "4100957688": "BF",
     "1733837998": "AckermanFG",
+    "1964247128": "TDF Super Ñema",
     "1027356162": "Younghou",
     "3987753314": "Pochoclo23",
     "1009159858": "Craime",
