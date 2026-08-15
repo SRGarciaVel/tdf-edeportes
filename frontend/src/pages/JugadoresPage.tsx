@@ -17,6 +17,8 @@ const TDF_PLAYERS: PlayerEntry[] = [
   { name: "BazthyFreeman", cfnId: "4100957688" },
   { name: "AckermanFG", cfnId: "1733837998" },
   { name: "TDF Super Ñema", cfnId: "1964247128" },
+  { name: "Jager Eins", cfnId: "2281859090" },
+  { name: "Zackito", cfnId: "2449521700" },
 ];
 
 // los 4 tienen perfil propio en Liquipedia como jugadores competitivos —
