@@ -484,3 +484,24 @@ aparezca. No es sensible en este caso (son capturas de pantalla, no
 credenciales), pero igual no debería vivir en el repo — repos públicos en
 particular no deberían acumular basura de debug, más si se usan de
 portafolio.
+
+## Las 80 partidas reales se guardaron en Postgres local, no en Supabase — otra vez las dos bases
+
+**Qué pasó:** `/jugadores` en producción (Vercel + Render + Supabase) mostraba
+"Sin partidas en este período" incluso con el filtro en 7D, a pesar de que
+`refresh_cfn.py` había guardado 80 partidas reales sin error.
+
+**Por qué:** esa corrida se hizo con `docker compose exec backend python
+scripts/refresh_cfn.py`, sin el override `-e DATABASE_URL=...` de Supabase
+— exactamente el mismo patrón que ya había pasado con la migración de
+`cfn_matches` (ver lección anterior "La migración se aplicó a Supabase
+pero no al Postgres local"). Esta vez fue al revés: el comando escribió a
+local, y Supabase (lo que ve producción) se quedó sin los datos.
+
+**Regla:** cuando el objetivo es que un dato llegue a producción, correr
+el comando apuntando explícitamente a Supabase (`-e DATABASE_URL=...`), o
+mejor todavía — usar el mecanismo que ya está armado para eso: el workflow
+de GitHub Actions, que apunta a Supabase por diseño y no depende de
+acordarse de un flag a mano cada vez. Esta lección es la razón de fondo
+por la que vale la pena automatizar: un cron bien configurado no se
+equivoca de base, una persona corriendo el comando a mano sí puede.
