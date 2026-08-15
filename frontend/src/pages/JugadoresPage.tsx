@@ -16,7 +16,7 @@ const TDF_PLAYERS: PlayerEntry[] = [
   { name: "Drachen", cfnId: "2908057346" },
   { name: "BazthyFreeman", cfnId: "4100957688" },
   { name: "AckermanFG", cfnId: "1733837998" },
-  { name: "TDF Super Ñema", cfnId: "1964247128"},
+  { name: "TDF Super Ñema", cfnId: "1964247128" },
 ];
 
 // los 4 tienen perfil propio en Liquipedia como jugadores competitivos —
@@ -30,6 +30,10 @@ const SCENE_PLAYERS: PlayerEntry[] = [
 
 const ALL_PLAYERS = [...TDF_PLAYERS, ...SCENE_PLAYERS];
 const DAY_OPTIONS = [1, 3, 7] as const;
+// mínimo de partidas decididas para que alguien pueda ganar el KPI de
+// "mejor win rate" — sin esto, alguien con 1 partida jugada y 1-0 le
+// gana a todo el grupo con un "100%" que no dice nada
+const MIN_MATCHES_FOR_BEST_WR = 3;
 
 /** Ordena de mayor a menor LP — los que todavía no tienen stats quedan al
  * final, en el orden original en que los definimos arriba. */
@@ -51,6 +55,16 @@ function relativeTime(iso: string): string {
   if (hours < 24) return `hace ${hours} h`;
   const days = Math.floor(hours / 24);
   return `hace ${days} d`;
+}
+
+function KpiTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-1">
+      <span className="font-mono text-[10px] uppercase tracking-wider text-gray-500">{label}</span>
+      <span className="text-2xl font-bold text-white leading-none">{value}</span>
+      {sub && <span className="font-mono text-[11px] text-gray-600 truncate">{sub}</span>}
+    </div>
+  );
 }
 
 function MatchStatsRow({ stats }: { stats?: CFNMatchStats }) {
@@ -210,18 +224,48 @@ export default function JugadoresPage() {
     return best?.cfnId ?? null;
   }, [profiles]);
 
-  const mostPlayedCharacter = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of profiles.values()) {
-      if (!p.character_name) continue;
-      counts.set(p.character_name, (counts.get(p.character_name) ?? 0) + 1);
+  // KPIs del grupo para la ventana de días seleccionada — a diferencia
+  // del viejo "personaje más jugado" (que miraba el perfil actual, fijo),
+  // esto se recalcula solo cada vez que cambia el filtro de días.
+  const groupStats = useMemo(() => {
+    let totalMatches = 0;
+    let totalWins = 0;
+    let totalDecided = 0;
+    const characterCounts = new Map<string, number>();
+    let bestPlayer: { name: string; winRate: number; wins: number; losses: number } | null = null;
+
+    for (const player of ALL_PLAYERS) {
+      const stats = matchStats.get(player.cfnId);
+      if (!stats) continue;
+
+      totalMatches += stats.total_matches;
+      totalWins += stats.wins;
+      const decided = stats.wins + stats.losses;
+      totalDecided += decided;
+
+      for (const [char, count] of Object.entries(stats.characters)) {
+        characterCounts.set(char, (characterCounts.get(char) ?? 0) + count);
+      }
+
+      if (decided >= MIN_MATCHES_FOR_BEST_WR && stats.win_rate != null) {
+        if (!bestPlayer || stats.win_rate > bestPlayer.winRate) {
+          bestPlayer = { name: player.name, winRate: stats.win_rate, wins: stats.wins, losses: stats.losses };
+        }
+      }
     }
-    let best: { name: string; count: number } | null = null;
-    for (const [name, count] of counts) {
-      if (!best || count > best.count) best = { name, count };
+
+    let topCharacter: { name: string; count: number } | null = null;
+    for (const [name, count] of characterCounts) {
+      if (!topCharacter || count > topCharacter.count) topCharacter = { name, count };
     }
-    return best;
-  }, [profiles]);
+
+    return {
+      totalMatches,
+      groupWinRate: totalDecided > 0 ? totalWins / totalDecided : null,
+      topCharacter,
+      bestPlayer,
+    };
+  }, [matchStats]);
 
   return (
     <Layout>
@@ -244,17 +288,33 @@ export default function JugadoresPage() {
           ))}
         </div>
       </div>
-      <p className="text-gray-500 mb-2 max-w-xl">
+      <p className="text-gray-500 mb-6 max-w-xl">
         Rango, LP y personaje principal de la escena. Se actualiza cada
-        hora, no en vivo. El win rate y los personajes de abajo de cada
-        card son de los últimos {days} día{days > 1 ? "s" : ""}.
+        hora, no en vivo. Los KPIs y las cards de abajo son de los
+        últimos {days} día{days > 1 ? "s" : ""}.
       </p>
-      {mostPlayedCharacter && (
-        <p className="font-mono text-xs text-tdf-purple mb-10">
-          // El personaje más jugado del grupo: {mostPlayedCharacter.name} (
-          {mostPlayedCharacter.count} de {profiles.size})
-        </p>
-      )}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
+        <KpiTile
+          label="Personaje del grupo"
+          value={groupStats.topCharacter?.name ?? "—"}
+          sub={groupStats.topCharacter ? `${groupStats.topCharacter.count} partidas` : undefined}
+        />
+        <KpiTile label="Partidas trackeadas" value={String(groupStats.totalMatches)} />
+        <KpiTile
+          label="Win rate del grupo"
+          value={groupStats.groupWinRate != null ? `${Math.round(groupStats.groupWinRate * 100)}%` : "—"}
+        />
+        <KpiTile
+          label="Mejor win rate"
+          value={groupStats.bestPlayer ? `${Math.round(groupStats.bestPlayer.winRate * 100)}%` : "—"}
+          sub={
+            groupStats.bestPlayer
+              ? `${groupStats.bestPlayer.name} (${groupStats.bestPlayer.wins}W-${groupStats.bestPlayer.losses}L)`
+              : `mín. ${MIN_MATCHES_FOR_BEST_WR} partidas`
+          }
+        />
+      </div>
 
       <div className="mb-14">
         <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">TDF</h2>
