@@ -54,3 +54,13 @@ export interface CFNProfile {
   updated_at: string;
   last_error: string | null;
 }
+
+export interface CFNMatchStats {
+  cfn_id: string;
+  days: number;
+  total_matches: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  characters: Record<string, number>;
+}

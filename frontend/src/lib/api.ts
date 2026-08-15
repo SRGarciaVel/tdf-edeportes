@@ -4,6 +4,7 @@ import type {
   QuarterlyGoal,
   User,
   CFNProfile,
+  CFNMatchStats,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -127,4 +128,9 @@ export async function listGoals(year?: number): Promise<QuarterlyGoal[]> {
 export async function listCfnPlayers(): Promise<CFNProfile[]> {
   const res = await fetch(`${API_URL}/cfn/players`);
   return parseOrThrow<CFNProfile[]>(res);
+}
+
+export async function getMatchStats(cfnId: string, days: number): Promise<CFNMatchStats> {
+  const res = await fetch(`${API_URL}/cfn/players/${cfnId}/matches?days=${days}`);
+  return parseOrThrow<CFNMatchStats>(res);
 }

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
-import { listCfnPlayers } from "../lib/api";
-import type { CFNProfile } from "../lib/types";
+import { getMatchStats, listCfnPlayers } from "../lib/api";
+import type { CFNMatchStats, CFNProfile } from "../lib/types";
 
 interface PlayerEntry {
   name: string;
@@ -27,6 +27,9 @@ const SCENE_PLAYERS: PlayerEntry[] = [
   { name: "Blaz", cfnId: "3381453962", liquipediaUrl: "https://liquipedia.net/fighters/Blaz" },
 ];
 
+const ALL_PLAYERS = [...TDF_PLAYERS, ...SCENE_PLAYERS];
+const DAY_OPTIONS = [1, 3, 7] as const;
+
 /** Ordena de mayor a menor LP — los que todavía no tienen stats quedan al
  * final, en el orden original en que los definimos arriba. */
 function sortByLp(players: PlayerEntry[], profiles: Map<string, CFNProfile>): PlayerEntry[] {
@@ -49,16 +52,45 @@ function relativeTime(iso: string): string {
   return `hace ${days} d`;
 }
 
+function MatchStatsRow({ stats }: { stats?: CFNMatchStats }) {
+  if (!stats || stats.total_matches === 0) {
+    return (
+      <p className="font-mono text-[11px] text-gray-700 border-t border-tdf-line/60 mt-3 pt-2">
+        Sin partidas en este período
+      </p>
+    );
+  }
+
+  const characterList = Object.entries(stats.characters)
+    .map(([name, count]) => `${name} x${count}`)
+    .join(", ");
+
+  return (
+    <div className="font-mono text-[11px] text-gray-500 border-t border-tdf-line/60 mt-3 pt-2 flex flex-wrap items-center gap-x-2">
+      <span className="text-white">
+        {stats.wins}W-{stats.losses}L
+      </span>
+      {stats.win_rate != null && (
+        <span className="text-tdf-magenta">{Math.round(stats.win_rate * 100)}% WR</span>
+      )}
+      <span className="text-gray-600">·</span>
+      <span>{characterList}</span>
+    </div>
+  );
+}
+
 function PlayerCard({
   player,
   profile,
   isTopMr,
   maxLpInGroup,
+  matchStats,
 }: {
   player: PlayerEntry;
   profile?: CFNProfile;
   isTopMr: boolean;
   maxLpInGroup: number;
+  matchStats?: CFNMatchStats;
 }) {
   const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
   const lpBarPct =
@@ -73,46 +105,46 @@ function PlayerCard({
           // Top MR
         </span>
       )}
-      <div className="flex items-center gap-3 min-w-0">
-        <InitialsAvatar seed={player.name} size={10} />
-        <div className="min-w-0">
-          <p className="font-semibold truncate">{player.name}</p>
-          <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
-          {hasStats && profile.character_name && (
-            <p className="font-mono text-xs text-tdf-purple mt-1">{profile.character_name}</p>
-          )}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <InitialsAvatar seed={player.name} size={10} />
+          <div className="min-w-0">
+            <p className="font-semibold truncate">{player.name}</p>
+            <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
+            {hasStats && profile.character_name && (
+              <p className="font-mono text-xs text-tdf-purple mt-1">{profile.character_name}</p>
+            )}
+          </div>
         </div>
+        {hasStats ? (
+          <div className="text-right shrink-0">
+            {profile.master_rating != null && (
+              <span className="font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta/40 px-2 py-1">
+                {profile.master_rating} MR
+              </span>
+            )}
+            {profile.league_points != null && (
+              <>
+                <p className="font-mono text-xs text-gray-500 mt-1">{profile.league_points} LP</p>
+                <div className="w-24 h-1 bg-tdf-line mt-1 ml-auto overflow-hidden">
+                  <div className="h-full bg-tdf-magenta" style={{ width: `${lpBarPct}%` }} />
+                </div>
+              </>
+            )}
+            <p className="font-mono text-[10px] text-gray-700 mt-1">{relativeTime(profile.updated_at)}</p>
+          </div>
+        ) : (
+          <span className="font-mono text-xs uppercase text-gray-600 border border-tdf-line px-2 py-1 shrink-0">
+            Próximamente
+          </span>
+        )}
       </div>
-      {hasStats ? (
-        <div className="text-right shrink-0">
-          {profile.master_rating != null && (
-            <span className="font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta/40 px-2 py-1">
-              {profile.master_rating} MR
-            </span>
-          )}
-          {profile.league_points != null && (
-            <>
-              <p className="font-mono text-xs text-gray-500 mt-1">{profile.league_points} LP</p>
-              <div className="w-24 h-1 bg-tdf-line mt-1 ml-auto overflow-hidden">
-                <div
-                  className="h-full bg-tdf-magenta"
-                  style={{ width: `${lpBarPct}%` }}
-                />
-              </div>
-            </>
-          )}
-          <p className="font-mono text-[10px] text-gray-700 mt-1">{relativeTime(profile.updated_at)}</p>
-        </div>
-      ) : (
-        <span className="font-mono text-xs uppercase text-gray-600 border border-tdf-line px-2 py-1 shrink-0">
-          Próximamente
-        </span>
-      )}
+      <MatchStatsRow stats={matchStats} />
     </>
   );
 
   const className =
-    "hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between gap-3 transition-all duration-200 relative" +
+    "hud-frame bg-tdf-charcoal px-5 py-4 flex flex-col transition-all duration-200 relative" +
     (isTopMr ? " border-tdf-magenta" : "") +
     (player.liquipediaUrl
       ? " hover:border-tdf-magenta hover:shadow-[0_0_20px_-4px_rgba(196,20,122,0.7)] cursor-pointer"
@@ -131,12 +163,29 @@ function PlayerCard({
 
 export default function JugadoresPage() {
   const [profiles, setProfiles] = useState<Map<string, CFNProfile>>(new Map());
+  const [matchStats, setMatchStats] = useState<Map<string, CFNMatchStats>>(new Map());
+  // 7 días por defecto: las partidas más recientes que tenemos guardadas
+  // hoy son de hace unos días — con 1 día por defecto la página se vería
+  // vacía hasta que se acumulen partidas más nuevas con el cron.
+  const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(7);
 
   useEffect(() => {
     listCfnPlayers()
       .then((data) => setProfiles(new Map(data.map((p) => [p.cfn_id, p]))))
       .catch(() => setProfiles(new Map()));
   }, []);
+
+  useEffect(() => {
+    Promise.all(ALL_PLAYERS.map((p) => getMatchStats(p.cfnId, days).catch(() => null)))
+      .then((results) => {
+        const map = new Map<string, CFNMatchStats>();
+        results.forEach((stats, i) => {
+          if (stats) map.set(ALL_PLAYERS[i].cfnId, stats);
+        });
+        setMatchStats(map);
+      })
+      .catch(() => setMatchStats(new Map()));
+  }, [days]);
 
   const sortedTdf = useMemo(() => sortByLp(TDF_PLAYERS, profiles), [profiles]);
   const sortedScene = useMemo(() => sortByLp(SCENE_PLAYERS, profiles), [profiles]);
@@ -176,10 +225,28 @@ export default function JugadoresPage() {
   return (
     <Layout>
       <SectionLabel index="05">Street Fighter 6 CFN</SectionLabel>
-      <h1 className="text-3xl font-bold mb-2">Jugadores</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
+        <h1 className="text-3xl font-bold">Jugadores</h1>
+        <div className="flex gap-2 font-mono text-xs">
+          {DAY_OPTIONS.map((d) => (
+            <button
+              key={d}
+              onClick={() => setDays(d)}
+              className={`px-3 py-1 border transition-colors ${
+                days === d
+                  ? "border-tdf-magenta text-tdf-magenta"
+                  : "border-tdf-line text-gray-500 hover:text-white"
+              }`}
+            >
+              {d}D
+            </button>
+          ))}
+        </div>
+      </div>
       <p className="text-gray-500 mb-2 max-w-xl">
         Rango, LP y personaje principal de la escena. Se actualiza cada
-        hora, no en vivo.
+        hora, no en vivo. El win rate y los personajes de abajo de cada
+        card son de los últimos {days} día{days > 1 ? "s" : ""}.
       </p>
       {mostPlayedCharacter && (
         <p className="font-mono text-xs text-tdf-purple mb-10">
@@ -198,6 +265,7 @@ export default function JugadoresPage() {
               profile={profiles.get(p.cfnId)}
               isTopMr={p.cfnId === topMrCfnId}
               maxLpInGroup={maxLpTdf}
+              matchStats={matchStats.get(p.cfnId)}
             />
           ))}
         </div>
@@ -218,6 +286,7 @@ export default function JugadoresPage() {
               profile={profiles.get(p.cfnId)}
               isTopMr={p.cfnId === topMrCfnId}
               maxLpInGroup={maxLpScene}
+              matchStats={matchStats.get(p.cfnId)}
             />
           ))}
         </div>

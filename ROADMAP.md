@@ -56,8 +56,9 @@ para tener un molde consistente donde seguir incorporando contenido real.
 - [x] CFN tracker real (`/jugadores`): implementado (Python + Playwright,
       ver `SPECS.md §12`) — pendiente que Seba lo corra por primera vez con
       sus credenciales reales, casi seguro necesita ajuste de selectores.
-- [ ] Historial de partidas / win rate por rango de días (`SPECS.md §12.1`)
-      — modelo y migración listos, extracción esperando dump de HTML real.
+- [x] Historial de partidas / win rate por rango de días (`SPECS.md §12.1`)
+      — COMPLETADO: extracción, guardado, endpoint de agregación y UI del
+      filtro 1D/3D/7D en `/jugadores`, todo probado contra datos reales.
 - [x] Reproductor y chat de Twitch embebidos (video en el home, panel de
       chat deslizable disponible en todo el sitio).
 - [x] Links a Liquipedia para jugadores de la escena chilena con perfil

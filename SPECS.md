@@ -327,10 +327,17 @@ también al Postgres local, que solo se había migrado en Supabase — ver
 datos reales (ya se probó la lógica con datos mockeados, falta la
 confirmación en vivo).
 
-**Pendiente:** el endpoint de agregación
-(`GET /cfn/players/{id}/matches?days=N`, calculando win rate y conteo de
-personajes desde `cfn_matches`) y la UI del filtro de días — quedan para
-la siguiente sesión, tal como se planeó desde el principio de esta tarea.
+**Pendiente:** ~~el endpoint de agregación... y la UI del filtro de
+días~~ — **COMPLETADO:** `GET /cfn/players/{id}/matches?days=N` (público,
+sin auth, valida `days` entre 1 y 30) agrega win rate y conteo de
+personajes desde `cfn_matches`. Probado contra Postgres real con datos
+sembrados a propósito en distintas ventanas de tiempo (1/3/30 días), y el
+cliente TS del frontend (`getMatchStats`) probado end-to-end contra el
+backend real. En `/jugadores` se agregó un selector 1D/3D/7D y una línea
+de W-L/win rate/personajes por card, debajo de los datos de perfil que ya
+había. Default del selector en 7 días (no 1) porque las partidas más
+recientes que hay guardadas hoy tienen unos días — con 1 día por defecto
+la página se vería vacía hasta que se acumulen partidas más nuevas.
 
 ## 13. Sistema de puntos — molde visual, sin mecánica real
 
