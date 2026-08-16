@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
+import MatchHistoryModal from "../components/MatchHistoryModal";
 import SectionLabel from "../components/SectionLabel";
 import { getMatchStats, listCfnPlayers } from "../lib/api";
 import type { CFNMatchStats, CFNProfile } from "../lib/types";
@@ -69,7 +70,13 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub?: st
   );
 }
 
-function MatchStatsRow({ stats }: { stats?: CFNMatchStats }) {
+function MatchStatsRow({
+  stats,
+  onOpenHistory,
+}: {
+  stats?: CFNMatchStats;
+  onOpenHistory: (e: React.MouseEvent) => void;
+}) {
   if (!stats || stats.total_matches === 0) {
     return (
       <p className="font-mono text-[11px] text-gray-700 border-t border-tdf-line/60 mt-3 pt-2">
@@ -78,20 +85,34 @@ function MatchStatsRow({ stats }: { stats?: CFNMatchStats }) {
     );
   }
 
-  const characterList = Object.entries(stats.characters)
-    .map(([name, count]) => `${name} x${count}`)
-    .join(", ");
+  // se trunca a los 3 personajes más usados — con jugadores que rotan
+  // mucho de personaje, la lista completa en una sola línea se volvía
+  // ilegible (ver lessons.md); el detalle completo vive en el modal
+  const entries = Object.entries(stats.characters);
+  const topThree = entries.slice(0, 3);
+  const rest = entries.length - topThree.length;
+  const characterList =
+    topThree.map(([name, count]) => `${name} x${count}`).join(", ") +
+    (rest > 0 ? ` +${rest} más` : "");
 
   return (
-    <div className="font-mono text-[11px] text-gray-500 border-t border-tdf-line/60 mt-3 pt-2 flex flex-wrap items-center gap-x-2">
-      <span className="text-white">
-        {stats.wins}W-{stats.losses}L
-      </span>
-      {stats.win_rate != null && (
-        <span className="text-tdf-magenta">{Math.round(stats.win_rate * 100)}% WR</span>
-      )}
-      <span className="text-gray-600">·</span>
-      <span>{characterList}</span>
+    <div className="font-mono text-[11px] text-gray-500 border-t border-tdf-line/60 mt-3 pt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-2">
+        <span className="text-white">
+          {stats.wins}W-{stats.losses}L
+        </span>
+        {stats.win_rate != null && (
+          <span className="text-tdf-magenta">{Math.round(stats.win_rate * 100)}% WR</span>
+        )}
+        <span className="text-gray-600">·</span>
+        <span>{characterList}</span>
+      </div>
+      <button
+        onClick={onOpenHistory}
+        className="text-tdf-purple hover:text-tdf-magenta transition-colors shrink-0"
+      >
+        Ver partidas →
+      </button>
     </div>
   );
 }
@@ -102,18 +123,29 @@ function PlayerCard({
   isTopMr,
   maxLpInGroup,
   matchStats,
+  onOpenHistory,
 }: {
   player: PlayerEntry;
   profile?: CFNProfile;
   isTopMr: boolean;
   maxLpInGroup: number;
   matchStats?: CFNMatchStats;
+  onOpenHistory: (player: PlayerEntry) => void;
 }) {
   const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
   const lpBarPct =
     hasStats && profile.league_points != null && maxLpInGroup > 0
       ? Math.max(4, Math.round((profile.league_points / maxLpInGroup) * 100))
       : 0;
+
+  // stopPropagation + preventDefault: las cards de la escena chilena son
+  // un <a> completo hacia Liquipedia — sin esto, el botón "Ver partidas"
+  // de adentro dispararía también la navegación externa
+  const handleOpenHistory = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onOpenHistory(player);
+  };
 
   const content = (
     <>
@@ -156,7 +188,7 @@ function PlayerCard({
           </span>
         )}
       </div>
-      <MatchStatsRow stats={matchStats} />
+      <MatchStatsRow stats={matchStats} onOpenHistory={handleOpenHistory} />
     </>
   );
 
@@ -185,6 +217,7 @@ export default function JugadoresPage() {
   // hoy son de hace unos días — con 1 día por defecto la página se vería
   // vacía hasta que se acumulen partidas más nuevas con el cron.
   const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(7);
+  const [historyPlayer, setHistoryPlayer] = useState<PlayerEntry | null>(null);
 
   useEffect(() => {
     listCfnPlayers()
@@ -329,6 +362,7 @@ export default function JugadoresPage() {
               isTopMr={p.cfnId === topMrCfnId}
               maxLpInGroup={maxLpTdf}
               matchStats={matchStats.get(p.cfnId)}
+              onOpenHistory={setHistoryPlayer}
             />
           ))}
         </div>
@@ -350,10 +384,20 @@ export default function JugadoresPage() {
               isTopMr={p.cfnId === topMrCfnId}
               maxLpInGroup={maxLpScene}
               matchStats={matchStats.get(p.cfnId)}
+              onOpenHistory={setHistoryPlayer}
             />
           ))}
         </div>
       </div>
+
+      {historyPlayer && (
+        <MatchHistoryModal
+          playerName={historyPlayer.name}
+          cfnId={historyPlayer.cfnId}
+          days={days}
+          onClose={() => setHistoryPlayer(null)}
+        />
+      )}
     </Layout>
   );
 }

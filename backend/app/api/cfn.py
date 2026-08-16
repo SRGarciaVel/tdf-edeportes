@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models import CFNMatch, CFNProfile
-from app.schemas.cfn import CFNMatchStats, CFNProfileRead
+from app.schemas.cfn import CFNMatchRead, CFNMatchStats, CFNProfileRead
 
 router = APIRouter(prefix="/cfn", tags=["cfn"])
 
@@ -51,4 +51,26 @@ def get_match_stats(
         losses=losses,
         win_rate=win_rate,
         characters=dict(character_counts.most_common()),
+    )
+
+
+@router.get("/players/{cfn_id}/matches/recent", response_model=list[CFNMatchRead])
+def get_recent_matches(
+    cfn_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    days: Annotated[int, Query(ge=1, le=30)] = 3,
+    limit: Annotated[int, Query(ge=1, le=50)] = 30,
+) -> list[CFNMatch]:
+    """Partidas individuales (no agregadas) en los últimos `days` días, más
+    recientes primero — para cuando el resumen de /matches no alcanza y
+    hace falta ver el detalle real de cada partida (SPECS.md — el
+    problema que resolvió esto: un resumen tipo "Zangief x23, Akuma x14..."
+    no dice cuándo pasó cada cosa). Público, sin auth."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    return (
+        db.query(CFNMatch)
+        .filter(CFNMatch.cfn_id == cfn_id, CFNMatch.played_at >= cutoff)
+        .order_by(CFNMatch.played_at.desc())
+        .limit(limit)
+        .all()
     )

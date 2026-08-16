@@ -64,3 +64,11 @@ export interface CFNMatchStats {
   win_rate: number | null;
   characters: Record<string, number>;
 }
+
+export interface CFNMatchRead {
+  played_at: string;
+  character_name: string | null;
+  opponent_name: string | null;
+  opponent_character: string | null;
+  won: boolean | null;
+}

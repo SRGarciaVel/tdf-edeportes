@@ -34,3 +34,18 @@ class CFNMatchStats(BaseModel):
     # personaje -> cuántas veces se usó en la ventana, ordenado de más a
     # menos usado
     characters: dict[str, int]
+
+
+class CFNMatchRead(BaseModel):
+    """Una partida individual — a diferencia de CFNMatchStats (el
+    agregado), esto es para cuando hace falta ver el detalle real, partida
+    por partida (ej. el modal de historial en /jugadores), no solo un
+    resumen tipo 'Zangief x23, Akuma x14...' que no dice cuándo pasó qué."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    played_at: datetime
+    character_name: str | None
+    opponent_name: str | None
+    opponent_character: str | None
+    won: bool | None

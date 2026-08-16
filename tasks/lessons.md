@@ -505,3 +505,25 @@ de GitHub Actions, que apunta a Supabase por diseño y no depende de
 acordarse de un flag a mano cada vez. Esta lección es la razón de fondo
 por la que vale la pena automatizar: un cron bien configurado no se
 equivoca de base, una persona corriendo el comando a mano sí puede.
+
+## Un resumen agregado (X personaje x N veces) se vuelve ilegible con jugadores que rotan mucho de personaje
+
+**Qué pasó:** la card de BazthyFreeman mostraba "Zangief x23, Akuma x14,
+Sagat x3, JP x3, Ed x2, Juri x2, Terry x2, M. Bison x2, Jamie x2, Marisa
+x2, Ingrid x2, Ken x2, Cammy x1" — 13 personajes distintos en una sola
+línea, imposible de leer de un vistazo.
+
+**Por qué:** el agregado (`characters: {personaje: count}`) es correcto,
+pero mostrar TODOS los personajes de la ventana sin límite no escala con
+jugadores que prueban muchos personajes distintos en una semana.
+
+**Solución:** truncar a los 3 más usados + "+N más" en la card (lectura
+rápida), y agregar un modal con el detalle real partida por partida
+(fecha, personaje, rival, resultado) para cuando alguien quiere ver el
+detalle completo — separa "resumen para escanear" de "detalle para
+investigar", en vez de forzar todo en una sola vista.
+
+**Regla:** cualquier agregado que dependa de cuántos valores distintos
+tenga la data (no un número fijo) necesita un tope de cuántos mostrar
+inline, con una vía aparte (modal, página de detalle) para ver todo —
+nunca asumir que la cardinalidad va a ser chica.
