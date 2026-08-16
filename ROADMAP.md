@@ -30,7 +30,12 @@ Cada checkpoint marcado como completado debe tener un commit correspondiente
       frontend solo lectura por ahora — sin UI de gestión para el staff,
       ver nota en `tasks/todo.md`).
 - [ ] Webhook saliente a Discord al crear/modificar evento.
-- [ ] Placeholder de branding en `docs/assets/` mientras llega el manual de marca.
+- [x] Branding real recibido del diseñador (16-08-2026): logo completo
+      (mascota + wordmark) y wordmark solo, con transparencia real. En uso
+      en Navbar, Footer, Home (hero) y `/nosotros`. Favicon generado desde
+      el mismo arte. Ver `SPECS.md §15` para el detalle de dónde vive cada
+      archivo y qué falta decidir (cuál de las dos variantes del logo
+      completo es la "oficial").
 - [x] Deploy inicial (staging): Supabase (Postgres) + Render (backend) +
       Vercel (frontend). Ver `SPECS.md §14` para topología y URLs reales.
       Pendiente la "prueba end-to-end con al menos 2 miembros del staff

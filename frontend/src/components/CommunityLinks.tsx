@@ -1,4 +1,4 @@
-import { SiDiscord, SiTwitch } from "react-icons/si";
+import { SiDiscord, SiInstagram, SiTwitch, SiX } from "react-icons/si";
 
 // Logo real de 7TV, sacado del outerHTML del <svg> en 7tv.app (inspeccionado
 // a mano, no de un sitio de "descarga logos" de dudosa procedencia). Se le
@@ -25,7 +25,11 @@ function SevenTvIcon({ size = 18 }: { size?: number }) {
 
 const ICON_LINKS = [
   { label: "Twitch", href: "https://www.twitch.tv/tdfedeportes", Icon: SiTwitch },
-  { label: "Discord", href: "https://discord.gg/t6gkWX6j6M", Icon: SiDiscord },
+  // corregido contra el "About" real de Twitch (11-08-2026) — el que
+  // había antes no era el invite correcto del club
+  { label: "Discord", href: "https://discord.gg/2qV394FD9w", Icon: SiDiscord },
+  { label: "Instagram", href: "https://www.instagram.com/tdf_edeportes", Icon: SiInstagram },
+  { label: "X", href: "https://x.com/TDFedeportes", Icon: SiX },
   {
     label: "7TV",
     href: "https://chromewebstore.google.com/detail/7tv/lppmekppnliemjclknbagdhoocikieoi",

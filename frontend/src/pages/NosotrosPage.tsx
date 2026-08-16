@@ -14,16 +14,57 @@ export default function NosotrosPage() {
   return (
     <Layout>
       <SectionLabel index="07">Quiénes somos</SectionLabel>
-      <h1 className="text-3xl font-bold mb-6">Nosotros</h1>
 
-      <p className="text-gray-400 max-w-2xl mb-10 leading-relaxed">
-        TDF e-deportes es, antes que nada, una <strong className="text-white">comunidad</strong>.
-        Streameamos fighting games, jugando Third Strike, Street Fighter 6 y
-        cualquier otro FG que se cruce, para que la gente se sume, mire,
-        comente y forme parte. Organizamos torneos abiertos a toda la
-        comunidad, pero eso es un evento más de lo que hacemos, no el centro
-        de por qué existimos.
-      </p>
+      <div className="flex flex-col items-center text-center mb-12">
+        <img src="/brand/logo-full.webp" alt="TDF" className="w-48 sm:w-56 h-auto mb-4" />
+        <p className="text-gray-400 max-w-lg leading-relaxed">
+          Equipo profesional de los edeportes, preparado para edeportear y
+          crear contenido de altísima calidad.
+        </p>
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-6 mb-14">
+        <div>
+          <h2 className="font-mono text-xs uppercase text-tdf-magenta mb-3">
+            ¿Quiénes somos?
+          </h2>
+          <p className="text-gray-400 leading-relaxed text-sm">
+            Somos un equipo meme/roleplay de fighting games, compuesto por
+            jóvenes como tú que quieren dar sus primeros pasos en un
+            entorno de webeo sano y con respeto. Estamos asociados a
+            diversas comunidades chilenas de juegos de pelea, y nuestro
+            enfoque va principalmente a Street Fighter 3: Third Strike, y
+            de ahí a la variedad de contenido, manteniendo siempre un
+            ambiente sano y ligero.
+          </p>
+        </div>
+        <div>
+          <h2 className="font-mono text-xs uppercase text-tdf-magenta mb-3">
+            ¿Qué hacemos?
+          </h2>
+          <p className="text-gray-400 leading-relaxed text-sm">
+            Tenemos un amplio repertorio de actividades para asegurar una
+            opción de interacción con nuestros espectadores: salas
+            abiertas de Third Strike y juegos retro (Fightcade 2),
+            exhibiciones y torneos de fighting games, y streams
+            particulares de cada miembro con fighting games y variedad.
+          </p>
+        </div>
+        <div>
+          <h2 className="font-mono text-xs uppercase text-tdf-magenta mb-3">
+            ¿Cómo aporto?
+          </h2>
+          <p className="text-gray-400 leading-relaxed text-sm">
+            El aporte primordial que siempre podés hacer es participar
+            activamente en la comunidad, a través de los streams, las
+            actividades y los torneos. Si además querés hacer un aporte
+            monetario, podés suscribirte al canal o donar por Twitch. Todo
+            aporte se usa únicamente en el crecimiento de la comunidad,
+            tanto en mejorar las actividades como en conseguir recursos
+            para streaming.
+          </p>
+        </div>
+      </div>
 
       <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">Staff</h2>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">

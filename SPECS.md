@@ -439,7 +439,45 @@ reconstruye `cfn_session.json` desde el secret `CFN_SESSION_JSON` de
 GitHub (nunca se commitea) y usa el secret `DATABASE_URL` (Session pooler
 de Supabase) para escribir el resultado en la base real.
 
-## 15. Deuda técnica conocida / decisiones pendientes
+## 15. Branding real (16-08-2026)
+
+El diseñador del equipo entregó el logo oficial: mascota (mono rojo con
+guantes/vendas de boxeo, llamas magenta/púrpura de fondo) + wordmark
+"TDF" estilo grafiti, y el wordmark solo. Los tres con transparencia real
+(no un fondo blanco pegado), redimensionados y convertidos a WebP para no
+mandar PNGs de varios MB a producción.
+
+**Dónde vive cada archivo** (`frontend/public/brand/`):
+- `logo-full.webp` — mascota + wordmark completo. En uso en el hero del
+  Home y en `/nosotros`.
+- `logo-full-alt.webp` — variante alternativa del mismo logo completo (el
+  diseñador mandó dos renders ligeramente distintos — el `-alt` tiene el
+  glow con más saturación pero el crop del render original tocaba el
+  borde superior del canvas, indicio de que puede estar más justo de
+  margen arriba). **No se usa por defecto, queda disponible.** Si el
+  equipo prefiere esta versión sobre `logo-full.webp`, es cuestión de
+  cambiar la referencia en `HomePage.tsx` y `NosotrosPage.tsx`.
+- `logo-wordmark.webp` — solo el texto "TDF" en grafiti, sin la mascota.
+  En uso en el Navbar y el Footer (más compacto, entra bien en una barra
+  horizontal angosta).
+- `icon-512.png` — crop cuadrado de la cara de la mascota, usado como
+  `apple-touch-icon` y `og:image` (vista previa al compartir el link).
+- `favicon.ico` (en `frontend/public/`, no en `brand/`) — generado del
+  mismo crop cuadrado, tamaños 16/32/48px.
+
+**De paso, corregido con la información real de "About" de Twitch**
+(capturada 16-08-2026): el link de Discord que estaba en el sitio
+(`t6gkWX6j6M`) no era el correcto — el real es
+`https://discord.gg/2qV394FD9w`. Se agregaron también Instagram
+(`tdf_edeportes`) y X (`@TDFedeportes`), que están en los canales
+oficiales del club pero nunca se habían linkeado desde el sitio.
+
+**`/nosotros` reescrito** con el copy real del "About" de Twitch
+(¿Quiénes somos? / ¿Qué hacemos? / ¿Cómo aporto?), reemplazando el texto
+genérico que había puesto Claude como placeholder al bootstrapear el
+proyecto.
+
+## 16. Deuda técnica conocida / decisiones pendientes
 
 - Titularidad de la app de Twitch Developer Console: pendiente que el CEO
   decida si la registra con una cuenta institucional o se registra

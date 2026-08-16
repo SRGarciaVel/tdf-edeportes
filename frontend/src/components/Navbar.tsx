@@ -19,8 +19,9 @@ export default function Navbar() {
   return (
     <header className="border-b border-tdf-line bg-tdf-charcoal/60 backdrop-blur sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <NavLink to="/" className="text-xl font-graffiti text-tdf-magenta tracking-wider">
-          TDF <span className="text-white/60 text-sm font-mono font-normal">e-deportes</span>
+        <NavLink to="/" className="flex items-center gap-2">
+          <img src="/brand/logo-wordmark.webp" alt="TDF" className="h-7 w-auto" />
+          <span className="text-white/60 text-sm font-mono">e-deportes</span>
         </NavLink>
 
         <nav className="hidden md:flex items-center gap-6 font-mono text-xs uppercase tracking-wider">
