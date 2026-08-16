@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
+import Skeleton from "../components/Skeleton";
 import { listEvents } from "../lib/api";
 import type { EventItem } from "../lib/types";
 
@@ -33,24 +34,42 @@ export default function TorneosPage() {
         ellos mismos crean.
       </p>
 
+      {loading && <TournamentListSkeleton />}
+
       {!loading && tournaments.length === 0 && (
         <p className="text-sm text-gray-600">Todavía no hay torneos cargados.</p>
       )}
 
-      {upcoming.length > 0 && (
+      {!loading && upcoming.length > 0 && (
         <div className="mb-10">
           <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">Próximos</h2>
           <TournamentList items={upcoming} />
         </div>
       )}
 
-      {past.length > 0 && (
+      {!loading && past.length > 0 && (
         <div>
           <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">Anteriores</h2>
           <TournamentList items={past} />
         </div>
       )}
     </Layout>
+  );
+}
+
+function TournamentListSkeleton() {
+  return (
+    <ul className="flex flex-col gap-3 mb-10">
+      {[0, 1, 2].map((i) => (
+        <li key={i} className="hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <Skeleton className="h-3 w-24" />
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -2,20 +2,24 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
+import Skeleton from "../components/Skeleton";
 import TwitchEmbed from "../components/TwitchEmbed";
 import { listEvents } from "../lib/api";
 import type { EventItem } from "../lib/types";
 
 export default function HomePage() {
   const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
+  const [loadingEvent, setLoadingEvent] = useState(true);
 
   useEffect(() => {
-    listEvents(null).then((events) => {
-      const upcoming = events
-        .filter((e) => new Date(e.start_at) > new Date())
-        .sort((a, b) => a.start_at.localeCompare(b.start_at));
-      setNextEvent(upcoming[0] ?? null);
-    });
+    listEvents(null)
+      .then((events) => {
+        const upcoming = events
+          .filter((e) => new Date(e.start_at) > new Date())
+          .sort((a, b) => a.start_at.localeCompare(b.start_at));
+        setNextEvent(upcoming[0] ?? null);
+      })
+      .finally(() => setLoadingEvent(false));
   }, []);
 
   return (
@@ -67,7 +71,15 @@ export default function HomePage() {
         </p>
       </section>
 
-      {nextEvent && (
+      {loadingEvent && (
+        <section className="hud-frame bg-tdf-charcoal px-6 py-5 mb-12 flex flex-col gap-3">
+          <Skeleton className="h-2.5 w-32" />
+          <Skeleton className="h-6 w-56" />
+          <Skeleton className="h-3 w-40" />
+        </section>
+      )}
+
+      {!loadingEvent && nextEvent && (
         <section className="hud-frame bg-tdf-charcoal px-6 py-5 mb-12">
           <SectionLabel index="03">Próximo evento</SectionLabel>
           <div className="flex items-center justify-between flex-wrap gap-3">

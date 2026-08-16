@@ -3,6 +3,7 @@ import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import MatchHistoryModal from "../components/MatchHistoryModal";
 import SectionLabel from "../components/SectionLabel";
+import Skeleton from "../components/Skeleton";
 import { getMatchStats, listCfnPlayers } from "../lib/api";
 import type { CFNMatchStats, CFNProfile } from "../lib/types";
 
@@ -72,11 +73,21 @@ function KpiTile({ label, value, sub }: { label: string; value: string; sub?: st
 
 function MatchStatsRow({
   stats,
+  loading,
   onOpenHistory,
 }: {
   stats?: CFNMatchStats;
+  loading: boolean;
   onOpenHistory: (e: React.MouseEvent) => void;
 }) {
+  if (loading) {
+    return (
+      <div className="border-t border-tdf-line/60 mt-3 pt-2">
+        <Skeleton className="h-3 w-40" />
+      </div>
+    );
+  }
+
   if (!stats || stats.total_matches === 0) {
     return (
       <p className="font-mono text-[11px] text-gray-700 border-t border-tdf-line/60 mt-3 pt-2">
@@ -120,16 +131,20 @@ function MatchStatsRow({
 function PlayerCard({
   player,
   profile,
+  profilesLoading,
   isTopMr,
   maxLpInGroup,
   matchStats,
+  statsLoading,
   onOpenHistory,
 }: {
   player: PlayerEntry;
   profile?: CFNProfile;
+  profilesLoading: boolean;
   isTopMr: boolean;
   maxLpInGroup: number;
   matchStats?: CFNMatchStats;
+  statsLoading: boolean;
   onOpenHistory: (player: PlayerEntry) => void;
 }) {
   const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
@@ -160,12 +175,22 @@ function PlayerCard({
           <div className="min-w-0">
             <p className="font-semibold truncate">{player.name}</p>
             <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
-            {hasStats && profile.character_name && (
-              <p className="font-mono text-xs text-tdf-purple mt-1">{profile.character_name}</p>
+            {profilesLoading ? (
+              <Skeleton className="h-3 w-16 mt-1" />
+            ) : (
+              hasStats &&
+              profile.character_name && (
+                <p className="font-mono text-xs text-tdf-purple mt-1">{profile.character_name}</p>
+              )
             )}
           </div>
         </div>
-        {hasStats ? (
+        {profilesLoading ? (
+          <div className="text-right shrink-0 flex flex-col items-end gap-1">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-3 w-14" />
+          </div>
+        ) : hasStats ? (
           <div className="text-right shrink-0">
             {profile.master_rating != null && (
               <span className="font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta/40 px-2 py-1">
@@ -188,7 +213,7 @@ function PlayerCard({
           </span>
         )}
       </div>
-      <MatchStatsRow stats={matchStats} onOpenHistory={handleOpenHistory} />
+      <MatchStatsRow stats={matchStats} loading={statsLoading} onOpenHistory={handleOpenHistory} />
     </>
   );
 
@@ -212,7 +237,9 @@ function PlayerCard({
 
 export default function JugadoresPage() {
   const [profiles, setProfiles] = useState<Map<string, CFNProfile>>(new Map());
+  const [profilesLoading, setProfilesLoading] = useState(true);
   const [matchStats, setMatchStats] = useState<Map<string, CFNMatchStats>>(new Map());
+  const [statsLoading, setStatsLoading] = useState(true);
   // 7 días por defecto: las partidas más recientes que tenemos guardadas
   // hoy son de hace unos días — con 1 día por defecto la página se vería
   // vacía hasta que se acumulen partidas más nuevas con el cron.
@@ -222,10 +249,12 @@ export default function JugadoresPage() {
   useEffect(() => {
     listCfnPlayers()
       .then((data) => setProfiles(new Map(data.map((p) => [p.cfn_id, p]))))
-      .catch(() => setProfiles(new Map()));
+      .catch(() => setProfiles(new Map()))
+      .finally(() => setProfilesLoading(false));
   }, []);
 
   useEffect(() => {
+    setStatsLoading(true);
     Promise.all(ALL_PLAYERS.map((p) => getMatchStats(p.cfnId, days).catch(() => null)))
       .then((results) => {
         const map = new Map<string, CFNMatchStats>();
@@ -234,7 +263,8 @@ export default function JugadoresPage() {
         });
         setMatchStats(map);
       })
-      .catch(() => setMatchStats(new Map()));
+      .catch(() => setMatchStats(new Map()))
+      .finally(() => setStatsLoading(false));
   }, [days]);
 
   const sortedTdf = useMemo(() => sortByLp(TDF_PLAYERS, profiles), [profiles]);
@@ -330,25 +360,39 @@ export default function JugadoresPage() {
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
-        <KpiTile
-          label="Personaje del grupo"
-          value={groupStats.topCharacter?.name ?? "—"}
-          sub={groupStats.topCharacter ? `${groupStats.topCharacter.count} partidas` : undefined}
-        />
-        <KpiTile label="Partidas trackeadas" value={String(groupStats.totalMatches)} />
-        <KpiTile
-          label="Win rate del grupo"
-          value={groupStats.groupWinRate != null ? `${Math.round(groupStats.groupWinRate * 100)}%` : "—"}
-        />
-        <KpiTile
-          label="Mejor win rate"
-          value={groupStats.bestPlayer ? `${Math.round(groupStats.bestPlayer.winRate * 100)}%` : "—"}
-          sub={
-            groupStats.bestPlayer
-              ? `${groupStats.bestPlayer.name} (${groupStats.bestPlayer.wins}W-${groupStats.bestPlayer.losses}L)`
-              : `mín. ${MIN_MATCHES_FOR_BEST_WR} partidas`
-          }
-        />
+        {statsLoading ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-2">
+                <Skeleton className="h-2.5 w-20" />
+                <Skeleton className="h-6 w-14" />
+                <Skeleton className="h-2.5 w-16" />
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <KpiTile
+              label="Personaje del grupo"
+              value={groupStats.topCharacter?.name ?? "—"}
+              sub={groupStats.topCharacter ? `${groupStats.topCharacter.count} partidas` : undefined}
+            />
+            <KpiTile label="Partidas trackeadas" value={String(groupStats.totalMatches)} />
+            <KpiTile
+              label="Win rate del grupo"
+              value={groupStats.groupWinRate != null ? `${Math.round(groupStats.groupWinRate * 100)}%` : "—"}
+            />
+            <KpiTile
+              label="Mejor win rate"
+              value={groupStats.bestPlayer ? `${Math.round(groupStats.bestPlayer.winRate * 100)}%` : "—"}
+              sub={
+                groupStats.bestPlayer
+                  ? `${groupStats.bestPlayer.name} (${groupStats.bestPlayer.wins}W-${groupStats.bestPlayer.losses}L)`
+                  : `mín. ${MIN_MATCHES_FOR_BEST_WR} partidas`
+              }
+            />
+          </>
+        )}
       </div>
 
       <div className="mb-14">
@@ -359,9 +403,11 @@ export default function JugadoresPage() {
               key={p.cfnId}
               player={p}
               profile={profiles.get(p.cfnId)}
+              profilesLoading={profilesLoading}
               isTopMr={p.cfnId === topMrCfnId}
               maxLpInGroup={maxLpTdf}
               matchStats={matchStats.get(p.cfnId)}
+              statsLoading={statsLoading}
               onOpenHistory={setHistoryPlayer}
             />
           ))}
@@ -381,9 +427,11 @@ export default function JugadoresPage() {
               key={p.cfnId}
               player={p}
               profile={profiles.get(p.cfnId)}
+              profilesLoading={profilesLoading}
               isTopMr={p.cfnId === topMrCfnId}
               maxLpInGroup={maxLpScene}
               matchStats={matchStats.get(p.cfnId)}
+              statsLoading={statsLoading}
               onOpenHistory={setHistoryPlayer}
             />
           ))}

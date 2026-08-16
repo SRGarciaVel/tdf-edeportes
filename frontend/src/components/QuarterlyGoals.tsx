@@ -1,3 +1,4 @@
+import Skeleton from "./Skeleton";
 import type { GoalStatus, QuarterlyGoal } from "../lib/types";
 
 const STATUS_LABEL: Record<GoalStatus, string> = {
@@ -12,7 +13,21 @@ const STATUS_COLOR: Record<GoalStatus, string> = {
   descartado: "text-gray-500",
 };
 
-export default function QuarterlyGoals({ goals }: { goals: QuarterlyGoal[] }) {
+export default function QuarterlyGoals({ goals, loading = false }: { goals: QuarterlyGoal[]; loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((q) => (
+          <div key={q} className="border border-white/10 p-4 flex flex-col gap-3">
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (goals.length === 0) {
     return <p className="text-sm text-gray-600">Sin objetivos cargados todavía.</p>;
   }

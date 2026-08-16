@@ -3,6 +3,7 @@ import EventFormModal from "../components/EventFormModal";
 import Layout from "../components/Layout";
 import MonthCalendar from "../components/MonthCalendar";
 import SectionLabel from "../components/SectionLabel";
+import Skeleton from "../components/Skeleton";
 import { createEvent, deleteEvent, listEvents, updateEvent } from "../lib/api";
 import { dateKey, eventDateKeys } from "../lib/calendar";
 import { useAuth } from "../lib/auth";
@@ -142,14 +143,23 @@ export default function CalendarioPage() {
         />
 
         <div className="lg:sticky lg:top-20">
-          <h2 className="font-mono text-sm text-gray-400 mb-3">
-            {selectedKey} {loading && "(cargando...)"}
-          </h2>
+          <h2 className="font-mono text-sm text-gray-400 mb-3">{selectedKey}</h2>
+          {loading && (
+            <ul className="flex flex-col gap-2">
+              {[0, 1].map((i) => (
+                <li key={i} className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-20" />
+                </li>
+              ))}
+            </ul>
+          )}
           {selectedDayEvents.length === 0 && !loading && (
             <p className="text-sm text-gray-600">
               Sin eventos {isStaff ? "" : "públicos "}este día.
             </p>
           )}
+          {!loading && (
           <ul className="flex flex-col gap-2">
             {selectedDayEvents.map((event) => (
               <li key={event.id}>
@@ -197,6 +207,7 @@ export default function CalendarioPage() {
               </li>
             ))}
           </ul>
+          )}
         </div>
       </div>
 

@@ -8,9 +8,14 @@ import type { QuarterlyGoal as QuarterlyGoalType } from "../lib/types";
 export default function ObjetivosPage() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [goals, setGoals] = useState<QuarterlyGoalType[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listGoals(year).then(setGoals).catch(() => setGoals([]));
+    setLoading(true);
+    listGoals(year)
+      .then(setGoals)
+      .catch(() => setGoals([]))
+      .finally(() => setLoading(false));
   }, [year]);
 
   return (
@@ -34,7 +39,7 @@ export default function ObjetivosPage() {
         </div>
       </div>
 
-      <QuarterlyGoals goals={goals} />
+      <QuarterlyGoals goals={goals} loading={loading} />
     </Layout>
   );
 }
