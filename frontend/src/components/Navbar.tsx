@@ -18,13 +18,13 @@ export default function Navbar() {
 
   return (
     <header className="border-b border-tdf-line bg-tdf-charcoal/60 backdrop-blur sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <NavLink to="/" className="flex items-center gap-2">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
+        <NavLink to="/" className="flex items-center gap-2 shrink-0">
           <img src="/brand/logo-wordmark.webp" alt="TDF" className="h-7 w-auto" />
           <span className="text-white/60 text-sm font-mono">e-deportes</span>
         </NavLink>
 
-        <nav className="hidden md:flex items-center gap-6 font-mono text-xs uppercase tracking-wider">
+        <nav className="hidden md:flex items-center gap-5 font-mono text-xs uppercase tracking-wide">
           {LINKS.map((link) => (
             <NavLink
               key={link.to}
@@ -40,7 +40,7 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-5 shrink-0">
           <CommunityLinks />
           <LoginButton />
         </div>
