@@ -10,29 +10,31 @@ import type { CFNMatchStats, CFNProfile } from "../lib/types";
 interface PlayerEntry {
   name: string;
   cfnId: string;
+  isTdf: boolean;
   liquipediaUrl?: string;
 }
 
-const TDF_PLAYERS: PlayerEntry[] = [
-  { name: "Sirxtias", cfnId: "2844671427" },
-  { name: "Drachen", cfnId: "2908057346" },
-  { name: "BazthyFreeman", cfnId: "4100957688" },
-  { name: "AckermanFG", cfnId: "1733837998" },
-  { name: "TDF Super Ñema", cfnId: "1964247128" },
-  { name: "Jager Eins", cfnId: "2281859090" },
-  { name: "Zackito", cfnId: "2449521700" },
+// una sola comunidad, sin secciones separadas — el orden lo define el LP
+// de cada uno (ver sortByLp), no la afiliación a TDF. La única distinción
+// visual es la etiqueta chica "TDF" en la card, para quien le interese
+// saberlo, sin que eso implique jerarquía de despliegue.
+const ALL_PLAYERS: PlayerEntry[] = [
+  { name: "Sirxtias", cfnId: "2844671427", isTdf: true },
+  { name: "Drachen", cfnId: "2908057346", isTdf: true },
+  { name: "BazthyFreeman", cfnId: "4100957688", isTdf: true },
+  { name: "AckermanFG", cfnId: "1733837998", isTdf: true },
+  { name: "TDF Super Ñema", cfnId: "1964247128", isTdf: true },
+  { name: "Jager Eins", cfnId: "2281859090", isTdf: true },
+  { name: "Zackito", cfnId: "2449521700", isTdf: true },
+  // estos 4 tienen perfil propio en Liquipedia como jugadores
+  // competitivos — se linkea por respeto a su trayectoria, no todos en
+  // la comunidad lo tienen
+  { name: "Younghou", cfnId: "1027356162", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Younghou" },
+  { name: "Pochoclo23", cfnId: "3987753314", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Pochoclo23" },
+  { name: "Craime", cfnId: "1009159858", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Craime" },
+  { name: "Blaz", cfnId: "3381453962", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Blaz" },
 ];
 
-// los 4 tienen perfil propio en Liquipedia como jugadores competitivos —
-// se linkea por respeto a su trayectoria, no todos los de la escena lo tienen
-const SCENE_PLAYERS: PlayerEntry[] = [
-  { name: "Younghou", cfnId: "1027356162", liquipediaUrl: "https://liquipedia.net/fighters/Younghou" },
-  { name: "Pochoclo23", cfnId: "3987753314", liquipediaUrl: "https://liquipedia.net/fighters/Pochoclo23" },
-  { name: "Craime", cfnId: "1009159858", liquipediaUrl: "https://liquipedia.net/fighters/Craime" },
-  { name: "Blaz", cfnId: "3381453962", liquipediaUrl: "https://liquipedia.net/fighters/Blaz" },
-];
-
-const ALL_PLAYERS = [...TDF_PLAYERS, ...SCENE_PLAYERS];
 const DAY_OPTIONS = [1, 3, 7] as const;
 // mínimo de partidas decididas para que alguien pueda ganar el KPI de
 // "mejor win rate" — sin esto, alguien con 1 partida jugada y 1-0 le
@@ -133,7 +135,7 @@ function PlayerCard({
   profile,
   profilesLoading,
   isTopMr,
-  maxLpInGroup,
+  maxLpOverall,
   matchStats,
   statsLoading,
   onOpenHistory,
@@ -142,20 +144,20 @@ function PlayerCard({
   profile?: CFNProfile;
   profilesLoading: boolean;
   isTopMr: boolean;
-  maxLpInGroup: number;
+  maxLpOverall: number;
   matchStats?: CFNMatchStats;
   statsLoading: boolean;
   onOpenHistory: (player: PlayerEntry) => void;
 }) {
   const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
   const lpBarPct =
-    hasStats && profile.league_points != null && maxLpInGroup > 0
-      ? Math.max(4, Math.round((profile.league_points / maxLpInGroup) * 100))
+    hasStats && profile.league_points != null && maxLpOverall > 0
+      ? Math.max(4, Math.round((profile.league_points / maxLpOverall) * 100))
       : 0;
 
-  // stopPropagation + preventDefault: las cards de la escena chilena son
-  // un <a> completo hacia Liquipedia — sin esto, el botón "Ver partidas"
-  // de adentro dispararía también la navegación externa
+  // stopPropagation + preventDefault: las cards con perfil de Liquipedia
+  // son un <a> completo hacia ese link — sin esto, el botón "Ver
+  // partidas" de adentro dispararía también la navegación externa
   const handleOpenHistory = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -164,17 +166,29 @@ function PlayerCard({
 
   const content = (
     <>
-      {isTopMr && (
-        <span className="absolute -top-2.5 left-3 bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-magenta z-10">
-          // Top MR
-        </span>
-      )}
+      <div className="absolute -top-2.5 left-3 flex gap-2 z-10">
+        {isTopMr && (
+          <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-magenta">
+            // Top MR
+          </span>
+        )}
+        {player.isTdf && (
+          <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-purple">
+            TDF
+          </span>
+        )}
+      </div>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <InitialsAvatar seed={player.name} size={10} />
           <div className="min-w-0">
             <p className="font-semibold truncate">{player.name}</p>
-            <p className="font-mono text-xs text-gray-600">CFN {player.cfnId}</p>
+            <p className="font-mono text-xs text-gray-600">
+              CFN {player.cfnId}
+              {player.liquipediaUrl && (
+                <span className="text-tdf-purple"> · Liquipedia ↗</span>
+              )}
+            </p>
             {profilesLoading ? (
               <Skeleton className="h-3 w-16 mt-1" />
             ) : (
@@ -267,15 +281,10 @@ export default function JugadoresPage() {
       .finally(() => setStatsLoading(false));
   }, [days]);
 
-  const sortedTdf = useMemo(() => sortByLp(TDF_PLAYERS, profiles), [profiles]);
-  const sortedScene = useMemo(() => sortByLp(SCENE_PLAYERS, profiles), [profiles]);
+  const sortedPlayers = useMemo(() => sortByLp(ALL_PLAYERS, profiles), [profiles]);
 
-  const maxLpTdf = useMemo(
-    () => Math.max(0, ...TDF_PLAYERS.map((p) => profiles.get(p.cfnId)?.league_points ?? 0)),
-    [profiles]
-  );
-  const maxLpScene = useMemo(
-    () => Math.max(0, ...SCENE_PLAYERS.map((p) => profiles.get(p.cfnId)?.league_points ?? 0)),
+  const maxLpOverall = useMemo(
+    () => Math.max(0, ...ALL_PLAYERS.map((p) => profiles.get(p.cfnId)?.league_points ?? 0)),
     [profiles]
   );
 
@@ -353,10 +362,17 @@ export default function JugadoresPage() {
           ))}
         </div>
       </div>
-      <p className="text-gray-500 mb-6 max-w-xl">
-        Rango, LP y personaje principal de la escena. Se actualiza cada
-        hora, no en vivo. Los KPIs y las cards de abajo son de los
-        últimos {days} día{days > 1 ? "s" : ""}.
+      <p className="text-gray-500 mb-1 max-w-xl">
+        Rango, LP y personaje principal de la comunidad — TDF y la escena
+        chilena, todos en el mismo pozo. Se actualiza cada hora, no en
+        vivo. Los KPIs y las cards de abajo son de los últimos {days} día
+        {days > 1 ? "s" : ""}.
+      </p>
+      <p className="font-mono text-[11px] text-gray-600 mb-6">
+        La etiqueta <span className="text-tdf-purple">TDF</span> marca a
+        quienes son parte del staff/colaboradores del club — el resto es
+        comunidad. Las cards con <span className="text-tdf-purple">Liquipedia ↗</span> son
+        clickeables, llevan a su perfil competitivo.
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
@@ -395,47 +411,20 @@ export default function JugadoresPage() {
         )}
       </div>
 
-      <div className="mb-14">
-        <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">TDF</h2>
-        <div className="grid sm:grid-cols-2 gap-3 pt-3">
-          {sortedTdf.map((p) => (
-            <PlayerCard
-              key={p.cfnId}
-              player={p}
-              profile={profiles.get(p.cfnId)}
-              profilesLoading={profilesLoading}
-              isTopMr={p.cfnId === topMrCfnId}
-              maxLpInGroup={maxLpTdf}
-              matchStats={matchStats.get(p.cfnId)}
-              statsLoading={statsLoading}
-              onOpenHistory={setHistoryPlayer}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="font-mono text-xs uppercase text-gray-400 mb-3">
-          Escena chilena
-        </h2>
-        <p className="font-mono text-[11px] text-gray-600 mb-6">
-          Click en una card para ver su perfil competitivo en Liquipedia →
-        </p>
-        <div className="grid sm:grid-cols-2 gap-3 pt-3">
-          {sortedScene.map((p) => (
-            <PlayerCard
-              key={p.cfnId}
-              player={p}
-              profile={profiles.get(p.cfnId)}
-              profilesLoading={profilesLoading}
-              isTopMr={p.cfnId === topMrCfnId}
-              maxLpInGroup={maxLpScene}
-              matchStats={matchStats.get(p.cfnId)}
-              statsLoading={statsLoading}
-              onOpenHistory={setHistoryPlayer}
-            />
-          ))}
-        </div>
+      <div className="grid sm:grid-cols-2 gap-3 pt-3">
+        {sortedPlayers.map((p) => (
+          <PlayerCard
+            key={p.cfnId}
+            player={p}
+            profile={profiles.get(p.cfnId)}
+            profilesLoading={profilesLoading}
+            isTopMr={p.cfnId === topMrCfnId}
+            maxLpOverall={maxLpOverall}
+            matchStats={matchStats.get(p.cfnId)}
+            statsLoading={statsLoading}
+            onOpenHistory={setHistoryPlayer}
+          />
+        ))}
       </div>
 
       {historyPlayer && (
