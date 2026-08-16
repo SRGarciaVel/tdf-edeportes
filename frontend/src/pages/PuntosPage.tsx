@@ -56,7 +56,7 @@ export default function PuntosPage() {
         Los espectadores más activos del chat y el stream.
       </p>
       <p className="font-mono text-xs text-amber-500/80 mb-10 border border-amber-500/30 inline-block px-2 py-1">
-        Datos de ejemplo — el sistema de puntos real todavía no está
+        Datos de ejemplo, el sistema de puntos real todavía no está
         implementado.
       </p>
 

@@ -527,3 +527,34 @@ investigar", en vez de forzar todo en una sola vista.
 tenga la data (no un número fijo) necesita un tope de cuántos mostrar
 inline, con una vía aparte (modal, página de detalle) para ver todo —
 nunca asumir que la cardinalidad va a ser chica.
+
+## Un badge posicionado en la esquina superior izquierda de un hud-frame se recorta por el clip-path del propio diseño
+
+**Qué pasó:** los badges "// Top MR" y "TDF" en `/jugadores` aparecían
+como texto cortado/ilegible en la esquina de cada card.
+
+**Por qué:** `.hud-frame` (el estilo de card de todo el sitio) usa
+`clip-path: polygon(...)` para el corte diagonal característico — y ese
+corte es específicamente en las esquinas **superior izquierda** e
+**inferior derecha** (confirmado en `index.css`). Un elemento posicionado
+en `left-3` con offset negativo de `top` cae justo en esa zona recortada.
+
+**Regla:** cualquier badge/etiqueta que se posicione sobre el borde de un
+`.hud-frame` tiene que ir en una esquina **sin** corte diagonal —
+superior derecha o inferior izquierda — nunca en las otras dos.
+
+## Los em-dash ("—") en texto visible se leen como "escrito por IA" — hay que evitarlos, no solo en el copy inicial
+
+**Qué pasó:** con el tiempo se colaron varios "—" en párrafos y valores
+mostrados en pantalla (`/puntos`, `/jugadores`), a pesar de que la regla
+de estilo del proyecto (definida desde el principio) dice explícitamente
+"sin em-dashes en texto visible".
+
+**Regla:** al escribir cualquier texto que el usuario vaya a leer en el
+sitio (párrafos, labels, valores de fallback tipo "sin dato"), revisar que
+no se cuele un "—" — usar punto, coma, o directamente separar en dos
+oraciones. Para valores de "sin dato" en UI, usar "N/D" (ya es el patrón
+existente en `QuarterlyGoals.tsx`), no un guión largo suelto. Esto NO
+aplica a comentarios de código (`//`, `/** */`) — esos son para quien lee
+el código, no para quien usa el sitio, y ahí es una herramienta de
+puntuación normal como cualquier otra.

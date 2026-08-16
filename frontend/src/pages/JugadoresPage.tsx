@@ -166,7 +166,7 @@ function PlayerCard({
 
   const content = (
     <>
-      <div className="absolute -top-2.5 left-3 flex gap-2 z-10">
+      <div className="absolute -top-2.5 right-3 flex gap-2 z-10">
         {isTopMr && (
           <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-magenta">
             // Top MR
@@ -363,14 +363,14 @@ export default function JugadoresPage() {
         </div>
       </div>
       <p className="text-gray-500 mb-1 max-w-xl">
-        Rango, LP y personaje principal de la comunidad — TDF y la escena
+        Rango, LP y personaje principal de la comunidad. TDF y la escena
         chilena, todos en el mismo pozo. Se actualiza cada hora, no en
         vivo. Los KPIs y las cards de abajo son de los últimos {days} día
         {days > 1 ? "s" : ""}.
       </p>
       <p className="font-mono text-[11px] text-gray-600 mb-6">
         La etiqueta <span className="text-tdf-purple">TDF</span> marca a
-        quienes son parte del staff/colaboradores del club — el resto es
+        quienes son parte del staff/colaboradores del club, el resto es
         comunidad. Las cards con <span className="text-tdf-purple">Liquipedia ↗</span> son
         clickeables, llevan a su perfil competitivo.
       </p>
@@ -390,17 +390,17 @@ export default function JugadoresPage() {
           <>
             <KpiTile
               label="Personaje del grupo"
-              value={groupStats.topCharacter?.name ?? "—"}
+              value={groupStats.topCharacter?.name ?? "N/D"}
               sub={groupStats.topCharacter ? `${groupStats.topCharacter.count} partidas` : undefined}
             />
             <KpiTile label="Partidas trackeadas" value={String(groupStats.totalMatches)} />
             <KpiTile
               label="Win rate del grupo"
-              value={groupStats.groupWinRate != null ? `${Math.round(groupStats.groupWinRate * 100)}%` : "—"}
+              value={groupStats.groupWinRate != null ? `${Math.round(groupStats.groupWinRate * 100)}%` : "N/D"}
             />
             <KpiTile
               label="Mejor win rate"
-              value={groupStats.bestPlayer ? `${Math.round(groupStats.bestPlayer.winRate * 100)}%` : "—"}
+              value={groupStats.bestPlayer ? `${Math.round(groupStats.bestPlayer.winRate * 100)}%` : "N/D"}
               sub={
                 groupStats.bestPlayer
                   ? `${groupStats.bestPlayer.name} (${groupStats.bestPlayer.wins}W-${groupStats.bestPlayer.losses}L)`
