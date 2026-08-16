@@ -27,32 +27,36 @@ export default function HomePage() {
       <section className="spray-bg py-12">
         <div className="relative z-10 flex flex-col gap-6">
           <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
-          <h1>
-            <img
-              src="/brand/logo-full.webp"
-              alt="TDF e-deportes"
-              className="w-40 sm:w-48 h-auto -mb-2"
-            />
-          </h1>
-          <p className="text-lg text-gray-400 max-w-xl">
-            Streams, torneos y una comunidad que crece jugando Third Strike,
-            Street Fighter 6 y cualquier otro FG que se cruce.
-          </p>
-          <div className="flex flex-wrap gap-4 font-mono text-sm uppercase">
-            <a
-              href="https://www.twitch.tv/tdfedeportes"
-              target="_blank"
-              rel="noreferrer"
-              className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-5 py-3 text-white"
-            >
-              Ver stream en Twitch →
-            </a>
-            <Link
-              to="/calendario"
-              className="border border-tdf-line hover:border-tdf-magenta transition-colors px-5 py-3"
-            >
-              Ver calendario
-            </Link>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">
+            <h1 className="shrink-0">
+              <img
+                src="/brand/logo-full.webp"
+                alt="TDF e-deportes"
+                className="w-40 sm:w-52 h-auto"
+              />
+            </h1>
+            <div className="flex flex-col gap-6">
+              <p className="text-lg text-gray-400 max-w-xl">
+                Streams, torneos y una comunidad que crece jugando Third
+                Strike, Street Fighter 6 y cualquier otro FG que se cruce.
+              </p>
+              <div className="flex flex-wrap gap-4 font-mono text-sm uppercase">
+                <a
+                  href="https://www.twitch.tv/tdfedeportes"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-5 py-3 text-white"
+                >
+                  Ver stream en Twitch →
+                </a>
+                <Link
+                  to="/calendario"
+                  className="border border-tdf-line hover:border-tdf-magenta transition-colors px-5 py-3"
+                >
+                  Ver calendario
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
