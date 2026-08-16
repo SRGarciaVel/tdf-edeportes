@@ -5,6 +5,7 @@ import MatchHistoryModal from "../components/MatchHistoryModal";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import { getMatchStats, listCfnPlayers } from "../lib/api";
+import { characterColorClass } from "../lib/characterColors";
 import type { CFNMatchStats, CFNProfile } from "../lib/types";
 
 interface PlayerEntry {
@@ -104,9 +105,6 @@ function MatchStatsRow({
   const entries = Object.entries(stats.characters);
   const topThree = entries.slice(0, 3);
   const rest = entries.length - topThree.length;
-  const characterList =
-    topThree.map(([name, count]) => `${name} x${count}`).join(", ") +
-    (rest > 0 ? ` +${rest} más` : "");
 
   return (
     <div className="font-mono text-[11px] text-gray-500 border-t border-tdf-line/60 mt-3 pt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
@@ -118,7 +116,16 @@ function MatchStatsRow({
           <span className="text-tdf-magenta">{Math.round(stats.win_rate * 100)}% WR</span>
         )}
         <span className="text-gray-600">·</span>
-        <span>{characterList}</span>
+        <span className="flex flex-wrap items-center gap-x-1.5">
+          {topThree.map(([name, count], i) => (
+            <span key={name}>
+              <span className={characterColorClass(name)}>{name}</span>
+              <span className="text-gray-500"> x{count}</span>
+              {i < topThree.length - 1 && <span className="text-gray-600">,</span>}
+            </span>
+          ))}
+          {rest > 0 && <span className="text-gray-600">+{rest} más</span>}
+        </span>
       </div>
       <button
         onClick={onOpenHistory}
@@ -166,7 +173,7 @@ function PlayerCard({
 
   const content = (
     <>
-      <div className="absolute -top-2.5 right-3 flex gap-2 z-10">
+      <div className="absolute top-2 right-2 flex gap-2 z-10">
         {isTopMr && (
           <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-magenta">
             // Top MR
@@ -194,7 +201,9 @@ function PlayerCard({
             ) : (
               hasStats &&
               profile.character_name && (
-                <p className="font-mono text-xs text-tdf-purple mt-1">{profile.character_name}</p>
+                <p className={`font-mono text-xs mt-1 ${characterColorClass(profile.character_name)}`}>
+                  {profile.character_name}
+                </p>
               )
             )}
           </div>
@@ -232,7 +241,7 @@ function PlayerCard({
   );
 
   const className =
-    "hud-frame bg-tdf-charcoal px-5 py-4 flex flex-col transition-all duration-200 relative" +
+    "hud-frame bg-tdf-charcoal px-5 pt-8 pb-4 flex flex-col transition-all duration-200 relative" +
     (isTopMr ? " border-tdf-magenta" : "") +
     (player.liquipediaUrl
       ? " hover:border-tdf-magenta hover:shadow-[0_0_20px_-4px_rgba(196,20,122,0.7)] cursor-pointer"
@@ -365,13 +374,13 @@ export default function JugadoresPage() {
       <p className="text-gray-500 mb-1 max-w-xl">
         Rango, LP y personaje principal de la comunidad. TDF y la escena
         chilena, todos en el mismo pozo. Se actualiza cada hora, no en
-        vivo. Los KPIs y las cards de abajo son de los últimos {days} día
-        {days > 1 ? "s" : ""}.
+        vivo. El resumen de arriba y las tarjetas de abajo son de los
+        últimos {days} día{days > 1 ? "s" : ""}.
       </p>
       <p className="font-mono text-[11px] text-gray-600 mb-6">
         La etiqueta <span className="text-tdf-purple">TDF</span> marca a
         quienes son parte del staff/colaboradores del club, el resto es
-        comunidad. Las cards con <span className="text-tdf-purple">Liquipedia ↗</span> son
+        comunidad. Las tarjetas con <span className="text-tdf-purple">Liquipedia ↗</span> son
         clickeables, llevan a su perfil competitivo.
       </p>
 

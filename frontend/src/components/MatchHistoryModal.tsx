@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getRecentMatches } from "../lib/api";
+import { characterColorClass } from "../lib/characterColors";
 import type { CFNMatchRead } from "../lib/types";
 
 function formatDate(iso: string): string {
@@ -22,11 +23,11 @@ function MatchRow({ match }: { match: CFNMatchRead }) {
       <div className="min-w-0">
         <p className="font-mono text-[11px] text-gray-600">{formatDate(match.played_at)}</p>
         <p className="text-sm truncate">
-          <span className="text-tdf-purple">{match.character_name ?? "?"}</span>
+          <span className={characterColorClass(match.character_name)}>{match.character_name ?? "?"}</span>
           <span className="text-gray-600"> vs </span>
           <span className="text-gray-300">{match.opponent_name ?? "?"}</span>
           {match.opponent_character && (
-            <span className="text-gray-600"> ({match.opponent_character})</span>
+            <span className={characterColorClass(match.opponent_character)}> ({match.opponent_character})</span>
           )}
         </p>
       </div>

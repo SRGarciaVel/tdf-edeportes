@@ -1,0 +1,47 @@
+// Colores asociados a cada personaje de SF6 — elección de estilo propia
+// (no arte ni logos de Capcom, solo un color de texto inspirado en la
+// vibra de cada uno) para darle identidad visual cuando se menciona un
+// personaje en la página, en vez de un solo color plano para todos.
+const CHARACTER_COLORS: Record<string, string> = {
+  "a.k.i.": "text-fuchsia-400",
+  akuma: "text-red-500",
+  alex: "text-blue-400",
+  blanka: "text-lime-400",
+  "c. viper": "text-red-400",
+  cammy: "text-emerald-400",
+  "chun-li": "text-blue-400",
+  "dee jay": "text-yellow-400",
+  dhalsim: "text-orange-400",
+  ed: "text-purple-400",
+  "e. honda": "text-sky-400",
+  elena: "text-teal-400",
+  guile: "text-green-500",
+  ingrid: "text-amber-400",
+  jamie: "text-amber-500",
+  jp: "text-violet-500",
+  juri: "text-fuchsia-500",
+  ken: "text-red-500",
+  kimberly: "text-yellow-400",
+  lily: "text-amber-600",
+  luke: "text-orange-500",
+  "m. bison": "text-purple-500",
+  mai: "text-red-400",
+  manon: "text-pink-400",
+  marisa: "text-stone-300",
+  rashid: "text-yellow-400",
+  ryu: "text-red-400",
+  sagat: "text-orange-600",
+  terry: "text-red-500",
+  yasmine: "text-fuchsia-400",
+  zangief: "text-red-600",
+};
+
+const DEFAULT_COLOR = "text-tdf-purple";
+
+/** Color de texto para un personaje de SF6 — case-insensitive, con un
+ * color por defecto para nombres que no estén en el mapa (nuevos
+ * personajes que Capcom agregue, o texto que no sea un nombre real). */
+export function characterColorClass(name: string | null | undefined): string {
+  if (!name) return DEFAULT_COLOR;
+  return CHARACTER_COLORS[name.toLowerCase()] ?? DEFAULT_COLOR;
+}
