@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./lib/auth";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
@@ -27,6 +28,11 @@ export default function App() {
           <Route path="/dashboard" element={<Navigate to="/calendario" replace />} />
         </Routes>
       </BrowserRouter>
+      {/* no renderiza nada visible, manda un ping de pagina vista a
+          Vercel Analytics en cada navegacion. Sin costo, capa gratis
+          soporta hasta 50.000 eventos/mes (verificado contra la doc de
+          Vercel, agosto 2026) */}
+      <Analytics />
     </AuthProvider>
   );
 }
