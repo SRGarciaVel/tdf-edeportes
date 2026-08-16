@@ -215,8 +215,15 @@ Fighter 6, tanto de TDF como de la escena chilena en general.
   AckermanFG `1733837998`, TDF Super Ñema `1964247128` — más comunidad
   cercana al club sin rol formal de staff: Jager Eins `2281859090`,
   Zackito `2449521700`
-- Escena chilena: Younghou `1027356162`, Pochoclo23 `3987753314`,
-  Craime `1009159858`, Blaz `3381453962`
+- Escena chilena: Younghou `1027356162`, Pochoclo23 `3987753314`
+
+**Sacados del sitio (temporal): Craime `1009159858`, Blaz `3381453962`.**
+Se habían agregado sin consultarles personalmente si querían aparecer —
+Seba decidió sacarlos del `PLAYERS` dict y del array del frontend hasta
+confirmar con ellos directamente. Sus datos ya guardados en
+`cfn_profiles`/`cfn_matches` no se borraron (no hace daño que queden ahí,
+sin mostrarse), así que reponerlos cuando confirmen es tan simple como
+agregar de nuevo estas dos líneas en ambos lugares.
 
 **Por qué no es una integración simple:** Buckler's Boot Camp (la web de
 Capcom donde vive esta info) no es pública — hace falta autenticarse con un

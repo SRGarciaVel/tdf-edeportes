@@ -32,8 +32,9 @@ const ALL_PLAYERS: PlayerEntry[] = [
   // la comunidad lo tienen
   { name: "Younghou", cfnId: "1027356162", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Younghou" },
   { name: "Pochoclo23", cfnId: "3987753314", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Pochoclo23" },
-  { name: "Craime", cfnId: "1009159858", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Craime" },
-  { name: "Blaz", cfnId: "3381453962", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Blaz" },
+  // Craime y Blaz: sacados hasta consultarles personalmente si quieren
+  // aparecer (no se les preguntó antes de agregarlos) — reponer cuando
+  // confirmen, el CFN ID queda documentado en SPECS.md por si acaso
 ];
 
 const DAY_OPTIONS = [1, 3, 7] as const;

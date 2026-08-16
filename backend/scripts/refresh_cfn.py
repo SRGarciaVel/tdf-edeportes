@@ -26,6 +26,9 @@ from app.models import CFNMatch, CFNProfile  # noqa: E402
 from app.services.cfn_scraper import refresh_all_players  # noqa: E402
 
 # CFN ID -> nombre a mostrar (SPECS.md #12)
+# Craime y Blaz sacados hasta consultarles personalmente si quieren
+# aparecer en el sitio — no se les preguntó antes de agregarlos. IDs
+# documentados en SPECS.md para reponer fácil cuando confirmen.
 PLAYERS: dict[str, str] = {
     "2844671427": "Sirxtias",
     "2908057346": "Drachen",
@@ -36,8 +39,6 @@ PLAYERS: dict[str, str] = {
     "2449521700": "Zackito",
     "1027356162": "Younghou",
     "3987753314": "Pochoclo23",
-    "1009159858": "Craime",
-    "3381453962": "Blaz",
 }
 
 
