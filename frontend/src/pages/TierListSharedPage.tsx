@@ -5,16 +5,50 @@ import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import { getTierList } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import type { TierListData } from "../lib/types";
+import type { TierItemData, TierListData } from "../lib/types";
 
-const TIER_ORDER = ["S", "A", "B", "C", "D"];
-const TIER_COLORS: Record<string, string> = {
-  S: "bg-red-500/20 border-red-500/40",
-  A: "bg-orange-500/20 border-orange-500/40",
-  B: "bg-yellow-500/20 border-yellow-500/40",
-  C: "bg-lime-500/20 border-lime-500/40",
-  D: "bg-emerald-500/20 border-emerald-500/40",
+const TIER_COLORS = [
+  "bg-red-500/20 border-red-500/40",
+  "bg-orange-500/20 border-orange-500/40",
+  "bg-yellow-500/20 border-yellow-500/40",
+  "bg-lime-500/20 border-lime-500/40",
+  "bg-emerald-500/20 border-emerald-500/40",
+  "bg-teal-500/20 border-teal-500/40",
+  "bg-sky-500/20 border-sky-500/40",
+  "bg-purple-500/20 border-purple-500/40",
+  "bg-fuchsia-500/20 border-fuchsia-500/40",
+  "bg-pink-500/20 border-pink-500/40",
+  "bg-gray-500/20 border-gray-500/40",
+  "bg-stone-500/20 border-stone-500/40",
+];
+
+const GAME_LABEL: Record<string, string> = {
+  sf6: "Street Fighter 6",
+  "3s": "Third Strike",
+  custom: "personalizada",
 };
+
+function ItemChip({ item }: { item: TierItemData }) {
+  if (item.image) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <img src={item.image} alt={item.label} className="w-16 h-16 object-cover border border-tdf-line" />
+        {item.label && (
+          <span className="text-[10px] font-mono text-gray-500 max-w-16 truncate">{item.label}</span>
+        )}
+      </div>
+    );
+  }
+  return (
+    <span
+      className={`px-2 py-1 text-xs font-mono border border-current/40 bg-tdf-dark ${characterColorClass(
+        item.label
+      )}`}
+    >
+      {item.label}
+    </span>
+  );
+}
 
 export default function TierListSharedPage() {
   const { id } = useParams<{ id: string }>();
@@ -76,33 +110,30 @@ export default function TierListSharedPage() {
     );
   }
 
+  const tierIds = Object.keys(data.tiers);
+
   return (
     <Layout>
       <SectionLabel index="09">Tier list</SectionLabel>
       <h1 className="text-3xl font-bold mb-2">
-        Tier list de {data.game === "sf6" ? "Street Fighter 6" : "Third Strike"}
+        Tier list de {GAME_LABEL[data.game] ?? data.game}
       </h1>
       <p className="text-gray-500 mb-8">Armada por alguien de la comunidad.</p>
 
       <div ref={boardRef} className="bg-tdf-dark p-4">
         <div className="flex flex-col gap-1">
-          {TIER_ORDER.map((tier) => (
-            <div key={tier} className="flex">
+          {tierIds.map((tierId, i) => (
+            <div key={tierId} className="flex">
               <div
-                className={`w-16 shrink-0 flex items-center justify-center font-bold text-xl border ${TIER_COLORS[tier]}`}
+                className={`w-16 shrink-0 flex items-center justify-center font-bold text-lg border ${
+                  TIER_COLORS[i % TIER_COLORS.length]
+                }`}
               >
-                {tier}
+                {tierId}
               </div>
               <div className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start">
-                {(data.tiers[tier] ?? []).map((name) => (
-                  <span
-                    key={name}
-                    className={`px-2 py-1 text-xs font-mono border border-current/40 bg-tdf-dark ${characterColorClass(
-                      name
-                    )}`}
-                  >
-                    {name}
-                  </span>
+                {data.tiers[tierId].map((item) => (
+                  <ItemChip key={item.id} item={item} />
                 ))}
               </div>
             </div>

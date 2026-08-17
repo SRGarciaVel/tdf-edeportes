@@ -73,11 +73,31 @@ export interface CFNMatchRead {
   won: boolean | null;
 }
 
-export type TierListGame = "sf6" | "3s";
+export type TierListGame = "sf6" | "3s" | "custom";
+
+export interface TierItemData {
+  id: string;
+  label: string;
+  image?: string | null;
+}
 
 export interface TierListData {
   id: string;
   game: TierListGame;
-  tiers: Record<string, string[]>;
+  tiers: Record<string, TierItemData[]>;
+  created_at: string;
+}
+
+export interface TierListTemplateData {
+  id: string;
+  name: string;
+  items: TierItemData[];
+  created_at: string;
+}
+
+export interface TierListTemplateSummaryData {
+  id: string;
+  name: string;
+  item_count: number;
   created_at: string;
 }

@@ -5,6 +5,7 @@ from app.models.event_comment import EventComment
 from app.models.quarterly_goal import QuarterlyGoal
 from app.models.role import Role, user_roles
 from app.models.tier_list import TierList
+from app.models.tier_list_template import TierListTemplate
 from app.models.user import User
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "CFNProfile",
     "CFNMatch",
     "TierList",
+    "TierListTemplate",
 ]

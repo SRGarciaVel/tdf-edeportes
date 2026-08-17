@@ -8,6 +8,9 @@ import type {
   CFNMatchRead,
   TierListData,
   TierListGame,
+  TierItemData,
+  TierListTemplateData,
+  TierListTemplateSummaryData,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -145,11 +148,12 @@ export async function getRecentMatches(cfnId: string, days: number): Promise<CFN
 
 export async function createTierList(
   game: TierListGame,
-  tiers: Record<string, string[]>
+  tiers: Record<string, TierItemData[]>,
+  token: string | null
 ): Promise<TierListData> {
   const res = await fetch(`${API_URL}/tierlists`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
     body: JSON.stringify({ game, tiers }),
   });
   return parseOrThrow<TierListData>(res);
@@ -158,4 +162,36 @@ export async function createTierList(
 export async function getTierList(id: string): Promise<TierListData> {
   const res = await fetch(`${API_URL}/tierlists/${id}`);
   return parseOrThrow<TierListData>(res);
+}
+
+export async function createTierListTemplate(
+  name: string,
+  items: TierItemData[],
+  token: string
+): Promise<TierListTemplateData> {
+  const res = await fetch(`${API_URL}/tierlist-templates`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ name, items }),
+  });
+  return parseOrThrow<TierListTemplateData>(res);
+}
+
+export async function listMyTierListTemplates(
+  token: string
+): Promise<TierListTemplateSummaryData[]> {
+  const res = await fetch(`${API_URL}/tierlist-templates/mine`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<TierListTemplateSummaryData[]>(res);
+}
+
+export async function getTierListTemplate(
+  id: string,
+  token: string
+): Promise<TierListTemplateData> {
+  const res = await fetch(`${API_URL}/tierlist-templates/${id}`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<TierListTemplateData>(res);
 }

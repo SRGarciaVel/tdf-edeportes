@@ -500,29 +500,59 @@ mantiene la misma línea que con el mod de Nexus y los retratos de
 Buckler's Boot Camp: alternativa propia en vez de apostar a que no nos
 pase nada.
 
-**Backend:**
-- `TierList` (`tier_lists`): `id` (uuid, es el link para compartir),
-  `game` ("sf6" | "3s"), `tiers` (jsonb, `{"S": ["Jamie", "Ryu"], ...}`),
-  `created_at`. Sin dueño/autenticación — cualquiera arma y comparte sin
-  cuenta, mismo criterio que TierMaker.
-- `POST /tierlists` (crear, público) y `GET /tierlists/{id}` (leer,
-  público). El backend valida que cada nombre pertenezca al roster real
-  del juego elegido — sin esto, el endpoint público sin auth podría
-  usarse para guardar cualquier texto arbitrario. **El roster está
-  duplicado a mano entre `backend/app/api/tier_lists.py` y
-  `frontend/src/lib/characterColors.ts`** — si se agrega/saca un
-  personaje, hay que actualizar los dos lugares.
-
 **Frontend:**
 - `/tierlist`: editor con drag and drop (`@dnd-kit/core`), selector SF6 /
-  Third Strike, exportar como PNG o copiar al portapapeles
-  (`html-to-image`), guardar y compartir (redirige a `/tierlist/{id}`).
+  Third Strike / Personalizada, exportar como PNG o copiar al
+  portapapeles (`html-to-image`), guardar y compartir (redirige a
+  `/tierlist/{id}`).
 - `/tierlist/:id`: vista de solo lectura del link compartido, con los
   mismos botones de exportar imagen.
-- Tiers fijos (S/A/B/C/D, no editables/reordenables en esta versión) —
-  simplificación consciente para la primera versión; agregar/quitar/
-  reordenar tiers y editar sus etiquetas queda para una vuelta futura si
-  se pide.
+- **Tiers editables:** agregar, sacar, reordenar (subir/bajar) y
+  renombrar — el `id` interno de cada tier no cambia al renombrar (es el
+  label lo que cambia, no la clave donde se guardan sus ítems), así
+  renombrar no rompe nada. Al borrar un tier, sus ítems vuelven a "sin
+  ranquear" en vez de perderse.
+- **Modo personalizado:** requiere login (Twitch) — subida de imágenes,
+  redimensionadas en el navegador a 120x120 (recorte "cover" centrado,
+  mismo criterio visual que TierMaker) usando `<canvas>`, comprimidas a
+  WebP antes de mandarlas al backend. Nunca se sube la imagen original
+  completa.
+- **Presets (`TierListTemplate`):** guardar el set de imágenes cargado
+  (todos los ítems, estén ranqueados o no) como plantilla reutilizable,
+  para no tener que volver a subir todo la próxima vez. Solo visibles
+  para quien las creó — el endpoint de detalle (que trae las imágenes
+  completas) valida que el usuario logueado sea el dueño.
+
+**Backend:**
+- `TierList` (`tier_lists`): `id` (uuid, es el link para compartir),
+  `game` ("sf6" | "3s" | "custom"), `tiers` (jsonb, ahora
+  `{"S": [{"id","label","image"}], ...}` — cada ítem es un objeto, no un
+  string plano, para poder guardar la imagen cuando corresponde),
+  `created_at`. SF6/Third Strike siguen sin auth (público, anónimo, mismo
+  criterio que TierMaker). Personalizada exige login — se valida adentro
+  del mismo endpoint según el campo `game`, no como dependency fija,
+  porque la misma ruta atiende a los tres juegos.
+- `TierListTemplate` (`tier_list_templates`): `id`, `name`, `created_by`
+  (FK a `users`, requiere login), `items` (jsonb). `POST` para crear,
+  `GET /mine` para listar las propias (liviano, sin las imágenes
+  completas — solo nombre y conteo), `GET /{id}` para el detalle completo
+  (imágenes incluidas, solo si el usuario logueado es el dueño).
+- Validación de imágenes: formato (`data:image/png|jpeg|jpg|webp;base64,`)
+  y tamaño máximo (~150KB en base64) — sin esto, el endpoint público
+  podría usarse para guardar payloads gigantes de mala fe.
+- **El roster está duplicado a mano entre `backend/app/api/tier_lists.py`
+  y `frontend/src/lib/characterColors.ts`** — si se agrega/saca un
+  personaje, hay que actualizar los dos lugares.
+
+**Decisión de moderación (no solo de copyright):** las tier lists de
+personajes (SF6/3S) siguen siendo anónimas — no hay contenido de terceros
+que moderar, solo fichas de color. Las personalizadas SÍ requieren login
+porque implican alojar imágenes que sube la propia comunidad — con nombre
+real detrás de cada subida (disuade abuso, y da con quién hablar si algo
+pasa). No se implementó un proceso formal de DMCA (agente registrado,
+política pública, etc.) — para eso haría falta más que código, es papeleo
+legal real que un club de hobby probablemente no necesita todavía, pero
+vale la pena tenerlo en mente si el uso crece.
 
 **Costo de bundle:** `@dnd-kit/core` + `html-to-image` sumaron ~20KB
 gzip al bundle del frontend (de ~110KB a ~130KB) — tercera librería que

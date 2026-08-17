@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
-from app.models import CFNMatch, CFNProfile, Event, EventComment, QuarterlyGoal, Role, TierList, User, user_roles  # noqa: E402, F401
+from app.models import CFNMatch, CFNProfile, Event, EventComment, QuarterlyGoal, Role, TierList, TierListTemplate, User, user_roles  # noqa: E402, F401
 
 # importados arriba para que Base.metadata los conozca antes del autogenerate
 
