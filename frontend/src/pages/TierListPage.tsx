@@ -1,6 +1,17 @@
-import { DndContext, useDraggable, useDroppable, type DragEndEvent } from "@dnd-kit/core";
+import {
+  DndContext,
+  useDroppable,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { toBlob, toPng } from "html-to-image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
@@ -24,6 +35,8 @@ interface TierRow {
   label: string;
   color: string;
 }
+
+const UNPLACED_ID = "unplaced";
 
 const TIER_PALETTE = [
   "bg-red-500/20 border-red-500/40",
@@ -52,11 +65,18 @@ function emptyTiers(rows: TierRow[]): Record<string, TierItemData[]> {
   return Object.fromEntries(rows.map((r) => [r.id, []]));
 }
 
+/** Ítem arrastrable Y reordenable (a diferencia de useDraggable solo, esto
+ * sabe insertarse en una posición exacta dentro de una lista, no solo
+ * "moverse a algún contenedor" — es lo que permite acomodar de derecha a
+ * izquierda, insertar en el medio, etc. Ver lessons.md. */
 function ItemChip({ item }: { item: TierItemData }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: item.id });
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   if (item.image) {
     return (
@@ -89,20 +109,28 @@ function ItemChip({ item }: { item: TierItemData }) {
   );
 }
 
-function DroppableZone({
+/** El contenedor de cada fila/bandeja — SortableContext (para poder
+ * reordenar e insertar en posición) envuelto en un useDroppable (para que
+ * un contenedor vacío, o soltar en el espacio libre después del último
+ * ítem, también cuente como un destino válido). */
+function SortableZone({
   id,
+  items,
   className,
   children,
 }: {
   id: string;
+  items: TierItemData[];
   className: string;
   children: React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={`${className} ${isOver ? "outline outline-2 outline-tdf-magenta" : ""}`}>
-      {children}
-    </div>
+    <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
+      <div ref={setNodeRef} className={`${className} ${isOver ? "outline outline-2 outline-tdf-magenta" : ""}`}>
+        {children}
+      </div>
+    </SortableContext>
   );
 }
 
@@ -125,7 +153,10 @@ export default function TierListPage() {
   const [unplaced, setUnplaced] = useState<TierItemData[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const boardRef = useRef<HTMLDivElement>(null);
+  // separado del resto de la página — es lo único que se captura al
+  // exportar como imagen, sin los botones de editar tiers ni "sin
+  // ranquear" (ver lessons.md, antes se exportaba todo junto)
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     listTierListTemplates()
@@ -139,11 +170,6 @@ export default function TierListPage() {
     const t = setTimeout(() => setMessage(null), 3500);
     return () => clearTimeout(t);
   }, [message]);
-
-  const allItems = useMemo(
-    () => [...unplaced, ...Object.values(tiers).flat()],
-    [unplaced, tiers]
-  );
 
   function loadIntoEditor(items: TierItemData[]) {
     const freshRows = defaultRows();
@@ -210,29 +236,62 @@ export default function TierListPage() {
     }
   }
 
+  function getContainerList(containerId: string): TierItemData[] {
+    return containerId === UNPLACED_ID ? unplaced : (tiers[containerId] ?? []);
+  }
+
+  function setContainerList(containerId: string, list: TierItemData[]) {
+    if (containerId === UNPLACED_ID) setUnplaced(list);
+    else setTiers((prev) => ({ ...prev, [containerId]: list }));
+  }
+
+  /** A qué contenedor pertenece un id — puede ser el id de un contenedor
+   * en sí (se soltó sobre espacio vacío) o el id de un ítem que ya está
+   * adentro de alguno (se soltó sobre/al lado de otro ítem, para
+   * insertarse en esa posición exacta). */
+  function findContainer(id: string): string | undefined {
+    if (id === UNPLACED_ID || rows.some((r) => r.id === id)) return id;
+    if (unplaced.some((i) => i.id === id)) return UNPLACED_ID;
+    for (const [tierId, items] of Object.entries(tiers)) {
+      if (items.some((i) => i.id === id)) return tierId;
+    }
+    return undefined;
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
-    const itemId = String(active.id);
-    const targetZone = String(over.id);
-    const found = allItems.find((i) => i.id === itemId);
-    if (!found) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
 
-    setTiers((prev) => {
-      const next: Record<string, TierItemData[]> = {};
-      for (const [tier, list] of Object.entries(prev)) {
-        next[tier] = list.filter((i) => i.id !== itemId);
-      }
-      if (rows.some((r) => r.id === targetZone)) {
-        next[targetZone] = [...(next[targetZone] ?? []), found];
-      }
-      return next;
-    });
+    const sourceContainer = findContainer(activeId);
+    const destContainer = findContainer(overId);
+    if (!sourceContainer || !destContainer) return;
 
-    setUnplaced((prev) => {
-      const withoutItem = prev.filter((i) => i.id !== itemId);
-      return targetZone === "unplaced" ? [...withoutItem, found] : withoutItem;
-    });
+    const sourceList = getContainerList(sourceContainer);
+    const activeIndex = sourceList.findIndex((i) => i.id === activeId);
+    if (activeIndex === -1) return;
+    const item = sourceList[activeIndex];
+
+    if (sourceContainer === destContainer) {
+      // reordenar dentro del mismo tier/bandeja — esto es lo que antes
+      // no funcionaba: solo se podía mandar al final, nunca insertar en
+      // una posición puntual (ver lessons.md)
+      const overIndex = sourceList.findIndex((i) => i.id === overId);
+      const newIndex = overIndex === -1 ? sourceList.length - 1 : overIndex;
+      setContainerList(sourceContainer, arrayMove(sourceList, activeIndex, newIndex));
+      return;
+    }
+
+    // mover entre contenedores distintos, insertando en la posición
+    // exacta donde se soltó (no siempre al final)
+    const destList = getContainerList(destContainer);
+    const overIndex = destList.findIndex((i) => i.id === overId);
+    const insertAt = overIndex === -1 ? destList.length : overIndex;
+
+    setContainerList(sourceContainer, sourceList.filter((i) => i.id !== activeId));
+    setContainerList(destContainer, [...destList.slice(0, insertAt), item, ...destList.slice(insertAt)]);
   }
 
   function addRow() {
@@ -268,8 +327,8 @@ export default function TierListPage() {
   }
 
   async function handleDownload() {
-    if (!boardRef.current) return;
-    const dataUrl = await toPng(boardRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
+    if (!exportRef.current) return;
+    const dataUrl = await toPng(exportRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
     const link = document.createElement("a");
     link.download = "tdf-tierlist.png";
     link.href = dataUrl;
@@ -277,9 +336,9 @@ export default function TierListPage() {
   }
 
   async function handleCopyImage() {
-    if (!boardRef.current) return;
+    if (!exportRef.current) return;
     try {
-      const blob = await toBlob(boardRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
+      const blob = await toBlob(exportRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
       if (!blob) throw new Error("sin blob");
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       setMessage("Imagen copiada al portapapeles.");
@@ -310,10 +369,11 @@ export default function TierListPage() {
       <h1 className="text-3xl font-bold mb-2">Arma tu tier list</h1>
       <p className="text-gray-500 mb-8 max-w-xl">
         Elige una plantilla armada por la comunidad, o crea la tuya si
-        tienes sesión iniciada. Arrastra cada ítem al tier que quieras,
-        agrega o saca tiers con los botones de la derecha de cada fila, y
-        cuando termines la puedes descargar como imagen, copiarla directo
-        al portapapeles, o guardarla para compartir un link.
+        tienes sesión iniciada. Arrastra cada ítem al tier que quieras (y
+        también dentro de un mismo tier, para reordenar), agrega o saca
+        tiers con los botones de la derecha de cada fila, y cuando
+        termines la puedes descargar como imagen, copiarla directo al
+        portapapeles, o guardarla para compartir un link.
       </p>
 
       {!activeTemplate && (
@@ -426,72 +486,85 @@ export default function TierListPage() {
           </div>
 
           <DndContext onDragEnd={handleDragEnd}>
-            <div ref={boardRef} className="bg-tdf-dark p-4">
-              <div className="flex flex-col gap-1 mb-4">
-                {rows.map((row, i) => (
-                  <div key={row.id} className="flex">
-                    <div className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}>
-                      <input
-                        value={row.label}
-                        onChange={(e) => renameRow(row.id, e.target.value)}
-                        className="w-full bg-transparent text-center font-bold text-lg focus:outline-none"
-                      />
-                    </div>
-                    <DroppableZone
-                      id={row.id}
-                      className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start"
-                    >
-                      {tiers[row.id]?.map((item) => (
-                        <ItemChip key={item.id} item={item} />
-                      ))}
-                    </DroppableZone>
-                    <div className="w-8 shrink-0 flex flex-col justify-center gap-0.5 pl-1">
-                      <button
-                        onClick={() => moveRow(row.id, -1)}
-                        disabled={i === 0}
-                        className="text-gray-500 hover:text-white disabled:opacity-20 text-xs"
-                        aria-label="Subir tier"
-                      >
-                        ▲
-                      </button>
-                      <button
-                        onClick={() => moveRow(row.id, 1)}
-                        disabled={i === rows.length - 1}
-                        className="text-gray-500 hover:text-white disabled:opacity-20 text-xs"
-                        aria-label="Bajar tier"
-                      >
-                        ▼
-                      </button>
-                      <button
-                        onClick={() => removeRow(row.id)}
-                        disabled={rows.length <= 1}
-                        className="text-gray-500 hover:text-red-400 disabled:opacity-20 text-xs"
-                        aria-label="Borrar tier"
-                      >
-                        ✕
-                      </button>
-                    </div>
+            {/* solo esto se captura al exportar como imagen — nada de
+                botones de editar, nada de "sin ranquear" */}
+            <div ref={exportRef} className="bg-tdf-dark p-4 flex flex-col gap-1 mb-1">
+              {rows.map((row) => (
+                <div key={row.id} className="flex">
+                  <div className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}>
+                    <span className="font-bold text-lg">{row.label}</span>
                   </div>
-                ))}
-              </div>
-
-              <button
-                onClick={addRow}
-                className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta transition-colors mb-6"
-              >
-                + Agregar tier
-              </button>
-
-              <p className="font-mono text-xs uppercase text-gray-500 mb-2">Sin ranquear</p>
-              <DroppableZone
-                id="unplaced"
-                className="border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-3 min-h-20"
-              >
-                {unplaced.map((item) => (
-                  <ItemChip key={item.id} item={item} />
-                ))}
-              </DroppableZone>
+                  <SortableZone
+                    id={row.id}
+                    items={tiers[row.id] ?? []}
+                    className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start"
+                  >
+                    {tiers[row.id]?.map((item) => (
+                      <ItemChip key={item.id} item={item} />
+                    ))}
+                  </SortableZone>
+                </div>
+              ))}
             </div>
+
+            {/* la administración de tiers y "sin ranquear" quedan AFUERA
+                del exportRef a propósito — son herramientas de edición,
+                no parte de la tier list terminada */}
+            <div className="flex flex-col gap-1 mb-4">
+              {rows.map((row, i) => (
+                <div key={row.id} className="flex items-center h-16">
+                  <div className="flex-1" />
+                  <input
+                    value={row.label}
+                    onChange={(e) => renameRow(row.id, e.target.value)}
+                    placeholder="nombre del tier"
+                    className="w-32 bg-tdf-dark border border-tdf-line px-2 py-1 text-xs font-mono mr-2"
+                  />
+                  <button
+                    onClick={() => moveRow(row.id, -1)}
+                    disabled={i === 0}
+                    className="text-gray-500 hover:text-white disabled:opacity-20 text-xs px-1"
+                    aria-label="Subir tier"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    onClick={() => moveRow(row.id, 1)}
+                    disabled={i === rows.length - 1}
+                    className="text-gray-500 hover:text-white disabled:opacity-20 text-xs px-1"
+                    aria-label="Bajar tier"
+                  >
+                    ▼
+                  </button>
+                  <button
+                    onClick={() => removeRow(row.id)}
+                    disabled={rows.length <= 1}
+                    className="text-gray-500 hover:text-red-400 disabled:opacity-20 text-xs px-1"
+                    aria-label="Borrar tier"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addRow}
+              className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta transition-colors mb-6"
+            >
+              + Agregar tier
+            </button>
+
+            <p className="font-mono text-xs uppercase text-gray-500 mb-2">Sin ranquear</p>
+            <SortableZone
+              id={UNPLACED_ID}
+              items={unplaced}
+              className="border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-3 min-h-20"
+            >
+              {unplaced.map((item) => (
+                <ItemChip key={item.id} item={item} />
+              ))}
+            </SortableZone>
           </DndContext>
 
           {message && <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>}
