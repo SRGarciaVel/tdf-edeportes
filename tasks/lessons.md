@@ -559,26 +559,30 @@ aplica a comentarios de código (`//`, `/** */`) — esos son para quien lee
 el código, no para quien usa el sitio, y ahí es una herramienta de
 puntuación normal como cualquier otra.
 
-## Twitch bloquea el chat de mods/dueño si CUALQUIER ancestro del iframe tiene un `transform`, aunque sea invisible
+## Twitch bloquea el chat de mods/dueño si el iframe queda tapado, aunque sea por un elemento nuestro propio
 
-**Qué pasó:** al abrir el panel de chat con la cuenta de un mod/dueño real
-del canal de Twitch, aparecía "Chatting is disabled for channel
-owner/mods because the Twitch Chat window is obscured by another
-element" — el chat se veía perfecto, pero no dejaba escribir.
+**Qué pasó:** después de sacar `framer-motion` (el primer sospechoso) el
+mensaje "obscured by another element" seguía apareciendo con la cuenta
+real de un mod del canal.
 
-**Por qué:** es una protección anti-clickjacking del propio navegador
-(pensada para que nadie pueda "tapar" el chat de un mod con un elemento
-invisible para hacerle clickear banear/expulsar a alguien sin darse
-cuenta). El detector se fija si algún ancestro del iframe tiene un
-`transform` en su CSS — nuestro panel usaba `framer-motion` para el
-slide, que anima con `transform: translateX(...)`, y ese valor queda
-aplicado (aunque sea `translateX(0px)`, visualmente idéntico a no tener
-nada) incluso cuando la animación termina. Alcanza con que exista, no
-hace falta que se note.
+**Por qué (la causa real, no la que pensé primero):** el botón flotante
+de "Chat"/"Cerrar" se quedaba siempre visible, con `right-0` — el mismo
+valor que usaba el panel cuando estaba abierto. Los dos con `right: 0` al
+mismo tiempo, y el botón con `z-50` (más alto que el panel, `z-40`),
+significa que el botón literalmente se dibujaba **encima** del iframe.
+No era un falso positivo de Twitch — el chat estaba tapado de verdad, por
+nuestro propio botón.
 
-**Regla:** cualquier contenedor que envuelva un iframe de chat de Twitch
-(o de cualquier plataforma con esta misma protección) no puede tener
-`transform` en ningún ancestro — ni por animación, ni por
-`translate-x-*`/`scale-*` de Tailwind, ni por nada. Para animar un panel
-que contiene un iframe así, usar propiedades de posición normales
-(`right`, `left`, `top`) con `transition`, nunca `transform`.
+**La solución de fondo:** el botón de "abrir" solo existe mientras el
+panel está **cerrado** (se deja de renderizar por completo al abrirlo,
+no se mueve ni se esconde con CSS — directamente no está en el DOM). El
+botón de "cerrar" vive **adentro** del panel mismo, apilado arriba del
+iframe con flexbox (`flex flex-col`, header arriba, iframe abajo) — así
+nunca puede superponerse al iframe, están en flujo normal, no flotando
+uno sobre otro.
+
+**Regla ampliada:** este bloqueo de Twitch se dispara por dos motivos
+distintos, no solo uno — (1) cualquier ancestro del iframe con un
+`transform`, y (2) cualquier elemento (propio o ajeno) que se superponga
+visualmente al iframe, sin importar si tiene transform o no. Verificar
+los dos por separado antes de dar el problema por resuelto.
