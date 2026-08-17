@@ -192,6 +192,8 @@ export default function TierListPage() {
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(
     null,
   );
+  const [confirmDeleteTemplate, setConfirmDeleteTemplate] =
+    useState<TierListTemplateSummaryData | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -245,13 +247,11 @@ export default function TierListPage() {
 
   // solo el botón visible a staff (ver el render más abajo) puede llegar
   // a llamar esto, pero el backend también valida is_staff en el DELETE
-  // — no confiamos únicamente en ocultar el botón en el frontend
+  // — no confiamos únicamente en ocultar el botón en el frontend.
+  // La confirmación ya no es window.confirm() del navegador (rompía con
+  // la estética del sitio) — vive en el popup propio, ver más abajo.
   async function handleDeleteTemplate(summary: TierListTemplateSummaryData) {
     if (!token) return;
-    const confirmed = window.confirm(
-      `¿Borrar la plantilla "${summary.name}"? Los rankings ya compartidos con esta plantilla van a seguir funcionando igual, pero nadie va a poder crear uno nuevo con ella.`,
-    );
-    if (!confirmed) return;
     setDeletingTemplateId(summary.id);
     try {
       await deleteTierListTemplate(token, summary.id);
@@ -261,6 +261,7 @@ export default function TierListPage() {
       setMessage("No se pudo borrar la plantilla.");
     } finally {
       setDeletingTemplateId(null);
+      setConfirmDeleteTemplate(null);
     }
   }
 
@@ -643,7 +644,7 @@ export default function TierListPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteTemplate(t);
+                      setConfirmDeleteTemplate(t);
                     }}
                     disabled={deletingTemplateId === t.id}
                     className="absolute top-2 right-2 text-gray-500 hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
@@ -655,6 +656,66 @@ export default function TierListPage() {
               </div>
             ))}
           </div>
+
+          {/* popup propio de confirmación, en vez de window.confirm() del
+              navegador — mismo patrón visual que el popup de configurar
+              tier más abajo, así todos los "¿estás seguro?" del sitio se
+              ven iguales entre sí */}
+          {confirmDeleteTemplate && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+              onClick={() => setConfirmDeleteTemplate(null)}
+            >
+              <div
+                className="hud-frame bg-tdf-charcoal border border-tdf-line w-full max-w-sm p-5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-mono text-xs uppercase text-red-400">
+                    Borrar plantilla
+                  </h3>
+                  <button
+                    onClick={() => setConfirmDeleteTemplate(null)}
+                    className="text-gray-500 hover:text-white text-sm"
+                    aria-label="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <p className="text-sm text-gray-200 mb-2">
+                  ¿Borrar{" "}
+                  <span className="font-semibold text-white">
+                    "{confirmDeleteTemplate.name}"
+                  </span>
+                  ?
+                </p>
+                <p className="font-mono text-[11px] text-gray-500 mb-5">
+                  Los rankings ya compartidos con esta plantilla van a seguir
+                  funcionando igual, pero nadie va a poder crear uno nuevo con
+                  ella.
+                </p>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setConfirmDeleteTemplate(null)}
+                    className="border border-tdf-line hover:border-white transition-colors px-4 py-2 font-mono text-[11px] uppercase"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTemplate(confirmDeleteTemplate)}
+                    disabled={deletingTemplateId === confirmDeleteTemplate.id}
+                    className="bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-colors px-4 py-2 font-mono text-[11px] uppercase text-red-300 disabled:opacity-50"
+                  >
+                    {deletingTemplateId === confirmDeleteTemplate.id
+                      ? "Borrando..."
+                      : "Borrar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
