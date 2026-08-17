@@ -1,7 +1,9 @@
 import {
   DndContext,
+  DragOverlay,
   useDroppable,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -109,6 +111,33 @@ function ItemChip({ item }: { item: TierItemData }) {
   );
 }
 
+/** Clon puramente visual del ítem que se está arrastrando, renderizado por
+ * <DragOverlay> en un portal aparte que sigue al cursor/dedo en todo
+ * momento. ItemChip solo se anima "in place" dentro de su propia grilla
+ * (con rectSortingStrategy) — sin esto, el ítem original se queda opaco
+ * en su celda pero nada visible se mueve con el puntero, que es la queja
+ * de Seba: no se siente como que estás "sosteniendo" la imagen. */
+function ItemPreview({ item }: { item: TierItemData }) {
+  if (item.image) {
+    return (
+      <img
+        src={item.image}
+        alt={item.label}
+        className="w-16 h-16 object-cover border-2 border-tdf-magenta shadow-[0_8px_24px_rgba(0,0,0,0.6)] rotate-3 cursor-grabbing"
+      />
+    );
+  }
+  return (
+    <div
+      className={`px-2 py-1 text-xs font-mono border-2 border-tdf-magenta bg-tdf-dark shadow-[0_8px_24px_rgba(0,0,0,0.6)] rotate-3 cursor-grabbing ${characterColorClass(
+        item.label
+      )}`}
+    >
+      {item.label}
+    </div>
+  );
+}
+
 /** El contenedor de cada fila/bandeja — SortableContext (para poder
  * reordenar e insertar en posición) envuelto en un useDroppable (para que
  * un contenedor vacío, o soltar en el espacio libre después del último
@@ -151,6 +180,7 @@ export default function TierListPage() {
   const [rows, setRows] = useState<TierRow[]>(defaultRows());
   const [tiers, setTiers] = useState<Record<string, TierItemData[]>>(() => emptyTiers(defaultRows()));
   const [unplaced, setUnplaced] = useState<TierItemData[]>([]);
+  const [activeItem, setActiveItem] = useState<TierItemData | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   // separado del resto de la página — es lo único que se captura al
@@ -258,7 +288,21 @@ export default function TierListPage() {
     return undefined;
   }
 
+  function findItem(id: string): TierItemData | undefined {
+    return (
+      unplaced.find((i) => i.id === id) ??
+      Object.values(tiers)
+        .flat()
+        .find((i) => i.id === id)
+    );
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveItem(findItem(String(event.active.id)) ?? null);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setActiveItem(null);
     const { active, over } = event;
     if (!over) return;
     const activeId = String(active.id);
@@ -326,9 +370,21 @@ export default function TierListPage() {
     });
   }
 
+  // los controles de cada tier (renombrar, subir/bajar, borrar) ahora
+  // viven DENTRO de la misma fila que se exporta (ver fila de cada tier
+  // más abajo) — este filtro es lo que los excluye de la imagen final sin
+  // tener que mantenerlos en un contenedor DOM aparte
+  function exportFilter(node: HTMLElement) {
+    return node.dataset?.exportExclude !== "true";
+  }
+
   async function handleDownload() {
     if (!exportRef.current) return;
-    const dataUrl = await toPng(exportRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
+    const dataUrl = await toPng(exportRef.current, {
+      backgroundColor: "#0D0710",
+      pixelRatio: 2,
+      filter: exportFilter,
+    });
     const link = document.createElement("a");
     link.download = "tdf-tierlist.png";
     link.href = dataUrl;
@@ -338,7 +394,11 @@ export default function TierListPage() {
   async function handleCopyImage() {
     if (!exportRef.current) return;
     try {
-      const blob = await toBlob(exportRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
+      const blob = await toBlob(exportRef.current, {
+        backgroundColor: "#0D0710",
+        pixelRatio: 2,
+        filter: exportFilter,
+      });
       if (!blob) throw new Error("sin blob");
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       setMessage("Imagen copiada al portapapeles.");
@@ -485,11 +545,15 @@ export default function TierListPage() {
             </button>
           </div>
 
-          <DndContext onDragEnd={handleDragEnd}>
-            {/* solo esto se captura al exportar como imagen — nada de
-                botones de editar, nada de "sin ranquear" */}
+          <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+            {/* Cada fila combina tier + controles en una sola línea (como
+                TierMaker) — pero solo el tier (label + bandeja) importa
+                visualmente al exportar; los controles llevan
+                data-export-exclude y el filtro de toPng/toBlob los saca
+                de la imagen final sin tener que mantenerlos en un
+                contenedor DOM aparte (ver exportFilter). */}
             <div ref={exportRef} className="bg-tdf-dark p-4 flex flex-col gap-1 mb-1">
-              {rows.map((row) => (
+              {rows.map((row, i) => (
                 <div key={row.id} className="flex">
                   <div className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}>
                     <span className="font-bold text-lg">{row.label}</span>
@@ -503,47 +567,43 @@ export default function TierListPage() {
                       <ItemChip key={item.id} item={item} />
                     ))}
                   </SortableZone>
-                </div>
-              ))}
-            </div>
-
-            {/* la administración de tiers y "sin ranquear" quedan AFUERA
-                del exportRef a propósito — son herramientas de edición,
-                no parte de la tier list terminada */}
-            <div className="flex flex-col gap-1 mb-4">
-              {rows.map((row, i) => (
-                <div key={row.id} className="flex items-center h-16">
-                  <div className="flex-1" />
-                  <input
-                    value={row.label}
-                    onChange={(e) => renameRow(row.id, e.target.value)}
-                    placeholder="nombre del tier"
-                    className="w-32 bg-tdf-dark border border-tdf-line px-2 py-1 text-xs font-mono mr-2"
-                  />
-                  <button
-                    onClick={() => moveRow(row.id, -1)}
-                    disabled={i === 0}
-                    className="text-gray-500 hover:text-white disabled:opacity-20 text-xs px-1"
-                    aria-label="Subir tier"
+                  <div
+                    data-export-exclude="true"
+                    className="w-32 shrink-0 bg-black/70 border border-tdf-line border-l-0 flex items-center gap-1.5 px-2"
                   >
-                    ▲
-                  </button>
-                  <button
-                    onClick={() => moveRow(row.id, 1)}
-                    disabled={i === rows.length - 1}
-                    className="text-gray-500 hover:text-white disabled:opacity-20 text-xs px-1"
-                    aria-label="Bajar tier"
-                  >
-                    ▼
-                  </button>
-                  <button
-                    onClick={() => removeRow(row.id)}
-                    disabled={rows.length <= 1}
-                    className="text-gray-500 hover:text-red-400 disabled:opacity-20 text-xs px-1"
-                    aria-label="Borrar tier"
-                  >
-                    ✕
-                  </button>
+                    <input
+                      value={row.label}
+                      onChange={(e) => renameRow(row.id, e.target.value)}
+                      placeholder="nombre"
+                      className="w-16 min-w-0 bg-tdf-dark border border-tdf-line px-1.5 py-1 text-[11px] font-mono"
+                    />
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => moveRow(row.id, -1)}
+                        disabled={i === 0}
+                        className="text-gray-500 hover:text-white disabled:opacity-20 text-[10px] leading-none px-1"
+                        aria-label="Subir tier"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => moveRow(row.id, 1)}
+                        disabled={i === rows.length - 1}
+                        className="text-gray-500 hover:text-white disabled:opacity-20 text-[10px] leading-none px-1"
+                        aria-label="Bajar tier"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => removeRow(row.id)}
+                      disabled={rows.length <= 1}
+                      className="text-gray-500 hover:text-red-400 disabled:opacity-20 text-xs px-1"
+                      aria-label="Borrar tier"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -565,6 +625,14 @@ export default function TierListPage() {
                 <ItemChip key={item.id} item={item} />
               ))}
             </SortableZone>
+
+            {/* sigue al cursor/dedo mientras se arrastra — le da la
+                sensación de "estar sosteniendo" la imagen. Antes el ítem
+                original solo se ponía opaco en su celda de origen, nada
+                visible se movía junto con el puntero. */}
+            <DragOverlay dropAnimation={null}>
+              {activeItem ? <ItemPreview item={activeItem} /> : null}
+            </DragOverlay>
           </DndContext>
 
           {message && <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>}
