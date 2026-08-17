@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import AnnouncementBar from "../components/AnnouncementBar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
@@ -24,6 +25,14 @@ export default function HomePage() {
 
   return (
     <Layout>
+      <AnnouncementBar
+        storageKey="tierlist-launch"
+        eyebrow="NUEVO"
+        message="Ya puedes armar tu Tier List de personajes con la comunidad."
+        ctaLabel="Probarla"
+        ctaTo="/tierlist"
+      />
+
       <section className="spray-bg py-12">
         <div className="relative z-10 flex flex-col gap-6">
           <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
@@ -37,8 +46,8 @@ export default function HomePage() {
             </h1>
             <div className="flex flex-col gap-6">
               <p className="text-lg text-gray-400 max-w-xl">
-                Streams, torneos y una comunidad que crece jugando Third
-                Strike, Street Fighter 6 y cualquier otro FG que se cruce.
+                Streams, torneos y una comunidad que crece jugando Third Strike,
+                Street Fighter 6 y cualquier otro FG que se cruce.
               </p>
               <div className="flex flex-wrap gap-4 font-mono text-sm uppercase">
                 <a
@@ -110,18 +119,37 @@ export default function HomePage() {
         </section>
       )}
 
-      <section className="grid sm:grid-cols-3 gap-4">
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { to: "/torneos", label: "Torneos", desc: "Brackets y resultados vía start.gg" },
-          { to: "/jugadores", label: "Jugadores", desc: "CFN de TDF y la escena chilena" },
-          { to: "/nosotros", label: "Nosotros", desc: "Quiénes somos y el staff detrás" },
+          {
+            to: "/torneos",
+            label: "Torneos",
+            desc: "Brackets y resultados vía start.gg",
+          },
+          {
+            to: "/jugadores",
+            label: "Jugadores",
+            desc: "CFN de TDF y la escena chilena",
+          },
+          {
+            to: "/tierlist",
+            label: "Tier List",
+            desc: "Arma tu ranking con la comunidad",
+          },
+          {
+            to: "/nosotros",
+            label: "Nosotros",
+            desc: "Quiénes somos y el staff detrás",
+          },
         ].map((item) => (
           <Link
             key={item.to}
             to={item.to}
             className="hud-frame bg-tdf-charcoal px-5 py-6 hover:border-tdf-magenta transition-colors"
           >
-            <p className="text-lg font-semibold text-tdf-magenta mb-1">{item.label}</p>
+            <p className="text-lg font-semibold text-tdf-magenta mb-1">
+              {item.label}
+            </p>
             <p className="text-sm text-gray-500">{item.desc}</p>
           </Link>
         ))}

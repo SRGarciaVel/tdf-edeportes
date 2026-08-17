@@ -7,7 +7,10 @@
     @apply bg-tdf-dark text-white font-display;
     letter-spacing: 0.01em;
   }
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     @apply font-display font-bold uppercase tracking-wide;
   }
 }
@@ -25,9 +28,12 @@
   .hud-frame {
     @apply border border-tdf-line relative;
     clip-path: polygon(
-      0 14px, 14px 0,
-      100% 0, 100% calc(100% - 14px),
-      calc(100% - 14px) 100%, 0 100%
+      0 14px,
+      14px 0,
+      100% 0,
+      100% calc(100% - 14px),
+      calc(100% - 14px) 100%,
+      0 100%
     );
     box-shadow: 0 8px 28px -16px rgba(196, 20, 122, 0.45);
   }
@@ -42,10 +48,21 @@
     content: "";
     position: absolute;
     inset: 0;
-    background-image: radial-gradient(rgba(196, 20, 122, 0.5) 1.5px, transparent 1.5px);
+    background-image: radial-gradient(
+      rgba(196, 20, 122, 0.5) 1.5px,
+      transparent 1.5px
+    );
     background-size: 16px 16px;
-    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 75%);
-    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 0%, transparent 75%);
+    -webkit-mask-image: radial-gradient(
+      ellipse 70% 60% at 50% 40%,
+      black 0%,
+      transparent 75%
+    );
+    mask-image: radial-gradient(
+      ellipse 70% 60% at 50% 40%,
+      black 0%,
+      transparent 75%
+    );
     opacity: 0.6;
     pointer-events: none;
     z-index: 0;
@@ -60,9 +77,21 @@
     position: absolute;
     inset: -8px;
     background:
-      radial-gradient(circle at 35% 40%, rgba(196, 20, 122, 0.55) 0%, transparent 55%),
-      radial-gradient(circle at 65% 60%, rgba(91, 42, 134, 0.55) 0%, transparent 50%),
-      radial-gradient(circle at 50% 50%, rgba(196, 20, 122, 0.3) 0%, transparent 65%);
+      radial-gradient(
+        circle at 35% 40%,
+        rgba(196, 20, 122, 0.55) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at 65% 60%,
+        rgba(91, 42, 134, 0.55) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 50% 50%,
+        rgba(196, 20, 122, 0.3) 0%,
+        transparent 65%
+      );
     border-radius: 9999px;
     filter: blur(3px);
     z-index: 0;
@@ -79,5 +108,22 @@
       transparent
     );
     box-shadow: 0 0 12px 2px rgba(196, 20, 122, 0.55);
+  }
+
+  /* pulso sutil en el box-shadow del hud-frame, para el aviso de
+     "función nueva" del Home — respira entre la sombra por defecto y
+     una versión más intensa, nunca parpadea a full opacidad (eso se
+     vería como spam de banner, no como un aviso de sistema) */
+  @keyframes announcement-glow {
+    0%,
+    100% {
+      box-shadow: 0 8px 28px -16px rgba(196, 20, 122, 0.45);
+    }
+    50% {
+      box-shadow: 0 8px 28px -10px rgba(196, 20, 122, 0.85);
+    }
+  }
+  .announcement-pulse {
+    animation: announcement-glow 2.4s ease-in-out infinite;
   }
 }
