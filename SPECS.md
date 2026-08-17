@@ -563,7 +563,56 @@ contenido, solo para usarlo. No se implementó un proceso formal de DMCA
 que código, es papeleo legal real que un club de hobby probablemente no
 necesita todavía, pero vale la pena tenerlo en mente si el uso crece.
 
-## 17. Deuda técnica conocida / decisiones pendientes
+**Fix posterior (mismo día): reordenamiento libre + export aislado.**
+El drag and drop inicial (`@dnd-kit/core` solo) tenía un bug real: soltar
+un ítem en cualquier parte de un tier siempre lo mandaba al final de la
+lista — no existía lógica para insertarlo en una posición puntual, así
+que "acomodar de derecha a izquierda" no funcionaba (siempre se iba al
+final, nunca se insertaba antes de otro ítem). Se resolvió agregando
+`@dnd-kit/sortable` + `@dnd-kit/utilities`: cada `ItemChip` usa
+`useSortable` en vez de `useDraggable`, cada tier/bandeja está envuelto
+en `SortableContext`, y `handleDragEnd` distingue soltar sobre un
+contenedor vacío (va al final) de soltar sobre un ítem puntual (se
+inserta ahí, con `arrayMove` si es dentro del mismo tier). Probado con un
+script aparte contra 4 escenarios (reordenar dentro del mismo tier en
+ambas direcciones, insertar en el medio, mover entre tiers a una posición
+puntual, soltar sobre un tier vacío) — los 4 pasan.
+
+De paso se separó `exportRef` (antes `boardRef`) para que solo envuelva
+las filas de tiers con sus ítems — los botones de flecha/borrar tier,
+"+ Agregar tier", y la caja de "Sin ranquear" quedaron estructuralmente
+afuera de ese contenedor, así la imagen descargada/copiada muestra
+únicamente el resultado, no la interfaz de edición.
+
+## 18. Panel de chat de Twitch — bloqueo anti-clickjacking (16-08-2026)
+
+Con la cuenta real de un mod/dueño del canal, el chat embebido
+(`TwitchChatPanel.tsx`) mostraba "Chatting is disabled for channel
+owner/mods because the Twitch Chat window is obscured by another
+element" y no dejaba escribir. Eran **dos causas independientes**, las
+dos de nuestro propio CSS, no un bug de Twitch:
+
+1. El panel se animaba con `framer-motion` (`transform: translateX`).
+   Cualquier `transform` en un ancestro del iframe de chat de Twitch —
+   aunque sea uno que no cambia nada visible — dispara la protección
+   anti-clickjacking del navegador. Se sacó `framer-motion` del proyecto
+   entero (no se usaba en ningún otro lado) y el panel ahora anima con
+   `right` + `transition-[right]`, nunca con `transform`.
+2. Causa más importante, encontrada después de que la primera no alcanzó:
+   el botón flotante de "Chat"/"Cerrar" se quedaba siempre visible con
+   `right-0`, el mismo valor que el panel abierto — y con `z-50` (más
+   alto que el panel). Literalmente se dibujaba encima del iframe. No era
+   un falso positivo, el chat estaba tapado de verdad. Se resolvió
+   sacando el botón de "abrir" del DOM por completo mientras el panel
+   está abierto (no se esconde con CSS, deja de existir), y moviendo el
+   botón de "cerrar" adentro del panel mismo, apilado arriba del iframe
+   con `flex flex-col` — nunca puede superponerse porque están en flujo
+   normal, no flotando uno sobre otro.
+
+Detalle completo y la regla general (este bloqueo tiene DOS motivos
+independientes, verificar los dos) en `tasks/lessons.md`.
+
+## 19. Deuda técnica conocida / decisiones pendientes
 
 - Titularidad de la app de Twitch Developer Console: pendiente que el CEO
   decida si la registra con una cuenta institucional o se registra

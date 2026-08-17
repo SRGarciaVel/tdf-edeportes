@@ -10,6 +10,21 @@ commitee, sin excepción.
   fricción con librerías, linters y documentación externa.
 - **Comentarios, docstrings, mensajes de commit y documentación** (`SPECS.md`,
   `README.md`, `ROADMAP.md`, este archivo): **español**.
+- **Texto visible del sitio** (párrafos, labels, botones, mensajes de error
+  o de "sin datos"): español chileno, tuteo con conjugación de **tú**
+  ("arma", "arrastra", "agrega", "puedes"), **nunca** voseo rioplatense
+  ("armá", "arrastrá", "agregá", "podés", "querés", "tenés", "sos"). Seba
+  es chileno, no argentino — esta regla no admite excepciones y ya se violó
+  dos veces sin querer (una vez en el texto nuevo de `/tierlist`, otra al
+  reescribir el "About" real de `/nosotros`), ver `SPECS.md §16`. Antes de
+  dar por terminado cualquier texto nuevo, revisar que no se haya colado
+  ninguna conjugación de voseo.
+- **Sin em-dash ("—") en texto visible del sitio**, tampoco en meta tags
+  (`og:description`, etc. — también se ven cuando alguien comparte el
+  link). Usar punto, coma, o separar en dos oraciones. Para valores de
+  "sin dato" en UI, usar "N/D", no un guión largo suelto. Esta regla NO
+  aplica a comentarios de código — ahí es puntuación normal. Ver
+  `SPECS.md §15-16` para el historial de cuándo se coló y por qué.
 - Si esta regla no es la que se quería (por ejemplo, si se prefiere también
   nomenclatura en español), se ajusta este documento explícitamente — no se
   asume a mitad de desarrollo.

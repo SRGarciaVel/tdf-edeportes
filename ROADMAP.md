@@ -72,6 +72,16 @@ para tener un molde consistente donde seguir incorporando contenido real.
 - [x] `/puntos`: molde visual (podio + tabla), sin mecánica real todavía —
       ver `SPECS.md §13`, requiere definir con el CEO/staff cómo se
       acumulan los puntos antes de implementar de verdad.
+- [x] `/tierlist`: herramienta de tier lists para la comunidad, basada
+      100% en plantillas subidas por la propia comunidad (no hay roster
+      propio de SF6/Third Strike incorporado al sitio — decisión de
+      copyright, ver `SPECS.md §16`). Crear una plantilla con imágenes
+      requiere login con Twitch; ranquear una plantilla existente es
+      libre para cualquiera. Tiers editables (agregar/sacar/reordenar/
+      renombrar), drag and drop con reordenamiento real en cualquier
+      dirección, exportar como PNG o al portapapeles, guardar y compartir
+      por link. Ver `SPECS.md §16-18` para el historial completo
+      (rediseños, bugs encontrados y resueltos).
 
 ## Mediano plazo — Fase 2: Cara pública y comunidad
 
