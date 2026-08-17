@@ -55,10 +55,10 @@ export default function NosotrosPage() {
             ¿Cómo aporto?
           </h2>
           <p className="text-gray-400 leading-relaxed text-sm">
-            El aporte primordial que siempre podés hacer es participar
+            El aporte primordial que siempre puedes hacer es participar
             activamente en la comunidad, a través de los streams, las
-            actividades y los torneos. Si además querés hacer un aporte
-            monetario, podés suscribirte al canal o donar por Twitch. Todo
+            actividades y los torneos. Si además quieres hacer un aporte
+            monetario, puedes suscribirte al canal o donar por Twitch. Todo
             aporte se usa únicamente en el crecimiento de la comunidad,
             tanto en mejorar las actividades como en conseguir recursos
             para streaming.

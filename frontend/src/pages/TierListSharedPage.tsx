@@ -22,12 +22,6 @@ const TIER_COLORS = [
   "bg-stone-500/20 border-stone-500/40",
 ];
 
-const GAME_LABEL: Record<string, string> = {
-  sf6: "Street Fighter 6",
-  "3s": "Third Strike",
-  custom: "personalizada",
-};
-
 function ItemChip({ item }: { item: TierItemData }) {
   if (item.image) {
     return (
@@ -71,10 +65,10 @@ export default function TierListSharedPage() {
   }, [message]);
 
   async function handleDownload() {
-    if (!boardRef.current || !data) return;
+    if (!boardRef.current) return;
     const dataUrl = await toPng(boardRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
     const link = document.createElement("a");
-    link.download = `tdf-tierlist-${data.game}.png`;
+    link.download = "tdf-tierlist.png";
     link.href = dataUrl;
     link.click();
   }
@@ -87,7 +81,7 @@ export default function TierListSharedPage() {
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       setMessage("Imagen copiada al portapapeles.");
     } catch {
-      setMessage("No se pudo copiar la imagen en este navegador — probá descargarla.");
+      setMessage("No se pudo copiar la imagen en este navegador — descárgala en su lugar.");
     }
   }
 
@@ -96,7 +90,7 @@ export default function TierListSharedPage() {
       <Layout>
         <p className="text-gray-500">No se encontró esta tier list.</p>
         <Link to="/tierlist" className="text-tdf-purple hover:text-tdf-magenta underline">
-          Armá la tuya →
+          Arma la tuya →
         </Link>
       </Layout>
     );
@@ -115,10 +109,8 @@ export default function TierListSharedPage() {
   return (
     <Layout>
       <SectionLabel index="09">Tier list</SectionLabel>
-      <h1 className="text-3xl font-bold mb-2">
-        Tier list de {GAME_LABEL[data.game] ?? data.game}
-      </h1>
-      <p className="text-gray-500 mb-8">Armada por alguien de la comunidad.</p>
+      <h1 className="text-3xl font-bold mb-2">Tier list de la comunidad</h1>
+      <p className="text-gray-500 mb-8">Armada por alguien de TDF.</p>
 
       <div ref={boardRef} className="bg-tdf-dark p-4">
         <div className="flex flex-col gap-1">

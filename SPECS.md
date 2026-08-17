@@ -477,87 +477,91 @@ oficiales del club pero nunca se habían linkeado desde el sitio.
 genérico que había puesto Claude como placeholder al bootstrapear el
 proyecto.
 
-## 16. Tier list (16-08-2026)
+## 16. Tier list (16-08-2026, rediseñada el mismo día)
 
-`/tierlist` — herramienta para armar tier lists de SF6 y Third Strike,
-pensada para usarse en stream. Idea de Seba, inspirada en TierMaker.
+`/tierlist` — herramienta para armar tier lists, pensada para usarse en
+stream. Idea de Seba, inspirada en TierMaker.
 
-**Decisión de copyright (discutida en profundidad con Seba, dos veces):**
-NO se usan retratos de personajes ni ningún arte de Capcom — cada
-personaje se representa como una ficha de texto con su color de
-identidad propio (`characterColors.ts`, ya construido para `/jugadores`).
-Esto se decidió a pesar de que Seba insistió con el argumento de que
-TierMaker usa retratos reales bajo una defensa de fair use + DMCA Safe
-Harbor. La distinción clave: Safe Harbor protege a una plataforma de lo
-que *suben otros usuarios*, no de contenido que *el sitio mismo publica*
-como plantilla — y para que la tier list sea usable, alguien (nosotros)
-tendría que precargar el roster completo como plantilla, lo cual nos
-saca de esa protección. Además, ya tenemos la postura explícita de
-Capcom por escrito (Fan Content Guidelines, `SPECS.md` — sección de
-"Comic Art Characters"/copyright del CFN tracker) diciendo que el uso sin
-alteración de sus materiales no cuenta como obra derivada permitida. Se
-mantiene la misma línea que con el mod de Nexus y los retratos de
-Buckler's Boot Camp: alternativa propia en vez de apostar a que no nos
-pase nada.
+**Rediseño importante (mismo día, segunda vuelta):** se sacaron los
+rosters propios de SF6 y Third Strike como "modos de juego" — ya no
+existen como opción incorporada al sitio. Todo el contenido ahora sale
+de **plantillas creadas por la comunidad**, públicas, listadas con el
+nombre de quien las armó. Esto además resuelve de raíz la discusión de
+copyright que se dio dos veces con Seba sobre usar retratos de
+personajes: como ya no hay ningún roster provisto por el sitio, el 100%
+del contenido de imágenes es subido por la propia comunidad — el sitio
+pasa a ser un alojador de contenido de terceros de verdad, no alguien
+publicando el roster de Capcom como plantilla propia. `characterColors.ts`
+(el mapa de colores por personaje) se mantiene igual, pero ya no cumple
+el rol de "roster incorporado" — solo sigue coloreando texto en
+`/jugadores`, y de forma oportunista si alguien nombra un personaje real
+en un ítem sin imagen de una plantilla comunitaria.
 
-**Frontend:**
-- `/tierlist`: editor con drag and drop (`@dnd-kit/core`), selector SF6 /
-  Third Strike / Personalizada, exportar como PNG o copiar al
-  portapapeles (`html-to-image`), guardar y compartir (redirige a
-  `/tierlist/{id}`).
-- `/tierlist/:id`: vista de solo lectura del link compartido, con los
-  mismos botones de exportar imagen.
-- **Tiers editables:** agregar, sacar, reordenar (subir/bajar) y
-  renombrar — el `id` interno de cada tier no cambia al renombrar (es el
-  label lo que cambia, no la clave donde se guardan sus ítems), así
-  renombrar no rompe nada. Al borrar un tier, sus ítems vuelven a "sin
-  ranquear" en vez de perderse.
-- **Modo personalizado:** requiere login (Twitch) — subida de imágenes,
-  redimensionadas en el navegador a 120x120 (recorte "cover" centrado,
-  mismo criterio visual que TierMaker) usando `<canvas>`, comprimidas a
-  WebP antes de mandarlas al backend. Nunca se sube la imagen original
-  completa.
-- **Presets (`TierListTemplate`):** guardar el set de imágenes cargado
-  (todos los ítems, estén ranqueados o no) como plantilla reutilizable,
-  para no tener que volver a subir todo la próxima vez. Solo visibles
-  para quien las creó — el endpoint de detalle (que trae las imágenes
-  completas) valida que el usuario logueado sea el dueño.
+**Regla de acceso (sin cambios respecto a la primera versión, pero ahora
+aplicada de forma más limpia):**
+- **Crear una plantilla nueva** (con imágenes subidas) requiere login con
+  Twitch — son imágenes de la persona, quedan asociadas a su cuenta.
+- **Ranquear una plantilla ya existente** es libre para cualquiera, sin
+  necesitar cuenta — mismo criterio que TierMaker.
+
+**Diseño de seguridad importante:** `POST /tierlists` (guardar un
+ranking) **no acepta imágenes directamente** — solo `template_id` + los
+IDs de los ítems de esa plantilla en cada tier. El backend resuelve el
+ítem real (con su imagen) desde la plantilla guardada en la base, nunca
+confía en datos de imagen que vengan del cliente en esa ruta. Sin esto,
+cualquiera sin login podría inyectar una imagen nueva saltándose por
+completo el requisito de login de `POST /tierlist-templates` — quedó
+probado explícitamente (batería de pruebas contra Postgres real:
+intentar "colar" un ítem que no pertenece a la plantilla da 400).
 
 **Backend:**
-- `TierList` (`tier_lists`): `id` (uuid, es el link para compartir),
-  `game` ("sf6" | "3s" | "custom"), `tiers` (jsonb, ahora
-  `{"S": [{"id","label","image"}], ...}` — cada ítem es un objeto, no un
-  string plano, para poder guardar la imagen cuando corresponde),
-  `created_at`. SF6/Third Strike siguen sin auth (público, anónimo, mismo
-  criterio que TierMaker). Personalizada exige login — se valida adentro
-  del mismo endpoint según el campo `game`, no como dependency fija,
-  porque la misma ruta atiende a los tres juegos.
 - `TierListTemplate` (`tier_list_templates`): `id`, `name`, `created_by`
-  (FK a `users`, requiere login), `items` (jsonb). `POST` para crear,
-  `GET /mine` para listar las propias (liviano, sin las imágenes
-  completas — solo nombre y conteo), `GET /{id}` para el detalle completo
-  (imágenes incluidas, solo si el usuario logueado es el dueño).
-- Validación de imágenes: formato (`data:image/png|jpeg|jpg|webp;base64,`)
-  y tamaño máximo (~150KB en base64) — sin esto, el endpoint público
-  podría usarse para guardar payloads gigantes de mala fe.
-- **El roster está duplicado a mano entre `backend/app/api/tier_lists.py`
-  y `frontend/src/lib/characterColors.ts`** — si se agrega/saca un
-  personaje, hay que actualizar los dos lugares.
+  (FK a `users`, requiere login para crearla), `items` (jsonb). Pública
+  de lectura: `GET /tierlist-templates` (lista todas, con
+  `creator_name`) y `GET /tierlist-templates/{id}` (detalle completo con
+  imágenes) — ninguna de las dos requiere login, para que cualquiera
+  pueda elegir y ranquear una plantilla sin cuenta. Solo el `POST` exige
+  login.
+- `TierList` (`tier_lists`): `id` (uuid, es el link para compartir),
+  `template_id` (FK nullable a `tier_list_templates` — nullable para que
+  un ranking guardado sobreviva aunque la plantilla original se borre
+  después), `tiers` (jsonb, foto congelada de cómo quedó ranqueado, con
+  los ítems completos copiados de la plantilla en el momento de guardar).
+  `POST /tierlists` sin auth (ranking libre para cualquiera).
+- Validación de imágenes (formato + tamaño máximo ~150KB en base64) vive
+  solo en `POST /tierlist-templates` ahora — es el único lugar donde
+  entra contenido nuevo al sistema.
 
-**Decisión de moderación (no solo de copyright):** las tier lists de
-personajes (SF6/3S) siguen siendo anónimas — no hay contenido de terceros
-que moderar, solo fichas de color. Las personalizadas SÍ requieren login
-porque implican alojar imágenes que sube la propia comunidad — con nombre
-real detrás de cada subida (disuade abuso, y da con quién hablar si algo
-pasa). No se implementó un proceso formal de DMCA (agente registrado,
-política pública, etc.) — para eso haría falta más que código, es papeleo
-legal real que un club de hobby probablemente no necesita todavía, pero
-vale la pena tenerlo en mente si el uso crece.
+**Frontend (`/tierlist`):**
+- Pantalla inicial: grilla de plantillas de la comunidad (nombre, cuántos
+  ítems, quién la creó) para elegir una y empezar a ranquear. Si hay
+  sesión iniciada, botón para crear una plantilla nueva (subir imágenes,
+  redimensionadas a 120x120 con `<canvas>` en el navegador antes de
+  mandarlas a cualquier lado, comprimidas a WebP).
+- Una vez elegida/creada una plantilla: el editor de siempre (tiers
+  editables — agregar, sacar, reordenar, renombrar sin romper dónde están
+  guardados los ítems — drag and drop, exportar PNG/portapapeles, guardar
+  y compartir por link).
+- `/tierlist/:id`: vista de solo lectura del link compartido.
 
-**Costo de bundle:** `@dnd-kit/core` + `html-to-image` sumaron ~20KB
-gzip al bundle del frontend (de ~110KB a ~130KB) — tercera librería que
-suma peso real después de Framer Motion, vale la pena tenerlo en cuenta
-si en algún momento el sitio se siente pesado para cargar.
+**Idioma:** se encontraron y corrigieron conjugaciones de voseo argentino
+("armá", "arrastrá", "podés", etc.) coladas en el texto visible de
+`/tierlist` y también en `/nosotros` (en el texto que se había reescrito
+a partir del "About" real de Twitch, que en su versión original sí
+estaba en tú-form correcto — el error fue mío al reescribirlo). Barrido
+completo hecho sobre todo `frontend/src` para confirmar que no quedó
+ningún otro rastro. Regla para cualquier texto nuevo de ahora en más:
+tú-form siempre ("arma", "arrastra", "agrega", "puedes"), nunca vos-form
+("armá", "arrastrá", "agregá", "podés") — Seba es chileno, no argentino,
+y lo marcó como una regla que no admite excepciones.
+
+**Decisión de moderación (sigue vigente, ya no depende de la distinción
+sf6/3s/custom):** ninguna imagen entra al sistema sin pasar por el login
+de creación de plantilla — no hay ningún camino anónimo para subir
+contenido, solo para usarlo. No se implementó un proceso formal de DMCA
+(agente registrado, política pública, etc.) — para eso haría falta más
+que código, es papeleo legal real que un club de hobby probablemente no
+necesita todavía, pero vale la pena tenerlo en mente si el uso crece.
 
 ## 17. Deuda técnica conocida / decisiones pendientes
 

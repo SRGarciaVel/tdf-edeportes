@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -9,15 +9,15 @@ from app.core.database import Base
 
 
 class TierList(Base):
-    """Una tier list armada por alguien de la comunidad — anónima (no
-    requiere login, mismo criterio que TierMaker: cualquiera arma y
-    comparte sin cuenta), guardada solo para poder compartirla por link.
+    """Un ranking armado por alguien de la comunidad, a partir de una
+    plantilla existente (TierListTemplate) — anónima (no requiere login,
+    solo la creación de la plantilla en sí lo requiere), guardada para
+    poder compartirla por link.
 
-    No se guardan retratos ni ningún arte de personajes — `tiers` es JSON
-    con nombres de personaje como texto plano (ej. {"S": ["Jamie"], "A":
-    ["Ryu", "Ken"], ...}), el frontend los pinta con su color propio
-    (characterColors.ts), nunca con imágenes de Capcom (SPECS.md — sección
-    de tier lists, decisión de no usar arte oficial ni de mods).
+    `tiers` es una foto congelada de cómo quedó ranqueado, con los ítems
+    completos (incluida su imagen) copiados desde la plantilla en el
+    momento de guardar — así, si la plantilla se borra o cambia después,
+    este ranking ya guardado no se ve afectado.
     """
 
     __tablename__ = "tier_lists"
@@ -25,9 +25,12 @@ class TierList(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    game: Mapped[str] = mapped_column(String, nullable=False)  # "sf6" | "3s"
-    # {"S": ["Jamie", "Ryu"], "A": [...], ...} — orden de tiers y nombres
-    # de personaje dentro de cada uno, tal cual los dejó quien la armó
+    # nullable: si en algún momento se borra la plantilla original, el
+    # ranking ya guardado sigue existiendo igual (tiers ya tiene la copia)
+    template_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tier_list_templates.id"), nullable=True
+    )
+    # {"S": [{"id","label","image"}], "A": [...], ...}
     tiers: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

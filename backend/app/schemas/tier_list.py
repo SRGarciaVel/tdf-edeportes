@@ -1,36 +1,13 @@
 import uuid
 from datetime import datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-Game = Literal["sf6", "3s", "custom"]
-
 
 class TierItem(BaseModel):
-    """Un ítem dentro de un tier — para SF6/Third Strike es un personaje
-    (label = nombre, sin imagen, se pinta con su color propio en el
-    frontend). Para tier lists personalizadas, la comunidad sube su
-    propia imagen (SPECS.md — sección de tier lists, requiere estar
-    logueado, distinto criterio que los personajes)."""
-
     id: str
     label: str
-    image: str | None = None  # data URL, solo se usa con game="custom"
-
-
-class TierListCreate(BaseModel):
-    game: Game
-    tiers: dict[str, list[TierItem]] = Field(default_factory=dict)
-
-
-class TierListRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    game: Game
-    tiers: dict[str, list[TierItem]]
-    created_at: datetime
+    image: str | None = None  # data URL — solo se define al crear una plantilla
 
 
 class TierListTemplateCreate(BaseModel):
@@ -44,17 +21,37 @@ class TierListTemplateRead(BaseModel):
     id: uuid.UUID
     name: str
     items: list[TierItem]
+    creator_name: str
     created_at: datetime
 
 
 class TierListTemplateSummary(BaseModel):
-    """Versión liviana para listar "mis plantillas" sin mandar todas las
-    imágenes de cada una — solo cuando se abre una puntual se pide el
-    detalle completo."""
+    """Versión liviana para el selector de "elegí una plantilla" — sin las
+    imágenes completas de cada ítem, solo lo necesario para mostrar la
+    lista y elegir una."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     name: str
     item_count: int
+    creator_name: str
+    created_at: datetime
+
+
+class TierListCreate(BaseModel):
+    template_id: uuid.UUID
+    # tier -> lista de IDs de ítems de esa plantilla (no el objeto
+    # completo — el backend resuelve el ítem real desde la plantilla, así
+    # nadie puede colar una imagen que no pasó por una plantilla creada
+    # con login, ver app/api/tier_lists.py)
+    tiers: dict[str, list[str]] = Field(default_factory=dict)
+
+
+class TierListRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    template_id: uuid.UUID | None
+    tiers: dict[str, list[TierItem]]
     created_at: datetime

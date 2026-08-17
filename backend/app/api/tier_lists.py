@@ -3,13 +3,12 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, require_authenticated
 from app.core.database import get_db
 from app.models import TierList, TierListTemplate, User
 from app.schemas.tier_list import (
-    TierItem,
     TierListCreate,
     TierListRead,
     TierListTemplateCreate,
@@ -19,84 +18,60 @@ from app.schemas.tier_list import (
 
 router = APIRouter(tags=["tierlists"])
 
-# mismo roster que frontend/src/lib/characterColors.ts — mantener
-# sincronizados a mano si se agrega/saca un personaje.
-SF6_ROSTER = {
-    "A.K.I.", "Akuma", "Alex", "Blanka", "C. Viper", "Cammy", "Chun-Li",
-    "Dee Jay", "Dhalsim", "Ed", "E. Honda", "Elena", "Guile", "Ingrid",
-    "Jamie", "JP", "Juri", "Ken", "Kimberly", "Lily", "Luke", "M. Bison",
-    "Mai", "Manon", "Marisa", "Rashid", "Ryu", "Sagat", "Terry", "Yasmine",
-    "Zangief",
-}
-THIRD_STRIKE_ROSTER = {
-    "Alex", "Chun-Li", "Dudley", "Elena", "Gill", "Hugo", "Ibuki", "Ken",
-    "Makoto", "Necro", "Oro", "Q", "Remy", "Ryu", "Sean", "Twelve", "Urien",
-    "Yang", "Yun", "Akuma",
-}
-ROSTERS = {"sf6": SF6_ROSTER, "3s": THIRD_STRIKE_ROSTER}
-
 MAX_TIERS = 12
-MAX_PER_TIER = 60
+MAX_ITEMS = 60
 MAX_IMAGE_DATA_URL_LEN = 200_000  # ~150KB en base64, generoso para 120x120
 IMAGE_DATA_URL_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp);base64,")
 
 
-def _validate_items(game: str, tier_name: str, items: list[TierItem]) -> None:
-    if len(items) > MAX_PER_TIER:
-        raise HTTPException(400, f"Demasiados ítems en el tier '{tier_name}'")
-
-    if game == "custom":
-        for item in items:
-            if item.image is None:
-                raise HTTPException(400, "Los ítems de una tier list personalizada necesitan imagen")
-            if len(item.image) > MAX_IMAGE_DATA_URL_LEN:
-                raise HTTPException(400, "Una imagen es demasiado pesada")
-            if not IMAGE_DATA_URL_RE.match(item.image):
-                raise HTTPException(400, "Formato de imagen inválido")
-    else:
-        roster = ROSTERS[game]
-        for item in items:
-            if item.image is not None:
-                raise HTTPException(400, "Este juego no admite imágenes propias")
-            if item.label not in roster:
-                raise HTTPException(400, f"'{item.label}' no es un personaje válido de {game}")
-
-
-@router.post("/tierlists", response_model=TierListRead, status_code=201)
-def create_tier_list(
-    payload: TierListCreate,
-    db: Annotated[Session, Depends(get_db)],
-    user: Annotated[User | None, Depends(get_current_user)],
-) -> TierList:
-    """SF6/Third Strike: público, sin auth (mismo criterio que TierMaker).
-    Personalizada (con imagen): requiere login — se chequea acá adentro,
-    no como dependency fija, porque esta misma ruta sirve a los tres
-    juegos y los otros dos tienen que seguir siendo anónimos."""
-    if payload.game == "custom" and user is None:
-        raise HTTPException(401, "Iniciá sesión para guardar una tier list personalizada")
-
-    if len(payload.tiers) > MAX_TIERS:
-        raise HTTPException(400, f"Máximo {MAX_TIERS} tiers")
-
-    for tier_name, items in payload.tiers.items():
-        _validate_items(payload.game, tier_name, items)
-
-    tier_list = TierList(
-        game=payload.game,
-        tiers={k: [i.model_dump() for i in v] for k, v in payload.tiers.items()},
+@router.get("/tierlist-templates", response_model=list[TierListTemplateSummary])
+def list_templates(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    """Público, sin auth — cualquiera puede ver qué plantillas armó la
+    comunidad para elegir una y ranquear, aunque no esté logueado. Solo
+    crear una plantilla nueva requiere login (POST más abajo)."""
+    templates = (
+        db.query(TierListTemplate)
+        .options(joinedload(TierListTemplate.creator))
+        .order_by(TierListTemplate.created_at.desc())
+        .all()
     )
-    db.add(tier_list)
-    db.commit()
-    db.refresh(tier_list)
-    return tier_list
+    return [
+        {
+            "id": t.id,
+            "name": t.name,
+            "item_count": len(t.items),
+            "creator_name": t.creator.display_name,
+            "created_at": t.created_at,
+        }
+        for t in templates
+    ]
 
 
-@router.get("/tierlists/{tier_list_id}", response_model=TierListRead)
-def get_tier_list(tier_list_id: str, db: Annotated[Session, Depends(get_db)]) -> TierList:
-    tier_list = db.query(TierList).filter(TierList.id == tier_list_id).first()
-    if tier_list is None:
-        raise HTTPException(404, "Tier list no encontrada")
-    return tier_list
+@router.get("/tierlist-templates/{template_id}", response_model=TierListTemplateRead)
+def get_template(template_id: str, db: Annotated[Session, Depends(get_db)]) -> dict:
+    """Público — hace falta poder leer el detalle completo (con imágenes)
+    sin estar logueado, para que cualquiera pueda ranquear una plantilla
+    de la comunidad sin necesitar cuenta."""
+    try:
+        template_uuid = uuid.UUID(template_id)
+    except ValueError:
+        raise HTTPException(404, "Plantilla no encontrada") from None
+
+    template = (
+        db.query(TierListTemplate)
+        .options(joinedload(TierListTemplate.creator))
+        .filter(TierListTemplate.id == template_uuid)
+        .first()
+    )
+    if template is None:
+        raise HTTPException(404, "Plantilla no encontrada")
+    return {
+        "id": template.id,
+        "name": template.name,
+        "items": template.items,
+        "creator_name": template.creator.display_name,
+        "created_at": template.created_at,
+    }
 
 
 @router.post("/tierlist-templates", response_model=TierListTemplateRead, status_code=201)
@@ -104,9 +79,11 @@ def create_template(
     payload: TierListTemplateCreate,
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[User, Depends(require_authenticated)],
-) -> TierListTemplate:
-    """Requiere login — son las imágenes propias de la persona."""
-    if len(payload.items) > MAX_PER_TIER:
+) -> dict:
+    """Requiere login — son imágenes que sube la persona, quedan
+    asociadas a su cuenta (SPECS.md, sección de tier lists: por qué esto
+    exige login y el ranking en sí no)."""
+    if len(payload.items) > MAX_ITEMS:
         raise HTTPException(400, "Demasiados ítems en la plantilla")
     for item in payload.items:
         if item.image is None or not IMAGE_DATA_URL_RE.match(item.image):
@@ -122,45 +99,58 @@ def create_template(
     db.add(template)
     db.commit()
     db.refresh(template)
-    return template
+    return {
+        "id": template.id,
+        "name": template.name,
+        "items": template.items,
+        "creator_name": user.display_name,
+        "created_at": template.created_at,
+    }
 
 
-@router.get("/tierlist-templates/mine", response_model=list[TierListTemplateSummary])
-def list_my_templates(
+@router.post("/tierlists", response_model=TierListRead, status_code=201)
+def create_tier_list(
+    payload: TierListCreate,
     db: Annotated[Session, Depends(get_db)],
-    user: Annotated[User, Depends(require_authenticated)],
-) -> list[dict]:
-    templates = (
-        db.query(TierListTemplate)
-        .filter(TierListTemplate.created_by == user.id)
-        .order_by(TierListTemplate.created_at.desc())
-        .all()
-    )
-    return [
-        {
-            "id": t.id,
-            "name": t.name,
-            "item_count": len(t.items),
-            "created_at": t.created_at,
-        }
-        for t in templates
-    ]
-
-
-@router.get("/tierlist-templates/{template_id}", response_model=TierListTemplateRead)
-def get_template(
-    template_id: str,
-    db: Annotated[Session, Depends(get_db)],
-    user: Annotated[User, Depends(require_authenticated)],
-) -> TierListTemplate:
-    """Solo el dueño puede cargar el detalle completo (trae las imágenes) —
-    son subidas propias, no públicas como las tier lists de personajes."""
-    try:
-        template_uuid = uuid.UUID(template_id)
-    except ValueError:
-        raise HTTPException(404, "Plantilla no encontrada") from None
-
-    template = db.get(TierListTemplate, template_uuid)
-    if template is None or template.created_by != user.id:
+    # sin auth requerida: ranquear una plantilla ya existente es libre
+    # para cualquiera, mismo criterio que TierMaker. Lo que sí exige login
+    # es crear la plantilla (POST /tierlist-templates, arriba)
+    _user: Annotated[User | None, Depends(get_current_user)],
+) -> TierList:
+    template = db.get(TierListTemplate, payload.template_id)
+    if template is None:
         raise HTTPException(404, "Plantilla no encontrada")
-    return template
+
+    if len(payload.tiers) > MAX_TIERS:
+        raise HTTPException(400, f"Máximo {MAX_TIERS} tiers")
+
+    items_by_id = {item["id"]: item for item in template.items}
+    seen: set[str] = set()
+    resolved_tiers: dict[str, list[dict]] = {}
+
+    for tier_label, item_ids in payload.tiers.items():
+        if len(item_ids) > MAX_ITEMS:
+            raise HTTPException(400, f"Demasiados ítems en el tier '{tier_label}'")
+        resolved: list[dict] = []
+        for item_id in item_ids:
+            if item_id not in items_by_id:
+                raise HTTPException(400, f"El ítem '{item_id}' no pertenece a esta plantilla")
+            if item_id in seen:
+                raise HTTPException(400, f"El ítem '{item_id}' está repetido")
+            seen.add(item_id)
+            resolved.append(items_by_id[item_id])
+        resolved_tiers[tier_label] = resolved
+
+    tier_list = TierList(template_id=template.id, tiers=resolved_tiers)
+    db.add(tier_list)
+    db.commit()
+    db.refresh(tier_list)
+    return tier_list
+
+
+@router.get("/tierlists/{tier_list_id}", response_model=TierListRead)
+def get_tier_list(tier_list_id: str, db: Annotated[Session, Depends(get_db)]) -> TierList:
+    tier_list = db.query(TierList).filter(TierList.id == tier_list_id).first()
+    if tier_list is None:
+        raise HTTPException(404, "Tier list no encontrada")
+    return tier_list

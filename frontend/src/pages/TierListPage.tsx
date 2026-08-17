@@ -8,12 +8,16 @@ import {
   createTierList,
   createTierListTemplate,
   getTierListTemplate,
-  listMyTierListTemplates,
+  listTierListTemplates,
 } from "../lib/api";
-import { SF6_ROSTER, THIRD_STRIKE_ROSTER, characterColorClass } from "../lib/characterColors";
+import { characterColorClass } from "../lib/characterColors";
 import { resizeImageFile } from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
-import type { TierItemData, TierListGame, TierListTemplateSummaryData } from "../lib/types";
+import type {
+  TierItemData,
+  TierListTemplateData,
+  TierListTemplateSummaryData,
+} from "../lib/types";
 
 interface TierRow {
   id: string;
@@ -46,12 +50,6 @@ function defaultRows(): TierRow[] {
 
 function emptyTiers(rows: TierRow[]): Record<string, TierItemData[]> {
   return Object.fromEntries(rows.map((r) => [r.id, []]));
-}
-
-function rosterItemsFor(game: TierListGame): TierItemData[] {
-  if (game === "custom") return [];
-  const roster = game === "sf6" ? SF6_ROSTER : THIRD_STRIKE_ROSTER;
-  return roster.map((name) => ({ id: name, label: name }));
 }
 
 function ItemChip({ item }: { item: TierItemData }) {
@@ -114,31 +112,30 @@ function DroppableZone({
 export default function TierListPage() {
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const [game, setGame] = useState<TierListGame>("sf6");
-  const [rows, setRows] = useState<TierRow[]>(defaultRows());
-  const [tiers, setTiers] = useState<Record<string, TierItemData[]>>(() => emptyTiers(defaultRows()));
-  const [unplaced, setUnplaced] = useState<TierItemData[]>(rosterItemsFor("sf6"));
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [myTemplates, setMyTemplates] = useState<TierListTemplateSummaryData[]>([]);
+
+  const [templates, setTemplates] = useState<TierListTemplateSummaryData[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [activeTemplate, setActiveTemplate] = useState<TierListTemplateData | null>(null);
+
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newItems, setNewItems] = useState<TierItemData[]>([]);
   const [savingTemplate, setSavingTemplate] = useState(false);
-  const boardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const freshRows = defaultRows();
-    setRows(freshRows);
-    setTiers(emptyTiers(freshRows));
-    setUnplaced(rosterItemsFor(game));
-  }, [game]);
+  const [rows, setRows] = useState<TierRow[]>(defaultRows());
+  const [tiers, setTiers] = useState<Record<string, TierItemData[]>>(() => emptyTiers(defaultRows()));
+  const [unplaced, setUnplaced] = useState<TierItemData[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (game === "custom" && token) {
-      listMyTierListTemplates(token)
-        .then(setMyTemplates)
-        .catch(() => setMyTemplates([]));
-    }
-  }, [game, token]);
+    listTierListTemplates()
+      .then(setTemplates)
+      .catch(() => setTemplates([]))
+      .finally(() => setLoadingTemplates(false));
+  }, []);
 
   useEffect(() => {
     if (!message) return;
@@ -146,13 +143,75 @@ export default function TierListPage() {
     return () => clearTimeout(t);
   }, [message]);
 
-  // todos los ítems que existen en este momento, estén donde estén — se
-  // usa para encontrar de dónde sacar algo al soltarlo, y para guardar
-  // una plantilla con TODO lo que hay cargado, no solo lo ya ranqueado
   const allItems = useMemo(
     () => [...unplaced, ...Object.values(tiers).flat()],
     [unplaced, tiers]
   );
+
+  function loadIntoEditor(items: TierItemData[]) {
+    const freshRows = defaultRows();
+    setRows(freshRows);
+    setTiers(emptyTiers(freshRows));
+    setUnplaced(items);
+  }
+
+  async function handleSelectTemplate(summary: TierListTemplateSummaryData) {
+    try {
+      const full = await getTierListTemplate(summary.id);
+      setActiveTemplate(full);
+      loadIntoEditor(full.items);
+    } catch {
+      setMessage("No se pudo cargar esa plantilla.");
+    }
+  }
+
+  async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const added: TierItemData[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      try {
+        const image = await resizeImageFile(file, 120);
+        added.push({
+          id: crypto.randomUUID(),
+          label: file.name.replace(/\.[^.]+$/, "").slice(0, 30),
+          image,
+        });
+      } catch {
+        setMessage(`No se pudo procesar "${file.name}".`);
+      }
+    }
+    setNewItems((prev) => [...prev, ...added]);
+    e.target.value = "";
+  }
+
+  async function handleSaveNewTemplate() {
+    if (!token) return;
+    if (!newName.trim()) {
+      setMessage("Ponle un nombre a la plantilla.");
+      return;
+    }
+    if (newItems.length === 0) {
+      setMessage("Sube al menos una imagen.");
+      return;
+    }
+    setSavingTemplate(true);
+    try {
+      const template = await createTierListTemplate(newName.trim(), newItems, token);
+      setActiveTemplate(template);
+      loadIntoEditor(template.items);
+      setCreating(false);
+      setNewName("");
+      setNewItems([]);
+      listTierListTemplates().then(setTemplates).catch(() => {});
+      setMessage(`Plantilla "${template.name}" creada.`);
+    } catch {
+      setMessage("No se pudo guardar la plantilla.");
+    } finally {
+      setSavingTemplate(false);
+    }
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -211,66 +270,11 @@ export default function TierListPage() {
     });
   }
 
-  async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const newItems: TierItemData[] = [];
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) continue;
-      try {
-        const image = await resizeImageFile(file, 120);
-        newItems.push({
-          id: crypto.randomUUID(),
-          label: file.name.replace(/\.[^.]+$/, "").slice(0, 30),
-          image,
-        });
-      } catch {
-        setMessage(`No se pudo procesar "${file.name}".`);
-      }
-    }
-    setUnplaced((prev) => [...prev, ...newItems]);
-    e.target.value = "";
-  }
-
-  async function handleLoadTemplate(templateId: string) {
-    if (!token || !templateId) return;
-    try {
-      const template = await getTierListTemplate(templateId, token);
-      const freshRows = defaultRows();
-      setRows(freshRows);
-      setTiers(emptyTiers(freshRows));
-      setUnplaced(template.items);
-      setMessage(`Cargada la plantilla "${template.name}".`);
-    } catch {
-      setMessage("No se pudo cargar esa plantilla.");
-    }
-  }
-
-  async function handleSaveTemplate() {
-    if (!token) return;
-    if (allItems.length === 0) {
-      setMessage("Subí al menos una imagen antes de guardar la plantilla.");
-      return;
-    }
-    const name = window.prompt("Nombre para esta plantilla:");
-    if (!name) return;
-    setSavingTemplate(true);
-    try {
-      await createTierListTemplate(name, allItems, token);
-      setMessage(`Plantilla "${name}" guardada.`);
-      listMyTierListTemplates(token).then(setMyTemplates).catch(() => {});
-    } catch {
-      setMessage("No se pudo guardar la plantilla.");
-    } finally {
-      setSavingTemplate(false);
-    }
-  }
-
   async function handleDownload() {
     if (!boardRef.current) return;
     const dataUrl = await toPng(boardRef.current, { backgroundColor: "#0D0710", pixelRatio: 2 });
     const link = document.createElement("a");
-    link.download = `tdf-tierlist-${game}.png`;
+    link.download = "tdf-tierlist.png";
     link.href = dataUrl;
     link.click();
   }
@@ -283,18 +287,18 @@ export default function TierListPage() {
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       setMessage("Imagen copiada al portapapeles.");
     } catch {
-      setMessage("No se pudo copiar la imagen en este navegador — probá descargarla.");
+      setMessage("No se pudo copiar la imagen en este navegador — descárgala en su lugar.");
     }
   }
 
   async function handleSave() {
-    if (game === "custom" && !token) {
-      setMessage("Iniciá sesión con Twitch para guardar una tier list personalizada.");
-      return;
-    }
+    if (!activeTemplate) return;
     setSaving(true);
     try {
-      const result = await createTierList(game, tiers, token);
+      const idsOnly = Object.fromEntries(
+        Object.entries(tiers).map(([tier, items]) => [tier, items.map((i) => i.id)])
+      );
+      const result = await createTierList(activeTemplate.id, idsOnly);
       navigate(`/tierlist/${result.id}`);
     } catch {
       setMessage("No se pudo guardar la tier list.");
@@ -306,184 +310,222 @@ export default function TierListPage() {
   return (
     <Layout>
       <SectionLabel index="09">Tier list</SectionLabel>
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
-        <h1 className="text-3xl font-bold">Armá tu tier list</h1>
-        <div className="flex gap-2 font-mono text-xs">
-          {(["sf6", "3s", "custom"] as const).map((g) => (
-            <button
-              key={g}
-              onClick={() => setGame(g)}
-              className={`px-3 py-1 border transition-colors ${
-                game === g
-                  ? "border-tdf-magenta text-tdf-magenta"
-                  : "border-tdf-line text-gray-500 hover:text-white"
-              }`}
-            >
-              {g === "sf6" ? "SF6" : g === "3s" ? "3RD STRIKE" : "PERSONALIZADA"}
-            </button>
-          ))}
-        </div>
-      </div>
-      <p className="text-gray-500 mb-6 max-w-xl">
-        Arrastrá cada ítem al tier que quieras. Agregá o sacá tiers con los
-        botones de la derecha de cada fila. Cuando termines, la podés
-        descargar como imagen, copiarla directo al portapapeles, o
-        guardarla para compartir un link.
+      <h1 className="text-3xl font-bold mb-2">Arma tu tier list</h1>
+      <p className="text-gray-500 mb-8 max-w-xl">
+        Elige una plantilla armada por la comunidad, o crea la tuya si
+        tienes sesión iniciada. Arrastra cada ítem al tier que quieras,
+        agrega o saca tiers con los botones de la derecha de cada fila, y
+        cuando termines la puedes descargar como imagen, copiarla directo
+        al portapapeles, o guardarla para compartir un link.
       </p>
 
-      {game === "custom" && (
-        <div className="hud-frame bg-tdf-charcoal px-5 py-4 mb-8">
-          {!user ? (
-            <p className="text-sm text-gray-400">
-              Las tier lists personalizadas necesitan que inicies sesión
-              con Twitch — son imágenes que subís vos, y preferimos que
-              queden asociadas a una cuenta real.
-            </p>
-          ) : (
-            <div className="flex flex-wrap items-center gap-3">
+      {!activeTemplate && (
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-mono text-xs uppercase text-gray-400">
+              Plantillas de la comunidad
+            </h2>
+            {user ? (
               <button
-                onClick={() => fileInputRef.current?.click()}
-                className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase"
+                onClick={() => setCreating((v) => !v)}
+                className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta transition-colors"
               >
-                Subir imágenes
+                {creating ? "Cancelar" : "+ Crear una nueva"}
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFilesSelected}
-                className="hidden"
-              />
+            ) : (
               <span className="font-mono text-[11px] text-gray-600">
-                Se redimensionan solas a 120x120.
+                Inicia sesión con Twitch para crear una plantilla nueva.
               </span>
+            )}
+          </div>
 
-              <div className="w-px h-6 bg-tdf-line mx-1" />
-
-              <button
-                onClick={handleSaveTemplate}
-                disabled={savingTemplate}
-                className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase disabled:opacity-50"
-              >
-                {savingTemplate ? "Guardando..." : "Guardar como plantilla"}
-              </button>
-
-              {myTemplates.length > 0 && (
-                <select
-                  onChange={(e) => handleLoadTemplate(e.target.value)}
-                  defaultValue=""
-                  className="bg-tdf-dark border border-tdf-line px-2 py-2 font-mono text-xs text-gray-300"
+          {creating && (
+            <div className="hud-frame bg-tdf-charcoal px-5 py-4 mb-4 flex flex-col gap-3">
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Nombre de la plantilla"
+                className="bg-tdf-dark border border-tdf-line px-3 py-2 text-sm"
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase"
                 >
-                  <option value="" disabled>
-                    Cargar una plantilla mía...
-                  </option>
-                  {myTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} ({t.item_count})
-                    </option>
+                  Subir imágenes
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFilesSelected}
+                  className="hidden"
+                />
+                <span className="font-mono text-[11px] text-gray-600">
+                  Se redimensionan solas a 120x120 — {newItems.length} cargada
+                  {newItems.length === 1 ? "" : "s"}.
+                </span>
+              </div>
+              {newItems.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {newItems.map((item) => (
+                    <img
+                      key={item.id}
+                      src={item.image ?? undefined}
+                      alt={item.label}
+                      className="w-12 h-12 object-cover border border-tdf-line"
+                    />
                   ))}
-                </select>
+                </div>
               )}
+              <button
+                onClick={handleSaveNewTemplate}
+                disabled={savingTemplate}
+                className="self-start bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white disabled:opacity-50"
+              >
+                {savingTemplate ? "Guardando..." : "Guardar plantilla y empezar"}
+              </button>
             </div>
           )}
+
+          {loadingTemplates && <p className="text-sm text-gray-600">Cargando...</p>}
+          {!loadingTemplates && templates.length === 0 && (
+            <p className="text-sm text-gray-600">
+              Todavía no hay ninguna plantilla — sé el primero en crear una.
+            </p>
+          )}
+          <div className="grid sm:grid-cols-2 gap-3">
+            {templates.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => handleSelectTemplate(t)}
+                className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors px-5 py-4 text-left"
+              >
+                <p className="font-semibold">{t.name}</p>
+                <p className="font-mono text-xs text-gray-500 mt-1">
+                  {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
+                  <span className="text-tdf-purple">{t.creator_name}</span>
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      <DndContext onDragEnd={handleDragEnd}>
-        <div ref={boardRef} className="bg-tdf-dark p-4">
-          <div className="flex flex-col gap-1 mb-4">
-            {rows.map((row, i) => (
-              <div key={row.id} className="flex">
-                <div
-                  className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}
-                >
-                  <input
-                    value={row.label}
-                    onChange={(e) => renameRow(row.id, e.target.value)}
-                    className="w-full bg-transparent text-center font-bold text-lg focus:outline-none"
-                  />
-                </div>
-                <DroppableZone
-                  id={row.id}
-                  className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start"
-                >
-                  {tiers[row.id]?.map((item) => (
-                    <ItemChip key={item.id} item={item} />
-                  ))}
-                </DroppableZone>
-                <div className="w-8 shrink-0 flex flex-col justify-center gap-0.5 pl-1">
-                  <button
-                    onClick={() => moveRow(row.id, -1)}
-                    disabled={i === 0}
-                    className="text-gray-500 hover:text-white disabled:opacity-20 text-xs"
-                    aria-label="Subir tier"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    onClick={() => moveRow(row.id, 1)}
-                    disabled={i === rows.length - 1}
-                    className="text-gray-500 hover:text-white disabled:opacity-20 text-xs"
-                    aria-label="Bajar tier"
-                  >
-                    ▼
-                  </button>
-                  <button
-                    onClick={() => removeRow(row.id)}
-                    disabled={rows.length <= 1}
-                    className="text-gray-500 hover:text-red-400 disabled:opacity-20 text-xs"
-                    aria-label="Borrar tier"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
+      {activeTemplate && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <p className="font-mono text-xs text-gray-500">
+              Usando: <span className="text-white">{activeTemplate.name}</span> · por{" "}
+              <span className="text-tdf-purple">{activeTemplate.creator_name}</span>
+            </p>
+            <button
+              onClick={() => setActiveTemplate(null)}
+              className="font-mono text-xs text-gray-500 hover:text-white transition-colors"
+            >
+              ← Elegir otra plantilla
+            </button>
           </div>
 
-          <button
-            onClick={addRow}
-            className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta transition-colors mb-6"
-          >
-            + Agregar tier
-          </button>
+          <DndContext onDragEnd={handleDragEnd}>
+            <div ref={boardRef} className="bg-tdf-dark p-4">
+              <div className="flex flex-col gap-1 mb-4">
+                {rows.map((row, i) => (
+                  <div key={row.id} className="flex">
+                    <div className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}>
+                      <input
+                        value={row.label}
+                        onChange={(e) => renameRow(row.id, e.target.value)}
+                        className="w-full bg-transparent text-center font-bold text-lg focus:outline-none"
+                      />
+                    </div>
+                    <DroppableZone
+                      id={row.id}
+                      className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start"
+                    >
+                      {tiers[row.id]?.map((item) => (
+                        <ItemChip key={item.id} item={item} />
+                      ))}
+                    </DroppableZone>
+                    <div className="w-8 shrink-0 flex flex-col justify-center gap-0.5 pl-1">
+                      <button
+                        onClick={() => moveRow(row.id, -1)}
+                        disabled={i === 0}
+                        className="text-gray-500 hover:text-white disabled:opacity-20 text-xs"
+                        aria-label="Subir tier"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => moveRow(row.id, 1)}
+                        disabled={i === rows.length - 1}
+                        className="text-gray-500 hover:text-white disabled:opacity-20 text-xs"
+                        aria-label="Bajar tier"
+                      >
+                        ▼
+                      </button>
+                      <button
+                        onClick={() => removeRow(row.id)}
+                        disabled={rows.length <= 1}
+                        className="text-gray-500 hover:text-red-400 disabled:opacity-20 text-xs"
+                        aria-label="Borrar tier"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-          <p className="font-mono text-xs uppercase text-gray-500 mb-2">Sin ranquear</p>
-          <DroppableZone
-            id="unplaced"
-            className="border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-3 min-h-20"
-          >
-            {unplaced.map((item) => (
-              <ItemChip key={item.id} item={item} />
-            ))}
-          </DroppableZone>
-        </div>
-      </DndContext>
+              <button
+                onClick={addRow}
+                className="font-mono text-xs text-tdf-purple hover:text-tdf-magenta transition-colors mb-6"
+              >
+                + Agregar tier
+              </button>
 
-      {message && <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>}
+              <p className="font-mono text-xs uppercase text-gray-500 mb-2">Sin ranquear</p>
+              <DroppableZone
+                id="unplaced"
+                className="border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-3 min-h-20"
+              >
+                {unplaced.map((item) => (
+                  <ItemChip key={item.id} item={item} />
+                ))}
+              </DroppableZone>
+            </div>
+          </DndContext>
 
-      <div className="flex flex-wrap gap-3 mt-6">
-        <button
-          onClick={handleDownload}
-          className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase"
-        >
-          Descargar PNG
-        </button>
-        <button
-          onClick={handleCopyImage}
-          className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase"
-        >
-          Copiar imagen
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white disabled:opacity-50"
-        >
-          {saving ? "Guardando..." : "Guardar y compartir"}
-        </button>
-      </div>
+          {message && <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>}
+
+          <div className="flex flex-wrap gap-3 mt-6">
+            <button
+              onClick={handleDownload}
+              className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase"
+            >
+              Descargar PNG
+            </button>
+            <button
+              onClick={handleCopyImage}
+              className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase"
+            >
+              Copiar imagen
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white disabled:opacity-50"
+            >
+              {saving ? "Guardando..." : "Guardar y compartir"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {!activeTemplate && message && (
+        <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>
+      )}
     </Layout>
   );
 }
