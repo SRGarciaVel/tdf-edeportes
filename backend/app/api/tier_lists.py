@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user, require_authenticated
+from app.api.deps import get_current_user, require_authenticated, require_staff
 from app.core.database import get_db
 from app.models import TierList, TierListTemplate, User
 from app.schemas.tier_list import (
@@ -74,7 +74,9 @@ def get_template(template_id: str, db: Annotated[Session, Depends(get_db)]) -> d
     }
 
 
-@router.post("/tierlist-templates", response_model=TierListTemplateRead, status_code=201)
+@router.post(
+    "/tierlist-templates", response_model=TierListTemplateRead, status_code=201
+)
 def create_template(
     payload: TierListTemplateCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -108,6 +110,39 @@ def create_template(
     }
 
 
+@router.delete("/tierlist-templates/{template_id}", status_code=204)
+def delete_template(
+    template_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    _staff_user: Annotated[User, Depends(require_staff)],
+) -> None:
+    """Solo staff — cualquier miembro del staff puede borrar cualquier
+    plantilla de la comunidad, no solo quien la creó (SPECS.md §4: sin
+    matriz de permisos, la única regla es autenticado + is_staff).
+
+    Los rankings ya compartidos que apuntaban a esta plantilla no se
+    rompen ni se borran con ella: `TierList.tiers` ya tiene la copia
+    congelada de cada ítem (con su imagen) desde el momento en que se
+    guardó el ranking, así que alcanza con desvincular `template_id`
+    (queda en null, el modelo ya lo permite — ver tier_list.py) antes
+    de borrar la plantilla, en vez de dejar que la constraint de FK
+    reviente el delete."""
+    try:
+        template_uuid = uuid.UUID(template_id)
+    except ValueError:
+        raise HTTPException(404, "Plantilla no encontrada") from None
+
+    template = db.get(TierListTemplate, template_uuid)
+    if template is None:
+        raise HTTPException(404, "Plantilla no encontrada")
+
+    db.query(TierList).filter(TierList.template_id == template_uuid).update(
+        {"template_id": None}
+    )
+    db.delete(template)
+    db.commit()
+
+
 @router.post("/tierlists", response_model=TierListRead, status_code=201)
 def create_tier_list(
     payload: TierListCreate,
@@ -134,7 +169,9 @@ def create_tier_list(
         resolved: list[dict] = []
         for item_id in item_ids:
             if item_id not in items_by_id:
-                raise HTTPException(400, f"El ítem '{item_id}' no pertenece a esta plantilla")
+                raise HTTPException(
+                    400, f"El ítem '{item_id}' no pertenece a esta plantilla"
+                )
             if item_id in seen:
                 raise HTTPException(400, f"El ítem '{item_id}' está repetido")
             seen.add(item_id)
@@ -149,7 +186,9 @@ def create_tier_list(
 
 
 @router.get("/tierlists/{tier_list_id}", response_model=TierListRead)
-def get_tier_list(tier_list_id: str, db: Annotated[Session, Depends(get_db)]) -> TierList:
+def get_tier_list(
+    tier_list_id: str, db: Annotated[Session, Depends(get_db)]
+) -> TierList:
     tier_list = db.query(TierList).filter(TierList.id == tier_list_id).first()
     if tier_list is None:
         raise HTTPException(404, "Tier list no encontrada")

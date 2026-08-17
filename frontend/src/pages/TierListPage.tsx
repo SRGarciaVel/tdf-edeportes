@@ -20,6 +20,7 @@ import SectionLabel from "../components/SectionLabel";
 import {
   createTierList,
   createTierListTemplate,
+  deleteTierListTemplate,
   getTierListTemplate,
   listTierListTemplates,
 } from "../lib/api";
@@ -72,7 +73,14 @@ function emptyTiers(rows: TierRow[]): Record<string, TierItemData[]> {
  * "moverse a algún contenedor" — es lo que permite acomodar de derecha a
  * izquierda, insertar en el medio, etc. Ver lessons.md. */
 function ItemChip({ item }: { item: TierItemData }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: item.id,
   });
   const style = {
@@ -91,7 +99,11 @@ function ItemChip({ item }: { item: TierItemData }) {
           isDragging ? "opacity-30 relative z-50" : ""
         }`}
       >
-        <img src={item.image} alt={item.label} className="w-16 h-16 object-cover border border-tdf-line" />
+        <img
+          src={item.image}
+          alt={item.label}
+          className="w-16 h-16 object-cover border border-tdf-line"
+        />
       </div>
     );
   }
@@ -103,7 +115,7 @@ function ItemChip({ item }: { item: TierItemData }) {
       {...attributes}
       style={style}
       className={`px-2 py-1 text-xs font-mono border border-current/40 bg-tdf-dark cursor-grab active:cursor-grabbing select-none touch-none ${characterColorClass(
-        item.label
+        item.label,
       )} ${isDragging ? "opacity-30 relative z-50" : ""}`}
     >
       {item.label}
@@ -130,7 +142,7 @@ function ItemPreview({ item }: { item: TierItemData }) {
   return (
     <div
       className={`px-2 py-1 text-xs font-mono border-2 border-tdf-magenta bg-tdf-dark shadow-[0_8px_24px_rgba(0,0,0,0.6)] rotate-3 cursor-grabbing ${characterColorClass(
-        item.label
+        item.label,
       )}`}
     >
       {item.label}
@@ -155,8 +167,14 @@ function SortableZone({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
-      <div ref={setNodeRef} className={`${className} ${isOver ? "outline outline-2 outline-tdf-magenta" : ""}`}>
+    <SortableContext
+      items={items.map((i) => i.id)}
+      strategy={rectSortingStrategy}
+    >
+      <div
+        ref={setNodeRef}
+        className={`${className} ${isOver ? "outline outline-2 outline-tdf-magenta" : ""}`}
+      >
         {children}
       </div>
     </SortableContext>
@@ -169,7 +187,11 @@ export default function TierListPage() {
 
   const [templates, setTemplates] = useState<TierListTemplateSummaryData[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
-  const [activeTemplate, setActiveTemplate] = useState<TierListTemplateData | null>(null);
+  const [activeTemplate, setActiveTemplate] =
+    useState<TierListTemplateData | null>(null);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(
+    null,
+  );
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -178,7 +200,9 @@ export default function TierListPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [rows, setRows] = useState<TierRow[]>(defaultRows());
-  const [tiers, setTiers] = useState<Record<string, TierItemData[]>>(() => emptyTiers(defaultRows()));
+  const [tiers, setTiers] = useState<Record<string, TierItemData[]>>(() =>
+    emptyTiers(defaultRows()),
+  );
   const [unplaced, setUnplaced] = useState<TierItemData[]>([]);
   const [activeItem, setActiveItem] = useState<TierItemData | null>(null);
   const [settingsRowId, setSettingsRowId] = useState<string | null>(null);
@@ -219,6 +243,27 @@ export default function TierListPage() {
     }
   }
 
+  // solo el botón visible a staff (ver el render más abajo) puede llegar
+  // a llamar esto, pero el backend también valida is_staff en el DELETE
+  // — no confiamos únicamente en ocultar el botón en el frontend
+  async function handleDeleteTemplate(summary: TierListTemplateSummaryData) {
+    if (!token) return;
+    const confirmed = window.confirm(
+      `¿Borrar la plantilla "${summary.name}"? Los rankings ya compartidos con esta plantilla van a seguir funcionando igual, pero nadie va a poder crear uno nuevo con ella.`,
+    );
+    if (!confirmed) return;
+    setDeletingTemplateId(summary.id);
+    try {
+      await deleteTierListTemplate(token, summary.id);
+      setTemplates((prev) => prev.filter((t) => t.id !== summary.id));
+      setMessage(`Plantilla "${summary.name}" borrada.`);
+    } catch {
+      setMessage("No se pudo borrar la plantilla.");
+    } finally {
+      setDeletingTemplateId(null);
+    }
+  }
+
   async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -252,13 +297,19 @@ export default function TierListPage() {
     }
     setSavingTemplate(true);
     try {
-      const template = await createTierListTemplate(newName.trim(), newItems, token);
+      const template = await createTierListTemplate(
+        newName.trim(),
+        newItems,
+        token,
+      );
       setActiveTemplate(template);
       loadIntoEditor(template.items);
       setCreating(false);
       setNewName("");
       setNewItems([]);
-      listTierListTemplates().then(setTemplates).catch(() => {});
+      listTierListTemplates()
+        .then(setTemplates)
+        .catch(() => {});
       setMessage(`Plantilla "${template.name}" creada.`);
     } catch {
       setMessage("No se pudo guardar la plantilla.");
@@ -325,7 +376,10 @@ export default function TierListPage() {
       // una posición puntual (ver lessons.md)
       const overIndex = sourceList.findIndex((i) => i.id === overId);
       const newIndex = overIndex === -1 ? sourceList.length - 1 : overIndex;
-      setContainerList(sourceContainer, arrayMove(sourceList, activeIndex, newIndex));
+      setContainerList(
+        sourceContainer,
+        arrayMove(sourceList, activeIndex, newIndex),
+      );
       return;
     }
 
@@ -335,8 +389,15 @@ export default function TierListPage() {
     const overIndex = destList.findIndex((i) => i.id === overId);
     const insertAt = overIndex === -1 ? destList.length : overIndex;
 
-    setContainerList(sourceContainer, sourceList.filter((i) => i.id !== activeId));
-    setContainerList(destContainer, [...destList.slice(0, insertAt), item, ...destList.slice(insertAt)]);
+    setContainerList(
+      sourceContainer,
+      sourceList.filter((i) => i.id !== activeId),
+    );
+    setContainerList(destContainer, [
+      ...destList.slice(0, insertAt),
+      item,
+      ...destList.slice(insertAt),
+    ]);
   }
 
   function addRow() {
@@ -431,10 +492,14 @@ export default function TierListPage() {
         filter: exportFilter,
       });
       if (!blob) throw new Error("sin blob");
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
       setMessage("Imagen copiada al portapapeles.");
     } catch {
-      setMessage("No se pudo copiar la imagen en este navegador — descárgala en su lugar.");
+      setMessage(
+        "No se pudo copiar la imagen en este navegador — descárgala en su lugar.",
+      );
     }
   }
 
@@ -443,7 +508,10 @@ export default function TierListPage() {
     setSaving(true);
     try {
       const idsOnly = Object.fromEntries(
-        Object.entries(tiers).map(([tier, items]) => [tier, items.map((i) => i.id)])
+        Object.entries(tiers).map(([tier, items]) => [
+          tier,
+          items.map((i) => i.id),
+        ]),
       );
       const result = await createTierList(activeTemplate.id, idsOnly);
       navigate(`/tierlist/${result.id}`);
@@ -461,12 +529,12 @@ export default function TierListPage() {
       <SectionLabel index="09">Tier list</SectionLabel>
       <h1 className="text-3xl font-bold mb-2">Arma tu tier list</h1>
       <p className="text-gray-500 mb-8 max-w-xl">
-        Elige una plantilla armada por la comunidad, o crea la tuya si
-        tienes sesión iniciada. Arrastra cada ítem al tier que quieras (y
-        también dentro de un mismo tier, para reordenar), agrega o saca
-        tiers con los botones de la derecha de cada fila, y cuando
-        termines la puedes descargar como imagen, copiarla directo al
-        portapapeles, o guardarla para compartir un link.
+        Elige una plantilla armada por la comunidad, o crea la tuya si tienes
+        sesión iniciada. Arrastra cada ítem al tier que quieras (y también
+        dentro de un mismo tier, para reordenar), agrega o saca tiers con los
+        botones de la derecha de cada fila, y cuando termines la puedes
+        descargar como imagen, copiarla directo al portapapeles, o guardarla
+        para compartir un link.
       </p>
 
       {!activeTemplate && (
@@ -534,12 +602,16 @@ export default function TierListPage() {
                 disabled={savingTemplate}
                 className="self-start bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white disabled:opacity-50"
               >
-                {savingTemplate ? "Guardando..." : "Guardar plantilla y empezar"}
+                {savingTemplate
+                  ? "Guardando..."
+                  : "Guardar plantilla y empezar"}
               </button>
             </div>
           )}
 
-          {loadingTemplates && <p className="text-sm text-gray-600">Cargando...</p>}
+          {loadingTemplates && (
+            <p className="text-sm text-gray-600">Cargando...</p>
+          )}
           {!loadingTemplates && templates.length === 0 && (
             <p className="text-sm text-gray-600">
               Todavía no hay ninguna plantilla — sé el primero en crear una.
@@ -547,17 +619,40 @@ export default function TierListPage() {
           )}
           <div className="grid sm:grid-cols-2 gap-3">
             {templates.map((t) => (
-              <button
+              <div
                 key={t.id}
-                onClick={() => handleSelectTemplate(t)}
-                className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors px-5 py-4 text-left"
+                className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors relative"
               >
-                <p className="font-semibold">{t.name}</p>
-                <p className="font-mono text-xs text-gray-500 mt-1">
-                  {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
-                  <span className="text-tdf-purple">{t.creator_name}</span>
-                </p>
-              </button>
+                <button
+                  onClick={() => handleSelectTemplate(t)}
+                  className="w-full text-left px-5 py-4"
+                >
+                  <p
+                    className={`font-semibold ${user?.is_staff ? "pr-6" : ""}`}
+                  >
+                    {t.name}
+                  </p>
+                  <p className="font-mono text-xs text-gray-500 mt-1">
+                    {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
+                    <span className="text-tdf-purple">{t.creator_name}</span>
+                  </p>
+                </button>
+                {/* solo staff ve esto — el backend también valida
+                    is_staff en el DELETE, ver deleteTierListTemplate */}
+                {user?.is_staff && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTemplate(t);
+                    }}
+                    disabled={deletingTemplateId === t.id}
+                    className="absolute top-2 right-2 text-gray-500 hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
+                    aria-label={`Borrar plantilla ${t.name}`}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         </div>
@@ -567,8 +662,11 @@ export default function TierListPage() {
         <>
           <div className="flex items-center justify-between mb-4">
             <p className="font-mono text-xs text-gray-500">
-              Usando: <span className="text-white">{activeTemplate.name}</span> · por{" "}
-              <span className="text-tdf-purple">{activeTemplate.creator_name}</span>
+              Usando: <span className="text-white">{activeTemplate.name}</span>{" "}
+              · por{" "}
+              <span className="text-tdf-purple">
+                {activeTemplate.creator_name}
+              </span>
             </p>
             <button
               onClick={() => setActiveTemplate(null)}
@@ -585,10 +683,15 @@ export default function TierListPage() {
                 data-export-exclude y el filtro de toPng/toBlob los saca
                 de la imagen final sin tener que mantenerlos en un
                 contenedor DOM aparte (ver exportFilter). */}
-            <div ref={exportRef} className="bg-tdf-dark p-4 flex flex-col gap-1 mb-1">
+            <div
+              ref={exportRef}
+              className="bg-tdf-dark p-4 flex flex-col gap-1 mb-1"
+            >
               {rows.map((row, i) => (
                 <div key={row.id} className="flex">
-                  <div className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}>
+                  <div
+                    className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}
+                  >
                     <span className="font-bold text-lg">{row.label}</span>
                   </div>
                   <SortableZone
@@ -641,7 +744,9 @@ export default function TierListPage() {
               + Agregar tier
             </button>
 
-            <p className="font-mono text-xs uppercase text-gray-500 mb-2">Sin ranquear</p>
+            <p className="font-mono text-xs uppercase text-gray-500 mb-2">
+              Sin ranquear
+            </p>
             <SortableZone
               id={UNPLACED_ID}
               items={unplaced}
@@ -675,7 +780,9 @@ export default function TierListPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-mono text-xs uppercase text-gray-400">Editar tier</h3>
+                  <h3 className="font-mono text-xs uppercase text-gray-400">
+                    Editar tier
+                  </h3>
                   <button
                     onClick={() => setSettingsRowId(null)}
                     className="text-gray-500 hover:text-white text-sm"
@@ -685,21 +792,27 @@ export default function TierListPage() {
                   </button>
                 </div>
 
-                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">Color</p>
+                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">
+                  Color
+                </p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {TIER_PALETTE.map((color) => (
                     <button
                       key={color}
                       onClick={() => changeRowColor(settingsRow.id, color)}
                       className={`w-7 h-7 border-2 ${color} ${
-                        settingsRow.color === color ? "border-white" : "border-transparent"
+                        settingsRow.color === color
+                          ? "border-white"
+                          : "border-transparent"
                       }`}
                       aria-label="Elegir color del tier"
                     />
                   ))}
                 </div>
 
-                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">Nombre</p>
+                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">
+                  Nombre
+                </p>
                 <input
                   value={settingsRow.label}
                   onChange={(e) => renameRow(settingsRow.id, e.target.value)}
@@ -741,7 +854,9 @@ export default function TierListPage() {
             </div>
           )}
 
-          {message && <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>}
+          {message && (
+            <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>
+          )}
 
           <div className="flex flex-wrap gap-3 mt-6">
             <button
