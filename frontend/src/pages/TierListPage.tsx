@@ -65,14 +65,11 @@ function ItemChip({ item }: { item: TierItemData }) {
         {...listeners}
         {...attributes}
         style={style}
-        className={`flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing select-none touch-none ${
+        className={`cursor-grab active:cursor-grabbing select-none touch-none ${
           isDragging ? "opacity-30 relative z-50" : ""
         }`}
       >
         <img src={item.image} alt={item.label} className="w-16 h-16 object-cover border border-tdf-line" />
-        {item.label && (
-          <span className="text-[10px] font-mono text-gray-500 max-w-16 truncate">{item.label}</span>
-        )}
       </div>
     );
   }

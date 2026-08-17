@@ -24,14 +24,7 @@ const TIER_COLORS = [
 
 function ItemChip({ item }: { item: TierItemData }) {
   if (item.image) {
-    return (
-      <div className="flex flex-col items-center gap-1">
-        <img src={item.image} alt={item.label} className="w-16 h-16 object-cover border border-tdf-line" />
-        {item.label && (
-          <span className="text-[10px] font-mono text-gray-500 max-w-16 truncate">{item.label}</span>
-        )}
-      </div>
-    );
+    return <img src={item.image} alt={item.label} className="w-16 h-16 object-cover border border-tdf-line" />;
   }
   return (
     <span
