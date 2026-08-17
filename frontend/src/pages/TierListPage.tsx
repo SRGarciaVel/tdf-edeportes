@@ -181,6 +181,7 @@ export default function TierListPage() {
   const [tiers, setTiers] = useState<Record<string, TierItemData[]>>(() => emptyTiers(defaultRows()));
   const [unplaced, setUnplaced] = useState<TierItemData[]>([]);
   const [activeItem, setActiveItem] = useState<TierItemData | null>(null);
+  const [settingsRowId, setSettingsRowId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   // separado del resto de la página — es lo único que se captura al
@@ -359,6 +360,36 @@ export default function TierListPage() {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, label } : r)));
   }
 
+  function changeRowColor(id: string, color: string) {
+    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, color } : r)));
+  }
+
+  /** "Vaciar imágenes" del popup — a diferencia de borrar el tier entero,
+   * esto solo devuelve sus ítems a "sin ranquear" y deja la fila vacía
+   * lista para seguir usándose (equivalente a "Clear Row Images" de
+   * TierMaker). */
+  function clearRowImages(id: string) {
+    setUnplaced((prev) => [...prev, ...(tiers[id] ?? [])]);
+    setTiers((prev) => ({ ...prev, [id]: [] }));
+  }
+
+  /** A diferencia de addRow (que siempre agrega al final), esto inserta
+   * una fila nueva arriba o abajo de una fila puntual — lo que ofrece el
+   * popup de configuración de TierMaker ("Add a Row Above/Below"). */
+  function addRowAt(anchorId: string, position: "above" | "below") {
+    const newId = `tier-${Date.now()}`;
+    setRows((prev) => {
+      const idx = prev.findIndex((r) => r.id === anchorId);
+      if (idx === -1) return prev;
+      const color = TIER_PALETTE[prev.length % TIER_PALETTE.length];
+      const insertAt = position === "above" ? idx : idx + 1;
+      const next = [...prev];
+      next.splice(insertAt, 0, { id: newId, label: "Nuevo", color });
+      return next;
+    });
+    setTiers((prev) => ({ ...prev, [newId]: [] }));
+  }
+
   function moveRow(id: string, direction: -1 | 1) {
     setRows((prev) => {
       const idx = prev.findIndex((r) => r.id === id);
@@ -422,6 +453,8 @@ export default function TierListPage() {
       setSaving(false);
     }
   }
+
+  const settingsRow = rows.find((r) => r.id === settingsRowId) ?? null;
 
   return (
     <Layout>
@@ -569,14 +602,15 @@ export default function TierListPage() {
                   </SortableZone>
                   <div
                     data-export-exclude="true"
-                    className="w-32 shrink-0 bg-black/70 border border-tdf-line border-l-0 flex items-center gap-1.5 px-2"
+                    className="w-20 shrink-0 bg-black/70 border border-tdf-line border-l-0 flex items-center justify-center gap-2 px-2"
                   >
-                    <input
-                      value={row.label}
-                      onChange={(e) => renameRow(row.id, e.target.value)}
-                      placeholder="nombre"
-                      className="w-16 min-w-0 bg-tdf-dark border border-tdf-line px-1.5 py-1 text-[11px] font-mono"
-                    />
+                    <button
+                      onClick={() => setSettingsRowId(row.id)}
+                      className="text-gray-400 hover:text-tdf-magenta transition-colors text-sm leading-none"
+                      aria-label="Configurar tier"
+                    >
+                      ⚙
+                    </button>
                     <div className="flex flex-col">
                       <button
                         onClick={() => moveRow(row.id, -1)}
@@ -595,14 +629,6 @@ export default function TierListPage() {
                         ▼
                       </button>
                     </div>
-                    <button
-                      onClick={() => removeRow(row.id)}
-                      disabled={rows.length <= 1}
-                      className="text-gray-500 hover:text-red-400 disabled:opacity-20 text-xs px-1"
-                      aria-label="Borrar tier"
-                    >
-                      ✕
-                    </button>
                   </div>
                 </div>
               ))}
@@ -634,6 +660,86 @@ export default function TierListPage() {
               {activeItem ? <ItemPreview item={activeItem} /> : null}
             </DragOverlay>
           </DndContext>
+
+          {/* popup de configuración del tier, abierto desde la tuerca de
+              cada fila — mismo state (row.label, row.color) que la celda
+              de color, así renombrar o cambiar el color acá se refleja
+              de inmediato ahí, no son dos fuentes de verdad separadas */}
+          {settingsRow && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+              onClick={() => setSettingsRowId(null)}
+            >
+              <div
+                className="hud-frame bg-tdf-charcoal border border-tdf-line w-full max-w-sm p-5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-mono text-xs uppercase text-gray-400">Editar tier</h3>
+                  <button
+                    onClick={() => setSettingsRowId(null)}
+                    className="text-gray-500 hover:text-white text-sm"
+                    aria-label="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">Color</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {TIER_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => changeRowColor(settingsRow.id, color)}
+                      className={`w-7 h-7 border-2 ${color} ${
+                        settingsRow.color === color ? "border-white" : "border-transparent"
+                      }`}
+                      aria-label="Elegir color del tier"
+                    />
+                  ))}
+                </div>
+
+                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">Nombre</p>
+                <input
+                  value={settingsRow.label}
+                  onChange={(e) => renameRow(settingsRow.id, e.target.value)}
+                  className="w-full bg-tdf-dark border border-tdf-line px-3 py-2 text-sm font-mono mb-4"
+                  autoFocus
+                />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      removeRow(settingsRow.id);
+                      setSettingsRowId(null);
+                    }}
+                    disabled={rows.length <= 1}
+                    className="border border-tdf-line hover:border-red-400 hover:text-red-400 transition-colors px-3 py-2 font-mono text-[11px] uppercase disabled:opacity-30"
+                  >
+                    Borrar tier
+                  </button>
+                  <button
+                    onClick={() => clearRowImages(settingsRow.id)}
+                    className="border border-tdf-line hover:border-tdf-magenta transition-colors px-3 py-2 font-mono text-[11px] uppercase"
+                  >
+                    Vaciar imágenes
+                  </button>
+                  <button
+                    onClick={() => addRowAt(settingsRow.id, "above")}
+                    className="border border-tdf-line hover:border-tdf-magenta transition-colors px-3 py-2 font-mono text-[11px] uppercase"
+                  >
+                    Agregar arriba
+                  </button>
+                  <button
+                    onClick={() => addRowAt(settingsRow.id, "below")}
+                    className="border border-tdf-line hover:border-tdf-magenta transition-colors px-3 py-2 font-mono text-[11px] uppercase"
+                  >
+                    Agregar abajo
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {message && <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>}
 
