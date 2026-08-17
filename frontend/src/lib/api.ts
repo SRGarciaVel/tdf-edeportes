@@ -6,6 +6,8 @@ import type {
   CFNProfile,
   CFNMatchStats,
   CFNMatchRead,
+  TierListData,
+  TierListGame,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -139,4 +141,21 @@ export async function getMatchStats(cfnId: string, days: number): Promise<CFNMat
 export async function getRecentMatches(cfnId: string, days: number): Promise<CFNMatchRead[]> {
   const res = await fetch(`${API_URL}/cfn/players/${cfnId}/matches/recent?days=${days}&limit=30`);
   return parseOrThrow<CFNMatchRead[]>(res);
+}
+
+export async function createTierList(
+  game: TierListGame,
+  tiers: Record<string, string[]>
+): Promise<TierListData> {
+  const res = await fetch(`${API_URL}/tierlists`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ game, tiers }),
+  });
+  return parseOrThrow<TierListData>(res);
+}
+
+export async function getTierList(id: string): Promise<TierListData> {
+  const res = await fetch(`${API_URL}/tierlists/${id}`);
+  return parseOrThrow<TierListData>(res);
 }

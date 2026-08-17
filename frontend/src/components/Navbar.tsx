@@ -11,6 +11,7 @@ const LINKS = [
   { to: "/objetivos", label: "Objetivos" },
   { to: "/nosotros", label: "Nosotros" },
   { to: "/puntos", label: "Puntos" },
+  { to: "/tierlist", label: "Tier List" },
 ];
 
 export default function Navbar() {

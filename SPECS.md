@@ -477,7 +477,59 @@ oficiales del club pero nunca se habían linkeado desde el sitio.
 genérico que había puesto Claude como placeholder al bootstrapear el
 proyecto.
 
-## 16. Deuda técnica conocida / decisiones pendientes
+## 16. Tier list (16-08-2026)
+
+`/tierlist` — herramienta para armar tier lists de SF6 y Third Strike,
+pensada para usarse en stream. Idea de Seba, inspirada en TierMaker.
+
+**Decisión de copyright (discutida en profundidad con Seba, dos veces):**
+NO se usan retratos de personajes ni ningún arte de Capcom — cada
+personaje se representa como una ficha de texto con su color de
+identidad propio (`characterColors.ts`, ya construido para `/jugadores`).
+Esto se decidió a pesar de que Seba insistió con el argumento de que
+TierMaker usa retratos reales bajo una defensa de fair use + DMCA Safe
+Harbor. La distinción clave: Safe Harbor protege a una plataforma de lo
+que *suben otros usuarios*, no de contenido que *el sitio mismo publica*
+como plantilla — y para que la tier list sea usable, alguien (nosotros)
+tendría que precargar el roster completo como plantilla, lo cual nos
+saca de esa protección. Además, ya tenemos la postura explícita de
+Capcom por escrito (Fan Content Guidelines, `SPECS.md` — sección de
+"Comic Art Characters"/copyright del CFN tracker) diciendo que el uso sin
+alteración de sus materiales no cuenta como obra derivada permitida. Se
+mantiene la misma línea que con el mod de Nexus y los retratos de
+Buckler's Boot Camp: alternativa propia en vez de apostar a que no nos
+pase nada.
+
+**Backend:**
+- `TierList` (`tier_lists`): `id` (uuid, es el link para compartir),
+  `game` ("sf6" | "3s"), `tiers` (jsonb, `{"S": ["Jamie", "Ryu"], ...}`),
+  `created_at`. Sin dueño/autenticación — cualquiera arma y comparte sin
+  cuenta, mismo criterio que TierMaker.
+- `POST /tierlists` (crear, público) y `GET /tierlists/{id}` (leer,
+  público). El backend valida que cada nombre pertenezca al roster real
+  del juego elegido — sin esto, el endpoint público sin auth podría
+  usarse para guardar cualquier texto arbitrario. **El roster está
+  duplicado a mano entre `backend/app/api/tier_lists.py` y
+  `frontend/src/lib/characterColors.ts`** — si se agrega/saca un
+  personaje, hay que actualizar los dos lugares.
+
+**Frontend:**
+- `/tierlist`: editor con drag and drop (`@dnd-kit/core`), selector SF6 /
+  Third Strike, exportar como PNG o copiar al portapapeles
+  (`html-to-image`), guardar y compartir (redirige a `/tierlist/{id}`).
+- `/tierlist/:id`: vista de solo lectura del link compartido, con los
+  mismos botones de exportar imagen.
+- Tiers fijos (S/A/B/C/D, no editables/reordenables en esta versión) —
+  simplificación consciente para la primera versión; agregar/quitar/
+  reordenar tiers y editar sus etiquetas queda para una vuelta futura si
+  se pide.
+
+**Costo de bundle:** `@dnd-kit/core` + `html-to-image` sumaron ~20KB
+gzip al bundle del frontend (de ~110KB a ~130KB) — tercera librería que
+suma peso real después de Framer Motion, vale la pena tenerlo en cuenta
+si en algún momento el sitio se siente pesado para cargar.
+
+## 17. Deuda técnica conocida / decisiones pendientes
 
 - Titularidad de la app de Twitch Developer Console: pendiente que el CEO
   decida si la registra con una cuenta institucional o se registra

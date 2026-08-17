@@ -8,6 +8,8 @@ import JugadoresPage from "./pages/JugadoresPage";
 import NosotrosPage from "./pages/NosotrosPage";
 import ObjetivosPage from "./pages/ObjetivosPage";
 import PuntosPage from "./pages/PuntosPage";
+import TierListPage from "./pages/TierListPage";
+import TierListSharedPage from "./pages/TierListSharedPage";
 import TorneosPage from "./pages/TorneosPage";
 
 export default function App() {
@@ -22,6 +24,8 @@ export default function App() {
           <Route path="/objetivos" element={<ObjetivosPage />} />
           <Route path="/nosotros" element={<NosotrosPage />} />
           <Route path="/puntos" element={<PuntosPage />} />
+          <Route path="/tierlist" element={<TierListPage />} />
+          <Route path="/tierlist/:id" element={<TierListSharedPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           {/* el dashboard se fusionó con /calendario (ver lessons.md) —
               esto es solo para no romper un link viejo guardado */}
