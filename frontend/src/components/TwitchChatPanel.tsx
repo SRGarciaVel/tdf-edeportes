@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 
 const TWITCH_CHANNEL = "tdfedeportes";
@@ -19,23 +18,24 @@ export default function TwitchChatPanel() {
         {open ? "Cerrar" : "Chat"}
       </button>
 
-      <AnimatePresence>
+      {/* Animado con "right", nunca con transform — Twitch (en realidad
+          el navegador, por seguridad anti-clickjacking) marca el chat
+          como "tapado" si CUALQUIER ancestro del iframe tiene un
+          transform aplicado, aunque sea uno que no cambia nada visible.
+          Antes esto usaba framer-motion (transform: translateX), que
+          disparaba justo ese bloqueo — ver lessons.md. */}
+      <div
+        className="fixed top-0 h-full w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line transition-[right] duration-300 ease-out"
+        style={{ right: open ? 0 : "-100%" }}
+      >
         {open && (
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "tween", duration: 0.28, ease: "easeOut" }}
-            className="fixed top-0 right-0 h-full w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line"
-          >
-            <iframe
-              src={`https://www.twitch.tv/embed/${TWITCH_CHANNEL}/chat?parent=${parent}&darkpopout`}
-              className="w-full h-full"
-              title="Chat de TDF e-deportes en Twitch"
-            />
-          </motion.div>
+          <iframe
+            src={`https://www.twitch.tv/embed/${TWITCH_CHANNEL}/chat?parent=${parent}&darkpopout`}
+            className="w-full h-full"
+            title="Chat de TDF e-deportes en Twitch"
+          />
         )}
-      </AnimatePresence>
+      </div>
     </>
   );
 }

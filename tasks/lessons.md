@@ -558,3 +558,27 @@ existente en `QuarterlyGoals.tsx`), no un guión largo suelto. Esto NO
 aplica a comentarios de código (`//`, `/** */`) — esos son para quien lee
 el código, no para quien usa el sitio, y ahí es una herramienta de
 puntuación normal como cualquier otra.
+
+## Twitch bloquea el chat de mods/dueño si CUALQUIER ancestro del iframe tiene un `transform`, aunque sea invisible
+
+**Qué pasó:** al abrir el panel de chat con la cuenta de un mod/dueño real
+del canal de Twitch, aparecía "Chatting is disabled for channel
+owner/mods because the Twitch Chat window is obscured by another
+element" — el chat se veía perfecto, pero no dejaba escribir.
+
+**Por qué:** es una protección anti-clickjacking del propio navegador
+(pensada para que nadie pueda "tapar" el chat de un mod con un elemento
+invisible para hacerle clickear banear/expulsar a alguien sin darse
+cuenta). El detector se fija si algún ancestro del iframe tiene un
+`transform` en su CSS — nuestro panel usaba `framer-motion` para el
+slide, que anima con `transform: translateX(...)`, y ese valor queda
+aplicado (aunque sea `translateX(0px)`, visualmente idéntico a no tener
+nada) incluso cuando la animación termina. Alcanza con que exista, no
+hace falta que se note.
+
+**Regla:** cualquier contenedor que envuelva un iframe de chat de Twitch
+(o de cualquier plataforma con esta misma protección) no puede tener
+`transform` en ningún ancestro — ni por animación, ni por
+`translate-x-*`/`scale-*` de Tailwind, ni por nada. Para animar un panel
+que contiene un iframe así, usar propiedades de posición normales
+(`right`, `left`, `top`) con `transition`, nunca `transform`.
