@@ -235,6 +235,7 @@ export default function TierListPage() {
   const [confirmDeleteItem, setConfirmDeleteItem] =
     useState<TierItemData | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
   // separado del resto de la página — es lo único que se captura al
   // exportar como imagen, sin los botones de editar tiers ni "sin
   // ranquear" (ver lessons.md, antes se exportaba todo junto)
@@ -258,6 +259,7 @@ export default function TierListPage() {
     setRows(freshRows);
     setTiers(emptyTiers(freshRows));
     setUnplaced(items);
+    setEditMode(false);
   }
 
   async function handleSelectTemplate(summary: TierListTemplateSummaryData) {
@@ -607,11 +609,16 @@ export default function TierListPage() {
   const settingsRow = rows.find((r) => r.id === settingsRowId) ?? null;
   // quien creó esta plantilla, o cualquier staff — no cualquiera con
   // sesión iniciada. El backend valida lo mismo en el DELETE, esto solo
-  // decide si se muestra el botón
+  // decide si se muestra el botón de "Editar" que activa editMode
   const canEditTemplateItems =
     !!activeTemplate &&
     !!user &&
     (user.is_staff || user.id === activeTemplate.created_by);
+  // la "✕" en cada imagen NO está siempre visible — solo aparece con
+  // editMode activo (toggle explícito), como en cualquier galería
+  // (Google Photos, Notion, etc.), para evitar borrados accidentales al
+  // hacer click cerca del botón mientras se arrastra o se navega
+  const showItemDeleteButtons = canEditTemplateItems && editMode;
 
   return (
     <Layout>
@@ -829,7 +836,7 @@ export default function TierListPage() {
 
       {activeTemplate && (
         <>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
             <p className="font-mono text-xs text-gray-500">
               Usando: <span className="text-white">{activeTemplate.name}</span>{" "}
               · por{" "}
@@ -837,13 +844,34 @@ export default function TierListPage() {
                 {activeTemplate.creator_name}
               </span>
             </p>
-            <button
-              onClick={() => setActiveTemplate(null)}
-              className="font-mono text-xs text-gray-500 hover:text-white transition-colors"
-            >
-              ← Elegir otra plantilla
-            </button>
+            <div className="flex items-center gap-3">
+              {canEditTemplateItems && (
+                <button
+                  onClick={() => setEditMode((v) => !v)}
+                  className={`font-mono text-xs uppercase px-3 py-1.5 border transition-colors ${
+                    editMode
+                      ? "bg-tdf-magenta border-tdf-magenta text-white"
+                      : "border-tdf-line text-gray-400 hover:border-tdf-magenta hover:text-white"
+                  }`}
+                >
+                  {editMode ? "Listo" : "Editar"}
+                </button>
+              )}
+              <button
+                onClick={() => setActiveTemplate(null)}
+                className="font-mono text-xs text-gray-500 hover:text-white transition-colors"
+              >
+                ← Elegir otra plantilla
+              </button>
+            </div>
           </div>
+
+          {editMode && (
+            <p className="font-mono text-[11px] text-tdf-magenta mb-4">
+              Modo edición activo: toca la "✕" de cualquier imagen para borrarla
+              de la plantilla. Toca "Listo" cuando termines.
+            </p>
+          )}
 
           <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             {/* Cada fila combina tier + controles en una sola línea (como
@@ -873,7 +901,7 @@ export default function TierListPage() {
                         key={item.id}
                         item={item}
                         onDelete={
-                          canEditTemplateItems
+                          showItemDeleteButtons
                             ? () => setConfirmDeleteItem(item)
                             : undefined
                         }
@@ -934,7 +962,7 @@ export default function TierListPage() {
                   key={item.id}
                   item={item}
                   onDelete={
-                    canEditTemplateItems
+                    showItemDeleteButtons
                       ? () => setConfirmDeleteItem(item)
                       : undefined
                   }

@@ -1,10 +1,11 @@
 import { toBlob, toPng } from "html-to-image";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
-import { getTierList } from "../lib/api";
+import { deleteTierList, getTierList } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
+import { useAuth } from "../lib/auth";
 import type { TierItemData, TierListData, TierMetaData } from "../lib/types";
 
 // solo se usa como fallback para tier lists guardadas ANTES de tier_meta
@@ -49,9 +50,13 @@ function ItemChip({ item }: { item: TierItemData }) {
 
 export default function TierListSharedPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user, token } = useAuth();
   const [data, setData] = useState<TierListData | null>(null);
   const [error, setError] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,6 +71,25 @@ export default function TierListSharedPage() {
     const t = setTimeout(() => setMessage(null), 3000);
     return () => clearTimeout(t);
   }, [message]);
+
+  // quien la creó (si la guardó logueado) o cualquier staff — mismo
+  // criterio que el backend, ver deleteTierList en api.ts
+  const canDelete =
+    !!user && !!data && (user.is_staff || user.id === data.created_by);
+
+  async function handleDelete() {
+    if (!token || !id) return;
+    setDeleting(true);
+    try {
+      await deleteTierList(token, id);
+      navigate("/tierlist/comunidad");
+    } catch {
+      setMessage("No se pudo borrar la tier list.");
+      setConfirmDelete(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function handleDownload() {
     if (!boardRef.current) return;
@@ -201,7 +225,61 @@ export default function TierListSharedPage() {
         >
           Armar la mía →
         </Link>
+        {canDelete && (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="border border-red-500/40 text-red-300 hover:bg-red-500/20 transition-colors px-4 py-2 font-mono text-xs uppercase ml-auto"
+          >
+            Borrar
+          </button>
+        )}
       </div>
+
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setConfirmDelete(false)}
+        >
+          <div
+            className="hud-frame bg-tdf-charcoal border border-tdf-line w-full max-w-sm p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-mono text-xs uppercase text-red-400">
+                Borrar tier list
+              </h3>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="text-gray-500 hover:text-white text-sm"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-200 mb-5">
+              ¿Borrar esta tier list? El link que se haya compartido deja de
+              funcionar.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="border border-tdf-line hover:border-white transition-colors px-4 py-2 font-mono text-[11px] uppercase"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-colors px-4 py-2 font-mono text-[11px] uppercase text-red-300 disabled:opacity-50"
+              >
+                {deleting ? "Borrando..." : "Borrar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

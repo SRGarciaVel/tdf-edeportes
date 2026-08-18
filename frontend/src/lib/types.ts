@@ -89,6 +89,7 @@ export interface TierListData {
   id: string;
   template_id: string | null;
   creator_name: string;
+  created_by: string | null;
   template_name: string | null;
   tier_meta: TierMetaData[];
   tiers: Record<string, TierItemData[]>;
@@ -98,6 +99,7 @@ export interface TierListData {
 export interface TierListSummaryData {
   id: string;
   creator_name: string;
+  created_by: string | null;
   template_name: string | null;
   item_count: number;
   created_at: string;

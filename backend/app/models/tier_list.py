@@ -37,6 +37,17 @@ class TierList(Base):
     template_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tier_list_templates.id"), nullable=True
     )
+    # id del usuario logueado que la guardó — null si la guardó alguien
+    # sin sesión (invitado). A diferencia de TierListTemplate.created_by
+    # (que siempre existe, porque crear una plantilla exige login), acá
+    # puede ser null de verdad: no hay forma de verificar "dueño" de un
+    # invitado que solo escribió un nombre a mano, cualquiera pudo haber
+    # tipeado el nombre de otra persona. DELETE /tierlists/{id} usa esto
+    # para permitir borrar a quien la creó (si created_by no es null) o a
+    # cualquier staff — las guardadas sin sesión solo las borra staff.
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
     # nombre de quien la armó: display_name de Twitch si estaba logueado,
     # o el nombre que escribió a mano si no — nunca vacío, el backend
     # resuelve "Anónimo" como default (ver app/api/tier_lists.py)

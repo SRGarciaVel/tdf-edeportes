@@ -246,6 +246,18 @@ export async function getTierList(id: string): Promise<TierListData> {
   return parseOrThrow<TierListData>(res);
 }
 
+// puede borrarla quien la creó (si la guardó logueado) o cualquier
+// staff — el backend valida cuál de los dos caso a caso. Las guardadas
+// por invitados sin sesión (created_by null) solo las borra staff.
+export async function deleteTierList(token: string, id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/tierlists/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok)
+    throw new Error(`No se pudo borrar la tier list (${res.status})`);
+}
+
 // galería pública de tier lists YA ARMADAS por la comunidad (no
 // plantillas en blanco, ver listTierListTemplates para eso)
 export async function listTierLists(): Promise<TierListSummaryData[]> {

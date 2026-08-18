@@ -274,6 +274,7 @@ def create_tier_list(
         template_id=template.id,
         template_name=template.name,
         creator_name=creator_name,
+        created_by=user.id if user is not None else None,
         tier_meta=[m.model_dump() for m in payload.tier_meta],
         tiers=resolved_tiers,
     )
@@ -299,6 +300,7 @@ def list_tier_lists(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
         {
             "id": t.id,
             "creator_name": t.creator_name,
+            "created_by": t.created_by,
             "template_name": t.template_name,
             "item_count": sum(len(items) for items in t.tiers.values()),
             "created_at": t.created_at,
@@ -315,3 +317,31 @@ def get_tier_list(
     if tier_list is None:
         raise HTTPException(404, "Tier list no encontrada")
     return tier_list
+
+
+@router.delete("/tierlists/{tier_list_id}", status_code=204)
+def delete_tier_list(
+    tier_list_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_authenticated)],
+) -> None:
+    """Puede borrarla quien la guardó (si la guardó logueado, ver
+    created_by) O cualquier staff. Las tier lists guardadas por invitados
+    sin sesión (created_by null) solo las puede borrar staff — no hay
+    forma de verificar que un invitado sea "el mismo" que la guardó,
+    cualquiera pudo haber escrito cualquier nombre a mano. Esto es lo que
+    permite limpiar las guardadas antes de que existiera created_by."""
+    try:
+        tier_list_uuid = uuid.UUID(tier_list_id)
+    except ValueError:
+        raise HTTPException(404, "Tier list no encontrada") from None
+
+    tier_list = db.get(TierList, tier_list_uuid)
+    if tier_list is None:
+        raise HTTPException(404, "Tier list no encontrada")
+
+    if tier_list.created_by != user.id and not user.is_staff:
+        raise HTTPException(403, "No tienes permiso para borrar esta tier list")
+
+    db.delete(tier_list)
+    db.commit()

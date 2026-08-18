@@ -81,6 +81,7 @@ class TierListRead(BaseModel):
     id: uuid.UUID
     template_id: uuid.UUID | None
     creator_name: str
+    created_by: uuid.UUID | None
     template_name: str | None
     tier_meta: list[TierMeta]
     tiers: dict[str, list[TierItem]]
@@ -96,6 +97,7 @@ class TierListSummary(BaseModel):
 
     id: uuid.UUID
     creator_name: str
+    created_by: uuid.UUID | None
     template_name: str | None
     item_count: int
     created_at: datetime

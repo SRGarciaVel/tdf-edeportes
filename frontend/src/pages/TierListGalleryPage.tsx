@@ -3,13 +3,18 @@ import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
-import { listTierLists } from "../lib/api";
+import { deleteTierList, listTierLists } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import type { TierListSummaryData } from "../lib/types";
 
 export default function TierListGalleryPage() {
+  const { user, token } = useAuth();
   const [tierLists, setTierLists] = useState<TierListSummaryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] =
+    useState<TierListSummaryData | null>(null);
 
   useEffect(() => {
     listTierLists()
@@ -17,6 +22,28 @@ export default function TierListGalleryPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
+
+  // quien la creó (si la guardó logueado) o cualquier staff — las
+  // guardadas por invitados (created_by null) solo las borra staff,
+  // mismo criterio que el backend (ver deleteTierList en api.ts)
+  function canDelete(t: TierListSummaryData): boolean {
+    if (!user) return false;
+    return user.is_staff || user.id === t.created_by;
+  }
+
+  async function handleDelete(t: TierListSummaryData) {
+    if (!token) return;
+    setDeletingId(t.id);
+    try {
+      await deleteTierList(token, t.id);
+      setTierLists((prev) => prev.filter((x) => x.id !== t.id));
+    } catch {
+      setError(true);
+    } finally {
+      setDeletingId(null);
+      setConfirmDelete(null);
+    }
+  }
 
   return (
     <Layout>
@@ -71,23 +98,95 @@ export default function TierListGalleryPage() {
       {!loading && !error && tierLists.length > 0 && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {tierLists.map((t) => (
-            <Link
+            <div
               key={t.id}
-              to={`/tierlist/${t.id}`}
-              className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors px-5 py-4"
+              className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors relative"
             >
-              <p className="font-semibold text-tdf-magenta">{t.creator_name}</p>
-              <p className="font-mono text-xs text-gray-500 mt-1">
-                {t.template_name ?? "Plantilla ya borrada"} · {t.item_count}{" "}
-                ítem{t.item_count === 1 ? "" : "s"}
-              </p>
-              <p className="font-mono text-[11px] text-gray-600 mt-2">
-                {new Date(t.created_at).toLocaleDateString("es-CL", {
-                  dateStyle: "medium",
-                })}
-              </p>
-            </Link>
+              <Link to={`/tierlist/${t.id}`} className="block px-5 py-4">
+                <p
+                  className={`font-semibold text-tdf-magenta ${
+                    canDelete(t) ? "pr-6" : ""
+                  }`}
+                >
+                  {t.creator_name}
+                </p>
+                <p className="font-mono text-xs text-gray-500 mt-1">
+                  {t.template_name ?? "Plantilla ya borrada"} · {t.item_count}{" "}
+                  ítem{t.item_count === 1 ? "" : "s"}
+                </p>
+                <p className="font-mono text-[11px] text-gray-600 mt-2">
+                  {new Date(t.created_at).toLocaleDateString("es-CL", {
+                    dateStyle: "medium",
+                  })}
+                </p>
+              </Link>
+              {canDelete(t) && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setConfirmDelete(t);
+                  }}
+                  disabled={deletingId === t.id}
+                  className="absolute top-2 right-2 text-gray-500 hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
+                  aria-label={`Borrar tier list de ${t.creator_name}`}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           ))}
+        </div>
+      )}
+
+      {/* mismo patrón de popup propio que el resto del sitio (no
+          window.confirm) */}
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+          onClick={() => setConfirmDelete(null)}
+        >
+          <div
+            className="hud-frame bg-tdf-charcoal border border-tdf-line w-full max-w-sm p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-mono text-xs uppercase text-red-400">
+                Borrar tier list
+              </h3>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="text-gray-500 hover:text-white text-sm"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-200 mb-5">
+              ¿Borrar la tier list de{" "}
+              <span className="font-semibold text-white">
+                {confirmDelete.creator_name}
+              </span>
+              ? El link que se haya compartido deja de funcionar.
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="border border-tdf-line hover:border-white transition-colors px-4 py-2 font-mono text-[11px] uppercase"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDelete)}
+                disabled={deletingId === confirmDelete.id}
+                className="bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-colors px-4 py-2 font-mono text-[11px] uppercase text-red-300 disabled:opacity-50"
+              >
+                {deletingId === confirmDelete.id ? "Borrando..." : "Borrar"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </Layout>
