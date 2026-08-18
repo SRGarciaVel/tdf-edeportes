@@ -14,7 +14,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { toBlob, toPng } from "html-to-image";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import {
@@ -209,6 +209,7 @@ export default function TierListPage() {
   const [activeItem, setActiveItem] = useState<TierItemData | null>(null);
   const [settingsRowId, setSettingsRowId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [guestName, setGuestName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   // separado del resto de la página — es lo único que se captura al
   // exportar como imagen, sin los botones de editar tiers ni "sin
@@ -499,7 +500,7 @@ export default function TierListPage() {
       setMessage("Imagen copiada al portapapeles.");
     } catch {
       setMessage(
-        "No se pudo copiar la imagen en este navegador — descárgala en su lugar.",
+        "No se pudo copiar la imagen en este navegador. Descárgala en su lugar.",
       );
     }
   }
@@ -514,7 +515,16 @@ export default function TierListPage() {
           items.map((i) => i.id),
         ]),
       );
-      const result = await createTierList(activeTemplate.id, idsOnly);
+      // logueado: el backend usa el display_name de Twitch y este valor
+      // se ignora, así que da lo mismo mandarlo o no. Sin login: se
+      // manda el nombre que escribió (si escribió algo), el backend cae
+      // a "Anónimo" si viene vacío
+      const result = await createTierList(
+        activeTemplate.id,
+        idsOnly,
+        user ? undefined : guestName.trim() || undefined,
+        token,
+      );
       navigate(`/tierlist/${result.id}`);
     } catch {
       setMessage("No se pudo guardar la tier list.");
@@ -528,7 +538,15 @@ export default function TierListPage() {
   return (
     <Layout>
       <SectionLabel index="09">Tier list</SectionLabel>
-      <h1 className="text-3xl font-bold mb-2">Arma tu tier list</h1>
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <h1 className="text-3xl font-bold">Arma tu tier list</h1>
+        <Link
+          to="/tierlist/comunidad"
+          className="font-mono text-xs uppercase text-tdf-magenta hover:text-white underline whitespace-nowrap mt-2"
+        >
+          Ver tier lists de la comunidad →
+        </Link>
+      </div>
       <p className="text-gray-500 mb-8 max-w-xl">
         Elige una plantilla armada por la comunidad, o crea la tuya si tienes
         sesión iniciada. Arrastra cada ítem al tier que quieras (y también
@@ -582,7 +600,7 @@ export default function TierListPage() {
                   className="hidden"
                 />
                 <span className="font-mono text-[11px] text-gray-600">
-                  Se redimensionan solas a 120x120 — {newItems.length} cargada
+                  Se redimensionan solas a 120x120, {newItems.length} cargada
                   {newItems.length === 1 ? "" : "s"}.
                 </span>
               </div>
@@ -615,7 +633,7 @@ export default function TierListPage() {
           )}
           {!loadingTemplates && templates.length === 0 && (
             <p className="text-sm text-gray-600">
-              Todavía no hay ninguna plantilla — sé el primero en crear una.
+              Todavía no hay ninguna plantilla, sé el primero en crear una.
             </p>
           )}
           <div className="grid sm:grid-cols-2 gap-3">
@@ -919,7 +937,29 @@ export default function TierListPage() {
             <p className="font-mono text-xs text-tdf-magenta mt-4">{message}</p>
           )}
 
-          <div className="flex flex-wrap gap-3 mt-6">
+          {/* solo si no hay sesión iniciada — logueado, el nombre en la
+              galería sale directo del display_name de Twitch, no hace
+              falta pedir nada acá */}
+          {!user && (
+            <div className="mt-6 flex flex-col gap-1.5 max-w-xs">
+              <label
+                htmlFor="guest-name"
+                className="font-mono text-[11px] uppercase text-gray-500"
+              >
+                Tu nombre (para la galería de la comunidad)
+              </label>
+              <input
+                id="guest-name"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                placeholder="Anónimo"
+                maxLength={40}
+                className="bg-tdf-dark border border-tdf-line px-3 py-2 text-sm"
+              />
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 mt-4">
             <button
               onClick={handleDownload}
               className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase"

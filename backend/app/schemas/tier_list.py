@@ -46,6 +46,10 @@ class TierListCreate(BaseModel):
     # nadie puede colar una imagen que no pasó por una plantilla creada
     # con login, ver app/api/tier_lists.py)
     tiers: dict[str, list[str]] = Field(default_factory=dict)
+    # solo se usa si quien guarda NO está logueado — si hay sesión, el
+    # backend usa el display_name de Twitch y esto se ignora (no se
+    # puede spoofear el nombre de otra persona estando logueado)
+    creator_name: str | None = None
 
 
 class TierListRead(BaseModel):
@@ -53,5 +57,21 @@ class TierListRead(BaseModel):
 
     id: uuid.UUID
     template_id: uuid.UUID | None
+    creator_name: str
+    template_name: str | None
     tiers: dict[str, list[TierItem]]
+    created_at: datetime
+
+
+class TierListSummary(BaseModel):
+    """Versión liviana para la galería de "tier lists de la comunidad" —
+    sin el contenido completo de cada tier (eso vive en el detalle,
+    GET /tierlists/{id}), solo lo necesario para listar y elegir una."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    creator_name: str
+    template_name: str | None
+    item_count: int
     created_at: datetime

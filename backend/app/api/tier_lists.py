@@ -11,6 +11,7 @@ from app.models import TierList, TierListTemplate, User
 from app.schemas.tier_list import (
     TierListCreate,
     TierListRead,
+    TierListSummary,
     TierListTemplateCreate,
     TierListTemplateRead,
     TierListTemplateSummary,
@@ -22,6 +23,10 @@ MAX_TIERS = 12
 MAX_ITEMS = 60
 MAX_IMAGE_DATA_URL_LEN = 200_000  # ~150KB en base64, generoso para 120x120
 IMAGE_DATA_URL_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp);base64,")
+MAX_CREATOR_NAME_LEN = 40
+MAX_TIER_LISTS_LISTED = 100  # sin paginación todavía — no hay volumen que
+# la justifique aún, se agrega si esta pantalla crece (mismo criterio que
+# el resto del proyecto, ver CODESTYLE.md "elegancia sobre parches")
 
 
 @router.get("/tierlist-templates", response_model=list[TierListTemplateSummary])
@@ -150,7 +155,7 @@ def create_tier_list(
     # sin auth requerida: ranquear una plantilla ya existente es libre
     # para cualquiera, mismo criterio que TierMaker. Lo que sí exige login
     # es crear la plantilla (POST /tierlist-templates, arriba)
-    _user: Annotated[User | None, Depends(get_current_user)],
+    user: Annotated[User | None, Depends(get_current_user)],
 ) -> TierList:
     template = db.get(TierListTemplate, payload.template_id)
     if template is None:
@@ -178,11 +183,50 @@ def create_tier_list(
             resolved.append(items_by_id[item_id])
         resolved_tiers[tier_label] = resolved
 
-    tier_list = TierList(template_id=template.id, tiers=resolved_tiers)
+    # logueado: se usa el display_name de Twitch, no lo que haya mandado
+    # el cliente en creator_name (no se puede spoofear el nombre de otra
+    # persona estando logueado). Sin login: el nombre que escribió a
+    # mano, recortado y con "Anónimo" como default si vino vacío.
+    if user is not None:
+        creator_name = user.display_name
+    else:
+        raw_name = (payload.creator_name or "").strip()
+        creator_name = raw_name[:MAX_CREATOR_NAME_LEN] if raw_name else "Anónimo"
+
+    tier_list = TierList(
+        template_id=template.id,
+        template_name=template.name,
+        creator_name=creator_name,
+        tiers=resolved_tiers,
+    )
     db.add(tier_list)
     db.commit()
     db.refresh(tier_list)
     return tier_list
+
+
+@router.get("/tierlists", response_model=list[TierListSummary])
+def list_tier_lists(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
+    """Público, sin auth — la galería de tier lists YA ARMADAS por la
+    comunidad (a diferencia de /tierlist-templates, que lista las
+    plantillas en blanco para empezar a ranquear). Las más nuevas
+    primero."""
+    tier_lists = (
+        db.query(TierList)
+        .order_by(TierList.created_at.desc())
+        .limit(MAX_TIER_LISTS_LISTED)
+        .all()
+    )
+    return [
+        {
+            "id": t.id,
+            "creator_name": t.creator_name,
+            "template_name": t.template_name,
+            "item_count": sum(len(items) for items in t.tiers.values()),
+            "created_at": t.created_at,
+        }
+        for t in tier_lists
+    ]
 
 
 @router.get("/tierlists/{tier_list_id}", response_model=TierListRead)

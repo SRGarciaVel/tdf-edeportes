@@ -7,6 +7,7 @@ import type {
   CFNMatchStats,
   CFNMatchRead,
   TierListData,
+  TierListSummaryData,
   TierItemData,
   TierListTemplateData,
   TierListTemplateSummaryData,
@@ -200,11 +201,24 @@ export async function deleteTierListTemplate(
 export async function createTierList(
   templateId: string,
   tiers: Record<string, string[]>,
+  creatorName?: string,
+  token?: string | null,
 ): Promise<TierListData> {
   const res = await fetch(`${API_URL}/tierlists`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ template_id: templateId, tiers }),
+    headers: {
+      "Content-Type": "application/json",
+      // con sesión: el backend identifica al usuario por este header y
+      // usa su display_name real, ignorando creator_name por completo.
+      // Sin esto, el backend nunca ve el token y trata a todo el mundo
+      // como invitado aunque esté logueado.
+      ...authHeaders(token ?? null),
+    },
+    body: JSON.stringify({
+      template_id: templateId,
+      tiers,
+      creator_name: creatorName,
+    }),
   });
   return parseOrThrow<TierListData>(res);
 }
@@ -212,4 +226,11 @@ export async function createTierList(
 export async function getTierList(id: string): Promise<TierListData> {
   const res = await fetch(`${API_URL}/tierlists/${id}`);
   return parseOrThrow<TierListData>(res);
+}
+
+// galería pública de tier lists YA ARMADAS por la comunidad (no
+// plantillas en blanco, ver listTierListTemplates para eso)
+export async function listTierLists(): Promise<TierListSummaryData[]> {
+  const res = await fetch(`${API_URL}/tierlists`);
+  return parseOrThrow<TierListSummaryData[]>(res);
 }
