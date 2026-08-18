@@ -9,6 +9,7 @@ import type {
   TierListData,
   TierListSummaryData,
   TierItemData,
+  TierMetaData,
   TierListTemplateData,
   TierListTemplateSummaryData,
 } from "./types";
@@ -198,9 +199,25 @@ export async function deleteTierListTemplate(
     throw new Error(`No se pudo borrar la plantilla (${res.status})`);
 }
 
+// borra UN ítem puntual de una plantilla ya guardada (no la plantilla
+// entera) — permitido a quien la creó o a staff, el backend valida cuál
+// de los dos caso a caso
+export async function deleteTierListTemplateItem(
+  token: string,
+  templateId: string,
+  itemId: string,
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/tierlist-templates/${templateId}/items/${itemId}`,
+    { method: "DELETE", headers: authHeaders(token) },
+  );
+  if (!res.ok) throw new Error(`No se pudo borrar el ítem (${res.status})`);
+}
+
 export async function createTierList(
   templateId: string,
   tiers: Record<string, string[]>,
+  tierMeta: TierMetaData[],
   creatorName?: string,
   token?: string | null,
 ): Promise<TierListData> {
@@ -217,6 +234,7 @@ export async function createTierList(
     body: JSON.stringify({
       template_id: templateId,
       tiers,
+      tier_meta: tierMeta,
       creator_name: creatorName,
     }),
   });

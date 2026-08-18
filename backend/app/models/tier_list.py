@@ -44,7 +44,18 @@ class TierList(Base):
     # copia del nombre de la plantilla al momento de guardar — sobrevive
     # aunque la plantilla se borre después
     template_name: Mapped[str | None] = mapped_column(String, nullable=True)
-    # {"S": [{"id","label","image"}], "A": [...], ...}
+    # [{"label": "S", "color": "bg-red-500/40 border-red-500/70"}, ...] —
+    # el ORDEN de despliegue y el color elegido por tier, en ESE orden.
+    # Va en un array (no en las keys de `tiers`) a propósito: Postgres
+    # JSONB preserva el orden de los elementos de un array, pero NO
+    # garantiza el orden de las keys de un objeto (está documentado así
+    # por Postgres). Guardar el orden en las keys de `tiers` fue el bug
+    # original: el tier S terminaba mostrándose al final porque Postgres
+    # reordenaba las keys alfabéticamente al leer de vuelta.
+    tier_meta: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    # {"S": [{"id","label","image"}], "A": [...], ...} — el ORDEN de estas
+    # keys ya no se usa para nada (ver tier_meta arriba), es solo un mapa
+    # label -> ítems
     tiers: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

@@ -10,6 +10,24 @@ class TierItem(BaseModel):
     image: str | None = None  # data URL — solo se define al crear una plantilla
 
 
+class TierMeta(BaseModel):
+    """Orden + color + nombre mostrado de un tier, en el orden real en que
+    se muestran. Va separado de `tiers` (que sigue siendo label -> lista
+    de ítems) porque Postgres JSONB no garantiza el orden de las keys de
+    un objeto, pero sí el de los elementos de un array — este array ES la
+    fuente de verdad del orden.
+
+    `id` es la clave estable (coincide con las keys de `tiers`, ej. "S",
+    "A", o un id generado como "tier-172...") — NUNCA cambia aunque se
+    renombre el tier. `label` es el texto que se ve en pantalla, puede
+    venir de un renombre (ej. alguien cambió "S" por "GODLIKE" con la
+    tuerca del editor)."""
+
+    id: str
+    label: str
+    color: str
+
+
 class TierListTemplateCreate(BaseModel):
     name: str
     items: list[TierItem]
@@ -22,6 +40,7 @@ class TierListTemplateRead(BaseModel):
     name: str
     items: list[TierItem]
     creator_name: str
+    created_by: uuid.UUID
     created_at: datetime
 
 
@@ -46,6 +65,10 @@ class TierListCreate(BaseModel):
     # nadie puede colar una imagen que no pasó por una plantilla creada
     # con login, ver app/api/tier_lists.py)
     tiers: dict[str, list[str]] = Field(default_factory=dict)
+    # el orden real de despliegue + color elegido por tier (ver TierMeta)
+    # — el backend valida que los labels acá coincidan exactamente con
+    # las keys de `tiers`, ver create_tier_list
+    tier_meta: list[TierMeta] = Field(default_factory=list)
     # solo se usa si quien guarda NO está logueado — si hay sesión, el
     # backend usa el display_name de Twitch y esto se ignora (no se
     # puede spoofear el nombre de otra persona estando logueado)
@@ -59,6 +82,7 @@ class TierListRead(BaseModel):
     template_id: uuid.UUID | None
     creator_name: str
     template_name: str | None
+    tier_meta: list[TierMeta]
     tiers: dict[str, list[TierItem]]
     created_at: datetime
 

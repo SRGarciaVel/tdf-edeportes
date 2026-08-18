@@ -21,6 +21,7 @@ import {
   createTierList,
   createTierListTemplate,
   deleteTierListTemplate,
+  deleteTierListTemplateItem,
   getTierListTemplate,
   listTierListTemplates,
 } from "../lib/api";
@@ -29,6 +30,7 @@ import { resizeImageFile } from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
 import type {
   TierItemData,
+  TierMetaData,
   TierListTemplateData,
   TierListTemplateSummaryData,
 } from "../lib/types";
@@ -42,18 +44,18 @@ interface TierRow {
 const UNPLACED_ID = "unplaced";
 
 const TIER_PALETTE = [
-  "bg-red-500/20 border-red-500/40",
-  "bg-orange-500/20 border-orange-500/40",
-  "bg-yellow-500/20 border-yellow-500/40",
-  "bg-lime-500/20 border-lime-500/40",
-  "bg-emerald-500/20 border-emerald-500/40",
-  "bg-teal-500/20 border-teal-500/40",
-  "bg-sky-500/20 border-sky-500/40",
-  "bg-purple-500/20 border-purple-500/40",
-  "bg-fuchsia-500/20 border-fuchsia-500/40",
-  "bg-pink-500/20 border-pink-500/40",
-  "bg-gray-500/20 border-gray-500/40",
-  "bg-stone-500/20 border-stone-500/40",
+  "bg-red-500/40 border-red-500/70",
+  "bg-orange-500/40 border-orange-500/70",
+  "bg-yellow-500/40 border-yellow-500/70",
+  "bg-lime-500/40 border-lime-500/70",
+  "bg-emerald-500/40 border-emerald-500/70",
+  "bg-teal-500/40 border-teal-500/70",
+  "bg-sky-500/40 border-sky-500/70",
+  "bg-purple-500/40 border-purple-500/70",
+  "bg-fuchsia-500/40 border-fuchsia-500/70",
+  "bg-pink-500/40 border-pink-500/70",
+  "bg-gray-500/40 border-gray-500/70",
+  "bg-stone-500/40 border-stone-500/70",
 ];
 
 function defaultRows(): TierRow[] {
@@ -72,7 +74,13 @@ function emptyTiers(rows: TierRow[]): Record<string, TierItemData[]> {
  * sabe insertarse en una posición exacta dentro de una lista, no solo
  * "moverse a algún contenedor" — es lo que permite acomodar de derecha a
  * izquierda, insertar en el medio, etc. Ver lessons.md. */
-function ItemChip({ item }: { item: TierItemData }) {
+function ItemChip({
+  item,
+  onDelete,
+}: {
+  item: TierItemData;
+  onDelete?: () => void;
+}) {
   const {
     attributes,
     listeners,
@@ -88,8 +96,13 @@ function ItemChip({ item }: { item: TierItemData }) {
     transition,
   };
 
-  if (item.image) {
-    return (
+  // el botón de borrar va como HERMANO del div arrastrable, nunca
+  // anidado adentro — si estuviera adentro, el pointerdown del botón
+  // burbujearía hasta los listeners de dnd-kit (que están en el div
+  // padre) y podría interpretarse como el inicio de un drag en vez de
+  // un click
+  return (
+    <div className="relative">
       <div
         ref={setNodeRef}
         {...listeners}
@@ -99,26 +112,34 @@ function ItemChip({ item }: { item: TierItemData }) {
           isDragging ? "opacity-30 relative z-50" : ""
         }`}
       >
-        <img
-          src={item.image}
-          alt={item.label}
-          className="w-16 h-16 object-cover border border-tdf-line"
-        />
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.label}
+            className="w-16 h-16 object-cover border border-tdf-line"
+          />
+        ) : (
+          <span
+            className={`inline-block px-2 py-1 text-xs font-mono border border-current/40 bg-tdf-dark ${characterColorClass(
+              item.label,
+            )}`}
+          >
+            {item.label}
+          </span>
+        )}
       </div>
-    );
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      style={style}
-      className={`px-2 py-1 text-xs font-mono border border-current/40 bg-tdf-dark cursor-grab active:cursor-grabbing select-none touch-none ${characterColorClass(
-        item.label,
-      )} ${isDragging ? "opacity-30 relative z-50" : ""}`}
-    >
-      {item.label}
+      {onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center bg-red-500/90 hover:bg-red-500 text-white text-[10px] leading-none rounded-full z-10"
+          aria-label={`Borrar ${item.label} de la plantilla`}
+        >
+          ✕
+        </button>
+      )}
     </div>
   );
 }
@@ -211,6 +232,9 @@ export default function TierListPage() {
   const [saving, setSaving] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmDeleteItem, setConfirmDeleteItem] =
+    useState<TierItemData | null>(null);
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   // separado del resto de la página — es lo único que se captura al
   // exportar como imagen, sin los botones de editar tiers ni "sin
   // ranquear" (ver lessons.md, antes se exportaba todo junto)
@@ -263,6 +287,39 @@ export default function TierListPage() {
     } finally {
       setDeletingTemplateId(null);
       setConfirmDeleteTemplate(null);
+    }
+  }
+
+  // solo se puede llegar acá si canEditTemplateItems es true (ver más
+  // abajo, gear ✕ en cada ItemChip) — pero el backend también valida
+  // "creador O staff" en el DELETE, no se confía solo en ocultar el
+  // botón en el frontend
+  async function handleDeleteItem(item: TierItemData) {
+    if (!token || !activeTemplate) return;
+    setDeletingItemId(item.id);
+    try {
+      await deleteTierListTemplateItem(token, activeTemplate.id, item.id);
+      // sacarlo de todos lados donde pueda estar: sin ranquear, o ya
+      // puesto en algún tier
+      setUnplaced((prev) => prev.filter((i) => i.id !== item.id));
+      setTiers((prev) => {
+        const next: Record<string, TierItemData[]> = {};
+        for (const [tierId, items] of Object.entries(prev)) {
+          next[tierId] = items.filter((i) => i.id !== item.id);
+        }
+        return next;
+      });
+      setActiveTemplate((prev) =>
+        prev
+          ? { ...prev, items: prev.items.filter((i) => i.id !== item.id) }
+          : prev,
+      );
+      setMessage(`"${item.label}" borrado de la plantilla.`);
+    } catch {
+      setMessage("No se pudo borrar el ítem.");
+    } finally {
+      setDeletingItemId(null);
+      setConfirmDeleteItem(null);
     }
   }
 
@@ -515,6 +572,19 @@ export default function TierListPage() {
           items.map((i) => i.id),
         ]),
       );
+      // rows ya está en el orden real que se ve en pantalla (se puede
+      // reordenar con las flechas ▲▼ de cada fila) — es la fuente de
+      // verdad del orden, se manda tal cual en vez de confiar en el
+      // orden de las keys de idsOnly (que Postgres JSONB no preserva).
+      // row.label puede venir de un renombre (la tuerca del editor) —
+      // antes de esto, renombrar un tier nunca se guardaba, la vista
+      // compartida siempre mostraba el id original ("S") sin importar
+      // qué se hubiera escrito
+      const tierMeta: TierMetaData[] = rows.map((r) => ({
+        id: r.id,
+        label: r.label,
+        color: r.color,
+      }));
       // logueado: el backend usa el display_name de Twitch y este valor
       // se ignora, así que da lo mismo mandarlo o no. Sin login: se
       // manda el nombre que escribió (si escribió algo), el backend cae
@@ -522,6 +592,7 @@ export default function TierListPage() {
       const result = await createTierList(
         activeTemplate.id,
         idsOnly,
+        tierMeta,
         user ? undefined : guestName.trim() || undefined,
         token,
       );
@@ -534,6 +605,13 @@ export default function TierListPage() {
   }
 
   const settingsRow = rows.find((r) => r.id === settingsRowId) ?? null;
+  // quien creó esta plantilla, o cualquier staff — no cualquiera con
+  // sesión iniciada. El backend valida lo mismo en el DELETE, esto solo
+  // decide si se muestra el botón
+  const canEditTemplateItems =
+    !!activeTemplate &&
+    !!user &&
+    (user.is_staff || user.id === activeTemplate.created_by);
 
   return (
     <Layout>
@@ -607,12 +685,24 @@ export default function TierListPage() {
               {newItems.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {newItems.map((item) => (
-                    <img
-                      key={item.id}
-                      src={item.image ?? undefined}
-                      alt={item.label}
-                      className="w-12 h-12 object-cover border border-tdf-line"
-                    />
+                    <div key={item.id} className="relative">
+                      <img
+                        src={item.image ?? undefined}
+                        alt={item.label}
+                        className="w-12 h-12 object-cover border border-tdf-line"
+                      />
+                      <button
+                        onClick={() =>
+                          setNewItems((prev) =>
+                            prev.filter((i) => i.id !== item.id),
+                          )
+                        }
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center bg-red-500/90 hover:bg-red-500 text-white text-[10px] leading-none rounded-full"
+                        aria-label={`Sacar ${item.label} antes de guardar`}
+                      >
+                        ✕
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -779,7 +869,15 @@ export default function TierListPage() {
                     className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start"
                   >
                     {tiers[row.id]?.map((item) => (
-                      <ItemChip key={item.id} item={item} />
+                      <ItemChip
+                        key={item.id}
+                        item={item}
+                        onDelete={
+                          canEditTemplateItems
+                            ? () => setConfirmDeleteItem(item)
+                            : undefined
+                        }
+                      />
                     ))}
                   </SortableZone>
                   <div
@@ -832,7 +930,15 @@ export default function TierListPage() {
               className="border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-3 min-h-20"
             >
               {unplaced.map((item) => (
-                <ItemChip key={item.id} item={item} />
+                <ItemChip
+                  key={item.id}
+                  item={item}
+                  onDelete={
+                    canEditTemplateItems
+                      ? () => setConfirmDeleteItem(item)
+                      : undefined
+                  }
+                />
               ))}
             </SortableZone>
 
@@ -980,6 +1086,71 @@ export default function TierListPage() {
               {saving ? "Guardando..." : "Guardar y compartir"}
             </button>
           </div>
+
+          {/* confirmar antes de borrar un ítem de la plantilla (no el
+              ranking en curso, la plantilla en sí) — mismo patrón visual
+              que el popup de borrar plantilla completa, arriba */}
+          {confirmDeleteItem && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+              onClick={() => setConfirmDeleteItem(null)}
+            >
+              <div
+                className="hud-frame bg-tdf-charcoal border border-tdf-line w-full max-w-sm p-5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-mono text-xs uppercase text-red-400">
+                    Borrar ítem de la plantilla
+                  </h3>
+                  <button
+                    onClick={() => setConfirmDeleteItem(null)}
+                    className="text-gray-500 hover:text-white text-sm"
+                    aria-label="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 mb-5">
+                  {confirmDeleteItem.image && (
+                    <img
+                      src={confirmDeleteItem.image}
+                      alt={confirmDeleteItem.label}
+                      className="w-12 h-12 object-cover border border-tdf-line shrink-0"
+                    />
+                  )}
+                  <p className="text-sm text-gray-200">
+                    ¿Borrar{" "}
+                    <span className="font-semibold text-white">
+                      "{confirmDeleteItem.label}"
+                    </span>{" "}
+                    de esta plantilla? Esto le va a faltar a cualquiera que la
+                    use de acá en más. Los rankings que ya la usaron no se ven
+                    afectados.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setConfirmDeleteItem(null)}
+                    className="border border-tdf-line hover:border-white transition-colors px-4 py-2 font-mono text-[11px] uppercase"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleDeleteItem(confirmDeleteItem)}
+                    disabled={deletingItemId === confirmDeleteItem.id}
+                    className="bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 transition-colors px-4 py-2 font-mono text-[11px] uppercase text-red-300 disabled:opacity-50"
+                  >
+                    {deletingItemId === confirmDeleteItem.id
+                      ? "Borrando..."
+                      : "Borrar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 

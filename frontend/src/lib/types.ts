@@ -79,11 +79,18 @@ export interface TierItemData {
   image?: string | null;
 }
 
+export interface TierMetaData {
+  id: string;
+  label: string;
+  color: string;
+}
+
 export interface TierListData {
   id: string;
   template_id: string | null;
   creator_name: string;
   template_name: string | null;
+  tier_meta: TierMetaData[];
   tiers: Record<string, TierItemData[]>;
   created_at: string;
 }
@@ -101,6 +108,7 @@ export interface TierListTemplateData {
   name: string;
   items: TierItemData[];
   creator_name: string;
+  created_by: string;
   created_at: string;
 }
 

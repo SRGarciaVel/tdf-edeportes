@@ -28,6 +28,27 @@ MAX_TIER_LISTS_LISTED = 100  # sin paginación todavía — no hay volumen que
 # la justifique aún, se agrega si esta pantalla crece (mismo criterio que
 # el resto del proyecto, ver CODESTYLE.md "elegancia sobre parches")
 
+# debe coincidir exactamente con TIER_PALETTE en TierListPage.tsx — es la
+# misma duplicación ya aceptada en el proyecto para otras validaciones
+# (ver IMAGE_DATA_URL_RE arriba); si el color no viene de esta lista, se
+# rechaza en vez de guardar un className arbitrario mandado por el cliente
+TIER_COLOR_CHOICES = frozenset(
+    {
+        "bg-red-500/40 border-red-500/70",
+        "bg-orange-500/40 border-orange-500/70",
+        "bg-yellow-500/40 border-yellow-500/70",
+        "bg-lime-500/40 border-lime-500/70",
+        "bg-emerald-500/40 border-emerald-500/70",
+        "bg-teal-500/40 border-teal-500/70",
+        "bg-sky-500/40 border-sky-500/70",
+        "bg-purple-500/40 border-purple-500/70",
+        "bg-fuchsia-500/40 border-fuchsia-500/70",
+        "bg-pink-500/40 border-pink-500/70",
+        "bg-gray-500/40 border-gray-500/70",
+        "bg-stone-500/40 border-stone-500/70",
+    }
+)
+
 
 @router.get("/tierlist-templates", response_model=list[TierListTemplateSummary])
 def list_templates(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
@@ -75,6 +96,7 @@ def get_template(template_id: str, db: Annotated[Session, Depends(get_db)]) -> d
         "name": template.name,
         "items": template.items,
         "creator_name": template.creator.display_name,
+        "created_by": template.created_by,
         "created_at": template.created_at,
     }
 
@@ -111,6 +133,7 @@ def create_template(
         "name": template.name,
         "items": template.items,
         "creator_name": user.display_name,
+        "created_by": template.created_by,
         "created_at": template.created_at,
     }
 
@@ -148,6 +171,47 @@ def delete_template(
     db.commit()
 
 
+@router.delete("/tierlist-templates/{template_id}/items/{item_id}", status_code=204)
+def delete_template_item(
+    template_id: str,
+    item_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_authenticated)],
+) -> None:
+    """Borra UN ítem puntual de una plantilla ya guardada (a diferencia de
+    DELETE /tierlist-templates/{id}, que borra la plantilla entera) —
+    pensado para el caso de subir un lote grande de imágenes y que se
+    cuele una repetida.
+
+    A diferencia del borrado de la plantilla completa (solo staff), acá
+    puede hacerlo quien la creó O cualquier staff: corregir tu propio
+    error no debería depender de pedirle el favor a alguien más, pero
+    tocar la plantilla de otra persona sigue necesitando staff.
+
+    Los rankings ya guardados que usaban este ítem no se ven afectados —
+    ya tienen su copia congelada, ver TierList.tiers."""
+    try:
+        template_uuid = uuid.UUID(template_id)
+    except ValueError:
+        raise HTTPException(404, "Plantilla no encontrada") from None
+
+    template = db.get(TierListTemplate, template_uuid)
+    if template is None:
+        raise HTTPException(404, "Plantilla no encontrada")
+
+    if template.created_by != user.id and not user.is_staff:
+        raise HTTPException(403, "No tienes permiso para editar esta plantilla")
+
+    remaining = [i for i in template.items if i["id"] != item_id]
+    if len(remaining) == len(template.items):
+        raise HTTPException(404, "Ítem no encontrado en esta plantilla")
+    if len(remaining) == 0:
+        raise HTTPException(400, "No puedes borrar el último ítem de la plantilla")
+
+    template.items = remaining
+    db.commit()
+
+
 @router.post("/tierlists", response_model=TierListRead, status_code=201)
 def create_tier_list(
     payload: TierListCreate,
@@ -163,6 +227,19 @@ def create_tier_list(
 
     if len(payload.tiers) > MAX_TIERS:
         raise HTTPException(400, f"Máximo {MAX_TIERS} tiers")
+
+    # tier_meta es la fuente de verdad del orden Y del nombre mostrado
+    # (ver TierMeta) — sus ids tienen que ser EXACTAMENTE el mismo set
+    # que las keys de tiers, ni de más ni de menos, y cada color tiene
+    # que venir de la paleta conocida (no un className arbitrario mandado
+    # por el cliente)
+    meta_ids = {m.id for m in payload.tier_meta}
+    tier_keys = set(payload.tiers.keys())
+    if meta_ids != tier_keys:
+        raise HTTPException(400, "tier_meta no coincide con los tiers enviados")
+    for m in payload.tier_meta:
+        if m.color not in TIER_COLOR_CHOICES:
+            raise HTTPException(400, f"Color inválido para el tier '{m.label}'")
 
     items_by_id = {item["id"]: item for item in template.items}
     seen: set[str] = set()
@@ -197,6 +274,7 @@ def create_tier_list(
         template_id=template.id,
         template_name=template.name,
         creator_name=creator_name,
+        tier_meta=[m.model_dump() for m in payload.tier_meta],
         tiers=resolved_tiers,
     )
     db.add(tier_list)

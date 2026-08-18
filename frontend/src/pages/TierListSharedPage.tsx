@@ -5,21 +5,25 @@ import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import { getTierList } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import type { TierItemData, TierListData } from "../lib/types";
+import type { TierItemData, TierListData, TierMetaData } from "../lib/types";
 
-const TIER_COLORS = [
-  "bg-red-500/20 border-red-500/40",
-  "bg-orange-500/20 border-orange-500/40",
-  "bg-yellow-500/20 border-yellow-500/40",
-  "bg-lime-500/20 border-lime-500/40",
-  "bg-emerald-500/20 border-emerald-500/40",
-  "bg-teal-500/20 border-teal-500/40",
-  "bg-sky-500/20 border-sky-500/40",
-  "bg-purple-500/20 border-purple-500/40",
-  "bg-fuchsia-500/20 border-fuchsia-500/40",
-  "bg-pink-500/20 border-pink-500/40",
-  "bg-gray-500/20 border-gray-500/40",
-  "bg-stone-500/20 border-stone-500/40",
+// solo se usa como fallback para tier lists guardadas ANTES de tier_meta
+// (ver más abajo) — mismos valores más claros que TIER_PALETTE en
+// TierListPage.tsx (feedback del CEO y Pochoclo23: los colores viejos
+// (/20, /40) se veían muy oscuros)
+const FALLBACK_TIER_COLORS = [
+  "bg-red-500/40 border-red-500/70",
+  "bg-orange-500/40 border-orange-500/70",
+  "bg-yellow-500/40 border-yellow-500/70",
+  "bg-lime-500/40 border-lime-500/70",
+  "bg-emerald-500/40 border-emerald-500/70",
+  "bg-teal-500/40 border-teal-500/70",
+  "bg-sky-500/40 border-sky-500/70",
+  "bg-purple-500/40 border-purple-500/70",
+  "bg-fuchsia-500/40 border-fuchsia-500/70",
+  "bg-pink-500/40 border-pink-500/70",
+  "bg-gray-500/40 border-gray-500/70",
+  "bg-stone-500/40 border-stone-500/70",
 ];
 
 function ItemChip({ item }: { item: TierItemData }) {
@@ -116,7 +120,22 @@ export default function TierListSharedPage() {
     );
   }
 
-  const tierIds = Object.keys(data.tiers);
+  // tier_meta es la fuente de verdad del orden, color y nombre mostrado
+  // (ver TierMeta en el backend) — se agregó para arreglar el bug de que
+  // el tier S terminaba mostrándose al final (Postgres JSONB no
+  // garantiza el orden de las keys de un objeto, tiers es un objeto).
+  // Fallback para tier lists guardadas ANTES de este cambio (tier_meta
+  // vacío): reconstruir con el orden que devuelva Postgres, más un color
+  // por índice — es el mismo comportamiento (imperfecto) de siempre para
+  // esos casos viejos, mejor que romper la página.
+  const tierMeta: TierMetaData[] =
+    data.tier_meta.length > 0
+      ? data.tier_meta
+      : Object.keys(data.tiers).map((label, i) => ({
+          id: label,
+          label,
+          color: FALLBACK_TIER_COLORS[i % FALLBACK_TIER_COLORS.length],
+        }));
 
   return (
     <Layout>
@@ -136,17 +155,15 @@ export default function TierListSharedPage() {
 
       <div ref={boardRef} className="bg-tdf-dark p-4">
         <div className="flex flex-col gap-1">
-          {tierIds.map((tierId, i) => (
-            <div key={tierId} className="flex">
+          {tierMeta.map((meta) => (
+            <div key={meta.id} className="flex">
               <div
-                className={`w-16 shrink-0 flex items-center justify-center font-bold text-lg border ${
-                  TIER_COLORS[i % TIER_COLORS.length]
-                }`}
+                className={`w-16 shrink-0 flex items-center justify-center font-bold text-lg border ${meta.color}`}
               >
-                {tierId}
+                {meta.label}
               </div>
               <div className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start">
-                {data.tiers[tierId].map((item) => (
+                {(data.tiers[meta.id] ?? []).map((item) => (
                   <ItemChip key={item.id} item={item} />
                 ))}
               </div>
