@@ -70,6 +70,54 @@ function emptyTiers(rows: TierRow[]): Record<string, TierItemData[]> {
   return Object.fromEntries(rows.map((r) => [r.id, []]));
 }
 
+/** Texto editable directo en la caja de color (además del campo del
+ * popup del engranaje — ambos escriben sobre el mismo row.label, no son
+ * dos fuentes de verdad separadas). contentEditable en vez de un
+ * <textarea>: crece solo con el contenido sin ningún truco de JS, y a
+ * diferencia de un <textarea> es contenido de texto real del DOM — un
+ * <textarea> puede no capturar bien su valor tipeado al exportar a PNG
+ * con html-to-image (clona el DOM; el value de un form control es un
+ * caso conocido problemático para esas librerías), mientras que texto
+ * real sí exporta bien, es lo mismo que ya hacía el <span> de antes. */
+function TierLabelEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // solo pisa el contenido visible cuando cambia desde AFUERA (ej. el
+  // campo del popup del engranaje) — si esto corriera en cada tecla acá
+  // mismo, el cursor saltaría al final del texto en cada letra escrita
+  useEffect(() => {
+    if (ref.current && ref.current.textContent !== value) {
+      ref.current.textContent = value;
+    }
+  }, [value]);
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={(e) => onChange(e.currentTarget.textContent ?? "")}
+      onKeyDown={(e) => {
+        // Enter confirma en vez de meter un salto de línea literal —
+        // sigue siendo el nombre de un tier, no un párrafo
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.currentTarget.blur();
+        }
+      }}
+      role="textbox"
+      aria-label="Nombre del tier"
+      className="w-full text-center font-bold text-lg leading-tight break-words outline-none"
+    />
+  );
+}
+
 /** Ítem arrastrable Y reordenable (a diferencia de useDraggable solo, esto
  * sabe insertarse en una posición exacta dentro de una lista, no solo
  * "moverse a algún contenedor" — es lo que permite acomodar de derecha a
@@ -887,11 +935,12 @@ export default function TierListPage() {
               {rows.map((row, i) => (
                 <div key={row.id} className="flex">
                   <div
-                    className={`w-16 shrink-0 flex items-center justify-center border px-1 py-2 ${row.color}`}
+                    className={`w-16 min-w-0 shrink-0 flex items-center justify-center border px-1 py-2 ${row.color}`}
                   >
-                    <span className="font-bold text-lg text-center break-words leading-tight">
-                      {row.label}
-                    </span>
+                    <TierLabelEditor
+                      value={row.label}
+                      onChange={(v) => renameRow(row.id, v)}
+                    />
                   </div>
                   <SortableZone
                     id={row.id}
