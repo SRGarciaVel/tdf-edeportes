@@ -218,6 +218,7 @@ export async function createTierList(
   templateId: string,
   tiers: Record<string, string[]>,
   tierMeta: TierMetaData[],
+  labelWidth: number,
   creatorName?: string,
   token?: string | null,
 ): Promise<TierListData> {
@@ -235,6 +236,7 @@ export async function createTierList(
       template_id: templateId,
       tiers,
       tier_meta: tierMeta,
+      label_width: labelWidth,
       creator_name: creatorName,
     }),
   });

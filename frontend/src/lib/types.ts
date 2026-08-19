@@ -93,6 +93,7 @@ export interface TierListData {
   template_name: string | null;
   tier_meta: TierMetaData[];
   tiers: Record<string, TierItemData[]>;
+  label_width: number | null;
   created_at: string;
 }
 

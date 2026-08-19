@@ -68,6 +68,13 @@ class TierList(Base):
     # keys ya no se usa para nada (ver tier_meta arriba), es solo un mapa
     # label -> ítems
     tiers: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # ancho en píxeles de la columna de nombres de tier, elegido por quien
+    # arma el ranking (arrastrando el borde de la caja de color) — null
+    # para lo guardado antes de este campo, el frontend cae a 64px en ese
+    # caso. Es del ranking, no de la plantilla: cada persona puede
+    # ranquear la misma plantilla con anchos distintos según qué tan
+    # largos sean los nombres que le puso a sus tiers.
+    label_width: Mapped[int | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

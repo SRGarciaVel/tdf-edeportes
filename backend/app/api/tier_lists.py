@@ -293,6 +293,7 @@ def create_tier_list(
         created_by=user.id if user is not None else None,
         tier_meta=[m.model_dump() for m in payload.tier_meta],
         tiers=resolved_tiers,
+        label_width=payload.label_width,
     )
     db.add(tier_list)
     db.commit()

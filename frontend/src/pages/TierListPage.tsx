@@ -70,6 +70,51 @@ function emptyTiers(rows: TierRow[]): Record<string, TierItemData[]> {
   return Object.fromEntries(rows.map((r) => [r.id, []]));
 }
 
+/** Barra angosta al borde de la caja de color — arrastrarla ajusta
+ * labelWidth para TODAS las filas a la vez (es un solo ancho compartido,
+ * no uno por tier, para que las cajas de color se sigan viendo alineadas
+ * entre sí como en TierMaker). data-export-exclude porque es un control
+ * de edición, no debe aparecer en el PNG descargado. */
+function LabelWidthHandle({
+  width,
+  onChange,
+}: {
+  width: number;
+  onChange: (w: number) => void;
+}) {
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = width;
+
+    function onMove(moveEvent: PointerEvent) {
+      const next = Math.min(
+        240,
+        Math.max(48, startWidth + (moveEvent.clientX - startX)),
+      );
+      onChange(next);
+    }
+    function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  return (
+    <div
+      onPointerDown={handlePointerDown}
+      data-export-exclude="true"
+      className="w-2 shrink-0 cursor-col-resize bg-tdf-line hover:bg-tdf-magenta transition-colors"
+      title="Arrastra para ajustar el ancho de los nombres"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Ajustar ancho de los nombres de tier"
+    />
+  );
+}
+
 /** Texto editable directo en la caja de color (además del campo del
  * popup del engranaje — ambos escriben sobre el mismo row.label, no son
  * dos fuentes de verdad separadas). contentEditable en vez de un
@@ -284,6 +329,7 @@ export default function TierListPage() {
     useState<TierItemData | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [labelWidth, setLabelWidth] = useState(64);
   // separado del resto de la página — es lo único que se captura al
   // exportar como imagen, sin los botones de editar tiers ni "sin
   // ranquear" (ver lessons.md, antes se exportaba todo junto)
@@ -308,6 +354,7 @@ export default function TierListPage() {
     setTiers(emptyTiers(freshRows));
     setUnplaced(items);
     setEditMode(false);
+    setLabelWidth(64);
   }
 
   async function handleSelectTemplate(summary: TierListTemplateSummaryData) {
@@ -643,6 +690,7 @@ export default function TierListPage() {
         activeTemplate.id,
         idsOnly,
         tierMeta,
+        labelWidth,
         user ? undefined : guestName.trim() || undefined,
         token,
       );
@@ -935,13 +983,18 @@ export default function TierListPage() {
               {rows.map((row, i) => (
                 <div key={row.id} className="flex">
                   <div
-                    className={`w-16 min-w-0 shrink-0 flex items-center justify-center border px-1 py-2 ${row.color}`}
+                    style={{ width: labelWidth }}
+                    className={`min-w-0 shrink-0 flex items-center justify-center border px-1 py-2 ${row.color}`}
                   >
                     <TierLabelEditor
                       value={row.label}
                       onChange={(v) => renameRow(row.id, v)}
                     />
                   </div>
+                  <LabelWidthHandle
+                    width={labelWidth}
+                    onChange={setLabelWidth}
+                  />
                   <SortableZone
                     id={row.id}
                     items={tiers[row.id] ?? []}

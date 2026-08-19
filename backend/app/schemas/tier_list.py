@@ -73,6 +73,11 @@ class TierListCreate(BaseModel):
     # backend usa el display_name de Twitch y esto se ignora (no se
     # puede spoofear el nombre de otra persona estando logueado)
     creator_name: str | None = None
+    # ancho en px de la columna de nombres, elegido arrastrando el borde
+    # de la caja de color en el editor — límites generosos pero no
+    # infinitos (Field ya rechaza con 422 lo que se pase de rango, ni
+    # hace falta chequearlo a mano en el endpoint)
+    label_width: int | None = Field(default=None, ge=48, le=240)
 
 
 class TierListRead(BaseModel):
@@ -85,6 +90,7 @@ class TierListRead(BaseModel):
     template_name: str | None
     tier_meta: list[TierMeta]
     tiers: dict[str, list[TierItem]]
+    label_width: int | None
     created_at: datetime
 
 

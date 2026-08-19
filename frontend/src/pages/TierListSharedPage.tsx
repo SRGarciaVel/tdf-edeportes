@@ -182,7 +182,8 @@ export default function TierListSharedPage() {
           {tierMeta.map((meta) => (
             <div key={meta.id} className="flex">
               <div
-                className={`w-16 min-w-0 shrink-0 flex items-center justify-center font-bold text-lg text-center break-words leading-tight border px-1 py-2 ${meta.color}`}
+                style={{ width: data.label_width ?? 64 }}
+                className={`min-w-0 shrink-0 flex items-center justify-center font-bold text-lg text-center break-words leading-tight border px-1 py-2 ${meta.color}`}
               >
                 {meta.label}
               </div>
