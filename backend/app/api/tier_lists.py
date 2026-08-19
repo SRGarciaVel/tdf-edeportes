@@ -2,11 +2,12 @@ import re
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user, require_authenticated, require_staff
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models import TierList, TierListTemplate, User
 from app.schemas.tier_list import (
     TierListCreate,
@@ -213,7 +214,14 @@ def delete_template_item(
 
 
 @router.post("/tierlists", response_model=TierListRead, status_code=201)
+# límite más estricto que el default de la app (300/hora) porque este es
+# el ÚNICO endpoint de escritura que no exige ninguna cuenta — informe de
+# seguridad 18-08-2026, hallazgo #6. Mitiga el riesgo de spam sin romper
+# el ranquear-sin-login que es intencional (ver comentario del parámetro
+# user, más abajo).
+@limiter.limit("20/hour")
 def create_tier_list(
+    request: Request,
     payload: TierListCreate,
     db: Annotated[Session, Depends(get_db)],
     # sin auth requerida: ranquear una plantilla ya existente es libre
