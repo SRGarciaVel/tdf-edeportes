@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models import CFNMatch, CFNProfile
-from app.schemas.cfn import CFNMatchRead, CFNMatchStats, CFNProfileRead
+from app.schemas.cfn import CFNMatchRead, CFNMatchStats, CFNProfileRead, EncounterRead
 
 router = APIRouter(prefix="/cfn", tags=["cfn"])
 
@@ -38,7 +38,9 @@ def get_match_stats(
 
     wins = sum(1 for m in matches if m.won is True)
     losses = sum(1 for m in matches if m.won is False)
-    total_decided = wins + losses  # excluye partidas con won=None (no se pudo determinar)
+    total_decided = (
+        wins + losses
+    )  # excluye partidas con won=None (no se pudo determinar)
     win_rate = wins / total_decided if total_decided > 0 else None
 
     character_counts = Counter(m.character_name for m in matches if m.character_name)
@@ -74,3 +76,53 @@ def get_recent_matches(
         .limit(limit)
         .all()
     )
+
+
+@router.get("/encounters/recent", response_model=list[EncounterRead])
+def get_recent_encounters(
+    db: Annotated[Session, Depends(get_db)],
+) -> list[EncounterRead]:
+    """Cruces entre dos jugadores trackeados por TDF en las últimas 24
+    horas — no cualquier partida, solo cuando el rival TAMBIÉN es alguien
+    que seguimos (opponent_cfn_id se resuelve en cfn_scraper.py). Cada
+    cruce así queda en cfn_matches dos veces (una por jugador, cada uno
+    con el otro como "opponent"), así que acá se dedupea por par sin
+    importar el orden antes de devolver — evita mostrar el mismo cruce
+    dos veces. Público, sin auth, mismo criterio que el resto de /cfn."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    rows = (
+        db.query(CFNMatch)
+        .filter(CFNMatch.opponent_cfn_id.isnot(None), CFNMatch.played_at >= cutoff)
+        .all()
+    )
+
+    profiles = {
+        p.cfn_id: p.display_name or p.cfn_id for p in db.query(CFNProfile).all()
+    }
+    tracked_ids = set(profiles.keys())
+
+    seen: set[tuple[str, str, datetime]] = set()
+    encounters: list[EncounterRead] = []
+    for m in rows:
+        if m.opponent_cfn_id not in tracked_ids:
+            continue
+        pair_key = (
+            min(m.cfn_id, m.opponent_cfn_id),
+            max(m.cfn_id, m.opponent_cfn_id),
+            m.played_at,
+        )
+        if pair_key in seen:
+            continue
+        seen.add(pair_key)
+        encounters.append(
+            EncounterRead(
+                player_a_cfn_id=m.cfn_id,
+                player_a_name=profiles.get(m.cfn_id, m.cfn_id),
+                player_b_cfn_id=m.opponent_cfn_id,
+                player_b_name=profiles[m.opponent_cfn_id],
+                played_at=m.played_at,
+            )
+        )
+
+    encounters.sort(key=lambda e: e.played_at, reverse=True)
+    return encounters

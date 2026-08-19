@@ -30,7 +30,14 @@ import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from playwright.sync_api import BrowserContext, Page, TimeoutError as PlaywrightTimeout, sync_playwright
+from playwright.sync_api import (
+    BrowserContext,
+    Page,
+    sync_playwright,
+)
+from playwright.sync_api import (
+    TimeoutError as PlaywrightTimeout,
+)
 from playwright_stealth import Stealth
 
 logger = logging.getLogger(__name__)
@@ -124,11 +131,14 @@ def _verify_session(page: Page, debug: bool) -> None:
         wait_until="domcontentloaded",
         timeout=45000,
     )
+    _dismiss_cookie_banner(page)
     _debug_dump(page, "01_session_check", debug)
 
     # si la sesión venció, Buckler's Boot Camp muestra este cartel en vez
     # del perfil real
-    login_prompt = page.get_by_text(re.compile(r"must log in|iniciar sesi[oó]n", re.I))
+    login_prompt = page.get_by_text(
+        re.compile(r"must log in|iniciar sesi[oó]n", re.IGNORECASE)
+    )
     if login_prompt.count() > 0:
         _debug_dump(page, "99_session_expired", debug)
         raise CFNScraperError(
@@ -180,22 +190,33 @@ def get_player_stats(context: BrowserContext, cfn_id: str, debug: bool = False) 
             wait_until="domcontentloaded",
             timeout=45000,
         )
+        _dismiss_cookie_banner(page)
         _debug_dump(page, f"profile_{cfn_id}", debug)
 
-        result["character_name"] = _extract_text(page, '[class*="character_name__"] span')
+        result["character_name"] = _extract_text(
+            page, '[class*="character_name__"] span'
+        )
 
-        mr_text = _extract_text(page, '[class*="character_master_league__"] [class*="character_point__"]')
+        mr_text = _extract_text(
+            page, '[class*="character_master_league__"] [class*="character_point__"]'
+        )
         if mr_text:
             digits = re.sub(r"[^\d]", "", mr_text)
             result["master_rating"] = int(digits) if digits else None
 
-        lp_text = _extract_text(page, '[class*="character_normal_league__"] [class*="character_point__"]')
+        lp_text = _extract_text(
+            page, '[class*="character_normal_league__"] [class*="character_point__"]'
+        )
         if lp_text:
             digits = re.sub(r"[^\d]", "", lp_text)
             result["league_points"] = int(digits) if digits else None
 
-        if not any([result["character_name"], result["league_points"], result["master_rating"]]):
-            result["error"] = "Ningún selector matcheó — revisar debug_output/ y ajustar"
+        if not any(
+            [result["character_name"], result["league_points"], result["master_rating"]]
+        ):
+            result["error"] = (
+                "Ningún selector matcheó — revisar debug_output/ y ajustar"
+            )
     except Exception as exc:  # noqa: BLE001 — cualquier fallo acá es "no se pudo", no crash del refresh completo
         logger.warning("Fallo consultando CFN %s: %s", cfn_id, exc)
         result["error"] = str(exc)
@@ -204,11 +225,186 @@ def get_player_stats(context: BrowserContext, cfn_id: str, debug: bool = False) 
     return result
 
 
-def get_match_history(context: BrowserContext, cfn_id: str, debug: bool = False) -> list[dict]:
+def _dismiss_cookie_banner(page: Page) -> None:
+    """Cookiebot muestra un banner de cookies que tapa toda la pantalla y
+    bloquea CUALQUIER click en la página — confirmado como la causa real
+    de todos los fallos de "No se pudo sacar el CFN del rival" en el
+    primer intento real (log de Seba, 19-08-2026): el intercepter en
+    cada reintento era `CybotCookiebotDialogBodyBottomWrapper`, no un
+    problema de selectores del modal ni del historial.
+
+    Se saca del DOM directo en vez de buscarle el botón de "aceptar" —
+    más robusto ante cambios de Cookiebot (no depende de un id de botón
+    puntual, que puede variar entre versiones o según el idioma
+    detectado), y no hace falta que el consentimiento "pegue" de
+    verdad — esto es una sesión de scraping automatizada con cookies ya
+    cargadas, no una persona navegando por primera vez.
+    """
+    try:
+        page.evaluate(
+            "document.querySelectorAll('[id^=\"Cybot\"]').forEach(el => el.remove())"
+        )
+    except Exception as exc:  # noqa: BLE001 — si el banner no está (ya lo sacamos antes, o esta carga no lo mostró), no pasa nada
+        logger.debug("_dismiss_cookie_banner: %s", exc)
+
+
+def _close_open_modal(page: Page) -> None:
+    """Si el modal de detalle de una partida quedó abierto tapando la
+    fila, lo cierra antes de seguir. Confirmado en log real de Seba
+    (19-08-2026, segunda corrida, YA con el fix del banner de cookies
+    aplicado): el bloqueador pasó a ser el modal mismo
+    (battle_data_modal__AED01), abierto desde ANTES de intentar
+    clickear la fila 1 de cada jugador — Escape solo no alcanza para
+    cerrarlo de forma confiable.
+
+    Va en capas, de más "prolijo" a más agresivo, en vez de saltar
+    directo a sacarlo del DOM: la app parece ser Angular
+    (ng-non-bindable en el HTML del sitio), y sacar un componente del
+    DOM a mano sin pasar por el estado interno del framework puede
+    dejar a Angular pensando que el modal sigue abierto — si eso pasa,
+    el próximo click en una fila nueva podría no abrir nada porque el
+    componente cree que ya hay uno mostrándose. Por eso Escape y un
+    posible botón de cerrar se intentan primero (interacción real,
+    respeta el ciclo de vida del framework); sacarlo del DOM queda como
+    último recurso, solo si lo anterior no lo cerró de verdad.
+    """
+    modal = page.locator('[class*="battle_data_modal__"]').first
+    try:
+        if modal.count() == 0 or not modal.is_visible():
+            return
+    except Exception:  # noqa: BLE001
+        return
+
+    # capa 1: Escape
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(300)
+    try:
+        if modal.count() == 0 or not modal.is_visible():
+            return
+    except Exception:  # noqa: BLE001
+        return
+
+    # capa 2: un botón de cerrar explícito, si el modal tiene uno
+    close_btn = modal.locator(
+        '[class*="close" i], [aria-label*="close" i], [aria-label*="cerrar" i]'
+    ).first
+    if close_btn.count() > 0:
+        try:
+            close_btn.click(timeout=2000, force=True)
+            page.wait_for_timeout(300)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("_close_open_modal: botón de cerrar falló: %s", exc)
+    try:
+        if modal.count() == 0 or not modal.is_visible():
+            return
+    except Exception:  # noqa: BLE001
+        return
+
+    # capa 3: último recurso garantizado — sacarlo del DOM a la fuerza
+    logger.debug(
+        "_close_open_modal: Escape y botón de cerrar no alcanzaron, sacando del DOM"
+    )
+    try:
+        page.evaluate(
+            "document.querySelectorAll('[class*=\"battle_data_modal__\"]').forEach(el => el.remove())"
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("_close_open_modal: remove del DOM también falló: %s", exc)
+
+
+def _extract_opponent_cfn_id(
+    page: Page, row, own_cfn_id: str, debug: bool
+) -> str | None:
+    """Clickea la fila de una partida para abrir su modal de detalle,
+    donde el nombre del rival SÍ es un link a su perfil (a diferencia de
+    la fila de la lista, que solo lo muestra como texto plano sin link) —
+    confirmado por capturas de Seba, 19-08-2026. Todavía NO confirmado
+    contra HTML real del modal (solo capturas) — si esto no encuentra
+    nada, correr con --debug y revisar debug_output/battlelog_{cfn_id}_*
+    para ajustar.
+
+    A propósito NO depende del nombre de ninguna clase CSS del modal
+    (que puede estar hasheada/minificada distinto a la de la lista, y
+    romperse en cualquier momento sin aviso): busca CUALQUIER link a
+    /profile/{id} que aparezca en la página tras abrir el modal, y
+    descarta el que sea el perfil propio — el que quede es el del rival.
+    Más lento que un selector puntual (recorre todos los links de la
+    página), pero mucho más resistente a que Capcom cambie nombres de
+    clase internos.
+    """
+    try:
+        # por si Cookiebot se reinyecta solo con un timer propio entre
+        # una fila y la siguiente (algunos gestores de consentimiento lo
+        # hacen) — barato, no hace nada si el banner no está
+        _dismiss_cookie_banner(page)
+        # si el modal de la fila anterior quedó abierto (Escape solo no
+        # siempre alcanza, ver _close_open_modal), esto lo cierra ANTES
+        # de intentar clickear la fila siguiente — confirmado en log
+        # real que esto es lo que estaba bloqueando cada fila
+        _close_open_modal(page)
+        row.click(timeout=5000)
+        # el modal anima al abrir — no hay selector confirmado todavía
+        # para esperar "modal ya visible", así que se espera un tiempo
+        # fijo generoso en vez de wait_for sobre algo que no sabemos que
+        # existe
+        page.wait_for_timeout(800)
+
+        # BUG REAL encontrado por Seba (19-08-2026, tercera corrida): acá
+        # buscaba en TODA la página (page.locator), no solo dentro del
+        # modal — como la sesión está logueada como AckermanFG, hay casi
+        # seguro un link permanente a "mi perfil" en el header/nav del
+        # sitio que apunta a su CFN ID, y como ese link nunca coincide
+        # con own_cfn_id (que es el ID del jugador que se está
+        # escaneando, no el de la cuenta logueada), pasaba el filtro sin
+        # querer. Resultado: TODOS los cruces detectados salían contra
+        # AckermanFG sin importar a quién se le estuviera mirando el
+        # historial — la firma inconfundible de este bug puntual.
+        # Acotado al modal en sí, no debería volver a pasar.
+        modal = page.locator('[class*="battle_data_modal__"]').first
+        links = modal.locator('a[href*="/profile/"]')
+        opponent_id = None
+        for i in range(links.count()):
+            href = links.nth(i).get_attribute("href") or ""
+            match = re.search(r"/profile/(\d+)", href)
+            if match and match.group(1) != own_cfn_id:
+                opponent_id = match.group(1)
+                break
+
+        if debug:
+            _debug_dump(page, f"battlelog_{own_cfn_id}_modal", debug)
+
+        _close_open_modal(page)
+        return opponent_id
+    except Exception as exc:  # noqa: BLE001 — no encontrar el CFN del rival no debe tumbar la partida entera, se guarda igual sin ese dato
+        logger.warning("No se pudo sacar el CFN del rival para %s: %s", own_cfn_id, exc)
+        try:
+            _close_open_modal(page)
+        except Exception as close_exc:  # noqa: BLE001
+            logger.debug("Cierre de respaldo también falló: %s", close_exc)
+        return None
+
+
+def get_match_history(
+    context: BrowserContext,
+    cfn_id: str,
+    debug: bool = False,
+    known_match_keys: frozenset[tuple[str, datetime, str]] = frozenset(),
+) -> list[dict]:
     """Extrae las partidas de la primera página del historial
     (/profile/{cfn_id}/battlelog). No pagina — la primera página alcanza
     para calcular win rate de 1-3 días si el cron corre cada hora, no hace
     falta ir más atrás.
+
+    `known_match_keys` son las partidas que YA están guardadas en la base
+    de corridas anteriores (cfn_id, played_at, opponent_name) — para esas
+    NO se abre el modal a buscar el CFN del rival (ya se buscó la vez que
+    se vieron por primera vez, y el sitio muestra las mismas últimas N
+    partidas en cada corrida, así que la mayoría de las filas de cada
+    corrida ya son conocidas). Esto es lo que mantiene rápida la corrida
+    del cron pese a que abrir el modal de cada partida es una interacción
+    extra por fila — solo se paga ese costo en partidas genuinamente
+    nuevas, normalmente un puñado por jugador por hora, no las ~10-20 de
+    la página entera.
 
     Selectores confirmados contra HTML real (capturas de Seba, 11-08-2026):
     cada partida vive en un contenedor con clase
@@ -228,23 +424,41 @@ def get_match_history(context: BrowserContext, cfn_id: str, debug: bool = False)
             wait_until="domcontentloaded",
             timeout=45000,
         )
+        _dismiss_cookie_banner(page)
+        # por si el sitio auto-muestra algo al cargar la página (todavía
+        # no confirmado si eso es lo que pasa, o si es un modal que
+        # quedó abierto de la corrida anterior) — no hace nada si no hay
+        # ningún modal visible
+        _close_open_modal(page)
         _debug_dump(page, f"battlelog_{cfn_id}", debug)
 
         rows = page.locator('[class*="battle_data_inner_log__"]')
         for i in range(rows.count()):
             row = rows.nth(i)
             try:
-                date_text = row.locator('[class*="battle_data_date__"]').inner_text(timeout=3000).strip()
-                played_at = datetime.strptime(date_text, "%m/%d/%Y %H:%M").replace(tzinfo=_SITE_TIMEZONE)
+                date_text = (
+                    row.locator('[class*="battle_data_date__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+                played_at = datetime.strptime(date_text, "%m/%d/%Y %H:%M").replace(
+                    tzinfo=_SITE_TIMEZONE
+                )
 
-                opponent_name = row.locator(
-                    '[class*="battle_data_name_p2__"] [class*="battle_data_name__"]'
-                ).inner_text(timeout=3000).strip()
+                opponent_name = (
+                    row.locator(
+                        '[class*="battle_data_name_p2__"] [class*="battle_data_name__"]'
+                    )
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
 
                 p1 = row.locator('[class*="battle_data_player1__"]').first
                 p1_class = p1.get_attribute("class") or ""
-                won = True if "battle_data_win__" in p1_class else (
-                    False if "battle_data_lose__" in p1_class else None
+                won = (
+                    True
+                    if "battle_data_win__" in p1_class
+                    else (False if "battle_data_lose__" in p1_class else None)
                 )
                 character_name = p1.locator(
                     '[class*="battle_data_character__"] img'
@@ -255,6 +469,11 @@ def get_match_history(context: BrowserContext, cfn_id: str, debug: bool = False)
                     '[class*="battle_data_character__"] img'
                 ).first.get_attribute("alt")
 
+                key = (cfn_id, played_at, opponent_name)
+                opponent_cfn_id = None
+                if key not in known_match_keys:
+                    opponent_cfn_id = _extract_opponent_cfn_id(page, row, cfn_id, debug)
+
                 matches.append(
                     {
                         "cfn_id": cfn_id,
@@ -262,11 +481,14 @@ def get_match_history(context: BrowserContext, cfn_id: str, debug: bool = False)
                         "character_name": character_name,
                         "opponent_name": opponent_name,
                         "opponent_character": opponent_character,
+                        "opponent_cfn_id": opponent_cfn_id,
                         "won": won,
                     }
                 )
             except Exception as exc:  # noqa: BLE001 — una fila rara no debe tirar abajo el resto
-                logger.warning("No se pudo parsear la partida %d de %s: %s", i, cfn_id, exc)
+                logger.warning(
+                    "No se pudo parsear la partida %d de %s: %s", i, cfn_id, exc
+                )
                 continue
     except Exception as exc:  # noqa: BLE001
         logger.warning("get_match_history falló para %s: %s", cfn_id, exc)
@@ -275,11 +497,19 @@ def get_match_history(context: BrowserContext, cfn_id: str, debug: bool = False)
     return matches
 
 
-def refresh_all_players(cfn_ids: list[str], debug: bool = False) -> tuple[list[dict], list[dict]]:
+def refresh_all_players(
+    cfn_ids: list[str],
+    debug: bool = False,
+    known_match_keys: frozenset[tuple[str, datetime, str]] = frozenset(),
+) -> tuple[list[dict], list[dict]]:
     """Carga la sesión guardada una sola vez y consulta todos los CFN IDs
     con ella — evita repetir el login (que ni siquiera se automatiza) por
     jugador. Devuelve (perfiles, partidas) — un solo browser/sesión para
     ambos, no se abre una sesión aparte para el historial.
+
+    `known_match_keys` se pasa tal cual a get_match_history — ver ahí para
+    qué sirve (evitar el costo extra de abrir el modal de detalle en
+    partidas ya vistas antes).
 
     `debug` solo controla si se guardan screenshots/HTML de cada paso en
     DEBUG_DIR — el navegador siempre corre headless. Un contenedor Docker
@@ -313,7 +543,7 @@ def refresh_all_players(cfn_ids: list[str], debug: bool = False) -> tuple[list[d
         matches = []
         for cfn_id in cfn_ids:
             profiles.append(get_player_stats(context, cfn_id, debug))
-            matches.extend(get_match_history(context, cfn_id, debug))
+            matches.extend(get_match_history(context, cfn_id, debug, known_match_keys))
 
         browser.close()
         return profiles, matches

@@ -6,6 +6,7 @@ import type {
   CFNProfile,
   CFNMatchStats,
   CFNMatchRead,
+  EncounterData,
   TierListData,
   TierListSummaryData,
   TierItemData,
@@ -155,6 +156,13 @@ export async function getRecentMatches(
     `${API_URL}/cfn/players/${cfnId}/matches/recent?days=${days}&limit=30`,
   );
   return parseOrThrow<CFNMatchRead[]>(res);
+}
+
+// cruces entre gente trackeada por TDF en las últimas 24 horas —
+// deduplicado por par en el backend, ver GET /cfn/encounters/recent
+export async function getRecentEncounters(): Promise<EncounterData[]> {
+  const res = await fetch(`${API_URL}/cfn/encounters/recent`);
+  return parseOrThrow<EncounterData[]>(res);
 }
 
 export async function listTierListTemplates(): Promise<

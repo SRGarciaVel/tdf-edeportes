@@ -38,6 +38,16 @@ class CFNMatch(Base):
     character_name: Mapped[str | None] = mapped_column(String)
     opponent_name: Mapped[str | None] = mapped_column(String)
     opponent_character: Mapped[str | None] = mapped_column(String)
+    # CFN ID real del rival, sacado del link a su perfil dentro del modal
+    # de detalle de la partida (la fila de la lista solo tiene su nombre
+    # como texto plano, sin link — hay que clickear la partida para
+    # llegar al modal donde sí es un link, ver cfn_scraper.py). Sin FK a
+    # cfn_profiles a propósito: la gran mayoría de los rivales NO son
+    # gente que trackeamos, este campo solo se usa para detectar cuando
+    # SÍ lo son (ver GET /cfn/encounters/recent) — nullable también
+    # porque no siempre se puede sacar (rival con perfil privado, o
+    # partidas ya vistas en una corrida anterior no se re-consultan).
+    opponent_cfn_id: Mapped[str | None] = mapped_column(String, index=True)
     won: Mapped[bool | None] = mapped_column(Boolean)  # null si no se pudo determinar
     played_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

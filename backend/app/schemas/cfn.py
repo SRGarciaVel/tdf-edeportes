@@ -49,3 +49,18 @@ class CFNMatchRead(BaseModel):
     opponent_name: str | None
     opponent_character: str | None
     won: bool | None
+
+
+class EncounterRead(BaseModel):
+    """Un cruce entre dos jugadores TRACKEADOS por TDF (no cualquier
+    partida — solo cuando el rival también es alguien que seguimos). Cada
+    partida así queda registrada dos veces en cfn_matches (una vez desde
+    la perspectiva de cada jugador) — GET /cfn/encounters/recent dedupea
+    por par sin importar el orden antes de armar esto, así que acá "a" y
+    "b" son arbitrarios, no hay un lado "dueño" del cruce."""
+
+    player_a_cfn_id: str
+    player_a_name: str
+    player_b_cfn_id: str
+    player_b_name: str
+    played_at: datetime

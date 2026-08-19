@@ -21,9 +21,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.core.database import SessionLocal  # noqa: E402
-from app.models import CFNMatch, CFNProfile  # noqa: E402
-from app.services.cfn_scraper import refresh_all_players  # noqa: E402
+from app.core.database import SessionLocal
+from app.models import CFNMatch, CFNProfile
+from app.services.cfn_scraper import refresh_all_players
 
 # CFN ID -> nombre a mostrar (SPECS.md #12)
 # Craime y Blaz sacados hasta consultarles personalmente si quieren
@@ -64,20 +64,33 @@ def save_profiles(db, results: list[dict]) -> tuple[int, int]:
         else:
             ok += 1
             mr_display = f"{r['master_rating']}MR" if r["master_rating"] else "sin MR"
-            lp_display = f"{r['league_points']}LP" if r["league_points"] is not None else "sin LP"
-            print(f"  ✓ {display_name}: {mr_display} {lp_display} - {r['character_name']}")
+            lp_display = (
+                f"{r['league_points']}LP"
+                if r["league_points"] is not None
+                else "sin LP"
+            )
+            print(
+                f"  ✓ {display_name}: {mr_display} {lp_display} - {r['character_name']}"
+            )
 
         db.commit()
     return ok, failed
 
 
-def save_matches(db, matches: list[dict]) -> tuple[int, int]:
+def save_matches(db, matches: list[dict]) -> tuple[int, int, int]:
     """Inserta partidas nuevas, salteando las que ya vimos en una corrida
     anterior — el sitio muestra las últimas N partidas, así que corridas
-    consecutivas del cron ven partidas repetidas todo el tiempo."""
-    new, skipped = 0, 0
+    consecutivas del cron ven partidas repetidas todo el tiempo.
+
+    Si la partida YA existe pero esta corrida sacó un opponent_cfn_id
+    distinto al que tenía guardado, lo actualiza — necesario para que una
+    corrección del scraper (ej. el bug real del 19-08-2026: se guardaba
+    el CFN de la cuenta logueada en vez del rival real) se aplique
+    también a partidas ya guardadas, no solo a las nuevas de acá en
+    adelante."""
+    new, skipped, updated = 0, 0, 0
     for m in matches:
-        exists = (
+        existing = (
             db.query(CFNMatch)
             .filter(
                 CFNMatch.cfn_id == m["cfn_id"],
@@ -86,13 +99,20 @@ def save_matches(db, matches: list[dict]) -> tuple[int, int]:
             )
             .first()
         )
-        if exists:
-            skipped += 1
+        if existing:
+            if (
+                m.get("opponent_cfn_id")
+                and existing.opponent_cfn_id != m["opponent_cfn_id"]
+            ):
+                existing.opponent_cfn_id = m["opponent_cfn_id"]
+                updated += 1
+            else:
+                skipped += 1
             continue
         db.add(CFNMatch(**m))
         new += 1
     db.commit()
-    return new, skipped
+    return new, skipped, updated
 
 
 def main() -> None:
@@ -100,15 +120,55 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
-    print(f"Consultando {len(PLAYERS)} jugadores...")
-    profiles, matches = refresh_all_players(list(PLAYERS.keys()), debug=args.debug)
-
     db = SessionLocal()
+
+    # partidas ya guardadas de corridas anteriores — se pasan al scraper
+    # para que NO vuelva a abrir el modal de detalle en esas (ver
+    # get_match_history en cfn_scraper.py), solo en las genuinamente
+    # nuevas. Sin esto, cada corrida del cron reabriría el modal de las
+    # ~10-20 partidas de la página entera, no solo el puñado nuevo.
+    # partidas que YA tienen opponent_cfn_id resuelto de una corrida
+    # anterior — se pasan al scraper para que NO vuelva a abrir el modal
+    # de detalle en esas (ver get_match_history en cfn_scraper.py), solo
+    # en las genuinamente nuevas o en las que todavía no se pudieron
+    # resolver. A propósito NO incluye partidas guardadas SIN
+    # opponent_cfn_id (sea porque nunca se intentó, o porque el bug real
+    # del 19-08-2026 guardó ahí el CFN de la cuenta logueada en vez del
+    # rival real) — esas se vuelven a intentar en cada corrida hasta que
+    # se resuelvan bien, save_matches ya sabe actualizar el valor de una
+    # partida existente en vez de solo insertar nuevas.
+    known_match_keys = frozenset(
+        (cfn_id, played_at, opponent_name)
+        for cfn_id, played_at, opponent_name in db.query(
+            CFNMatch.cfn_id, CFNMatch.played_at, CFNMatch.opponent_name
+        )
+        .filter(CFNMatch.opponent_cfn_id.isnot(None))
+        .all()
+    )
+
+    print(f"Consultando {len(PLAYERS)} jugadores...")
+    profiles, matches = refresh_all_players(
+        list(PLAYERS.keys()), debug=args.debug, known_match_keys=known_match_keys
+    )
+
     ok, failed = save_profiles(db, profiles)
 
     print(f"\nHistorial: {len(matches)} partidas encontradas en total")
-    new, skipped = save_matches(db, matches)
-    print(f"  {new} nuevas guardadas, {skipped} ya existían (se saltaron)")
+    new, skipped, updated = save_matches(db, matches)
+    print(f"  {new} nuevas guardadas, {skipped} ya existían, {updated} corregidas")
+
+    tracked_ids = set(PLAYERS.keys())
+    encounters = [
+        m
+        for m in matches
+        if m.get("opponent_cfn_id") and m["opponent_cfn_id"] in tracked_ids
+    ]
+    if encounters:
+        print(f"\n¡{len(encounters)} cruce(s) entre gente trackeada detectados!")
+        for e in encounters:
+            own_name = PLAYERS.get(e["cfn_id"], e["cfn_id"])
+            rival_name = PLAYERS.get(e["opponent_cfn_id"], e["opponent_cfn_id"])
+            print(f"  {own_name} vs {rival_name} — {e['played_at']}")
 
     db.close()
     print(f"\nListo: {ok} perfiles ok, {failed} con error.")

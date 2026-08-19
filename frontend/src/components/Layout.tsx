@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import EncounterNotifications from "./EncounterNotifications";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 import TwitchChatPanel from "./TwitchChatPanel";
@@ -12,6 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </main>
       <Footer />
       <TwitchChatPanel />
+      <EncounterNotifications />
     </div>
   );
 }

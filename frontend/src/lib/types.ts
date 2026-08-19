@@ -73,6 +73,14 @@ export interface CFNMatchRead {
   won: boolean | null;
 }
 
+export interface EncounterData {
+  player_a_cfn_id: string;
+  player_a_name: string;
+  player_b_cfn_id: string;
+  player_b_name: string;
+  played_at: string;
+}
+
 export interface TierItemData {
   id: string;
   label: string;
