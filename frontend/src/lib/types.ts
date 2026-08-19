@@ -44,15 +44,37 @@ export interface QuarterlyGoal {
   status: GoalStatus;
 }
 
-export interface CFNProfile {
+export interface CFNPlayer {
   cfn_id: string;
-  display_name: string | null;
+  display_name: string;
+  is_tdf: boolean;
+  liquipedia_url: string | null;
+  avatar_url: string | null;
   league_rank: string | null;
   league_points: number | null;
   master_rating: number | null;
   character_name: string | null;
-  updated_at: string;
+  updated_at: string | null;
   last_error: string | null;
+}
+
+export interface CFNRegistration {
+  id: string;
+  cfn_id: string;
+  display_name: string;
+  status: "pending" | "approved" | "rejected";
+  requested_at: string;
+  reviewed_at: string | null;
+}
+
+export interface CFNRegistrationPending {
+  id: string;
+  cfn_id: string;
+  display_name: string;
+  requested_at: string;
+  twitch_username: string;
+  twitch_display_name: string;
+  twitch_avatar_url: string | null;
 }
 
 export interface CFNMatchStats {

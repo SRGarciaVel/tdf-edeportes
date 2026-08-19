@@ -1,41 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import MatchHistoryModal from "../components/MatchHistoryModal";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
-import { getMatchStats, listCfnPlayers } from "../lib/api";
+import {
+  getMatchStats,
+  getMyCfnRegistration,
+  listCfnPlayers,
+  registerCfn,
+} from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import type { CFNMatchStats, CFNProfile } from "../lib/types";
-
-interface PlayerEntry {
-  name: string;
-  cfnId: string;
-  isTdf: boolean;
-  liquipediaUrl?: string;
-}
-
-// una sola comunidad, sin secciones separadas — el orden lo define el LP
-// de cada uno (ver sortByLp), no la afiliación a TDF. La única distinción
-// visual es la etiqueta chica "TDF" en la card, para quien le interese
-// saberlo, sin que eso implique jerarquía de despliegue.
-const ALL_PLAYERS: PlayerEntry[] = [
-  { name: "Sirxtias", cfnId: "2844671427", isTdf: true },
-  { name: "Drachen", cfnId: "2908057346", isTdf: true },
-  { name: "BazthyFreeman", cfnId: "4100957688", isTdf: true },
-  { name: "AckermanFG", cfnId: "1733837998", isTdf: true },
-  { name: "TDF Super Ñema", cfnId: "1964247128", isTdf: true },
-  { name: "Jager Eins", cfnId: "2281859090", isTdf: true },
-  { name: "Zackito", cfnId: "2449521700", isTdf: true },
-  // estos 4 tienen perfil propio en Liquipedia como jugadores
-  // competitivos — se linkea por respeto a su trayectoria, no todos en
-  // la comunidad lo tienen
-  { name: "Younghou", cfnId: "1027356162", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Younghou" },
-  { name: "Pochoclo23", cfnId: "3987753314", isTdf: false, liquipediaUrl: "https://liquipedia.net/fighters/Pochoclo23" },
-  // Craime y Blaz: sacados hasta consultarles personalmente si quieren
-  // aparecer (no se les preguntó antes de agregarlos) — reponer cuando
-  // confirmen, el CFN ID queda documentado en SPECS.md por si acaso
-];
+import { resizeImageFile } from "../lib/imageResize";
+import { useAuth } from "../lib/auth";
+import type { CFNMatchStats, CFNPlayer, CFNRegistration } from "../lib/types";
 
 const DAY_OPTIONS = [1, 3, 7] as const;
 // mínimo de partidas decididas para que alguien pueda ganar el KPI de
@@ -43,17 +22,15 @@ const DAY_OPTIONS = [1, 3, 7] as const;
 // gana a todo el grupo con un "100%" que no dice nada
 const MIN_MATCHES_FOR_BEST_WR = 3;
 
-/** Ordena de mayor a menor LP — los que todavía no tienen stats quedan al
- * final, en el orden original en que los definimos arriba. */
-function sortByLp(players: PlayerEntry[], profiles: Map<string, CFNProfile>): PlayerEntry[] {
-  return [...players].sort((a, b) => {
-    const lpA = profiles.get(a.cfnId)?.league_points ?? -1;
-    const lpB = profiles.get(b.cfnId)?.league_points ?? -1;
-    return lpB - lpA;
-  });
+/** Ordena de mayor a menor LP — los que todavía no tienen stats quedan
+ * al final. */
+function sortByLp(players: CFNPlayer[]): CFNPlayer[] {
+  return [...players].sort(
+    (a, b) => (b.league_points ?? -1) - (a.league_points ?? -1),
+  );
 }
 
-/** "hace 12 min" / "hace 3 h" / "hace 2 d" — a partir de updated_at. */
+/** "hace 12 min" / "hace 3 h" / "hace 2 d" — a partir de un ISO date. */
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diffMs / 60000);
@@ -65,12 +42,28 @@ function relativeTime(iso: string): string {
   return `hace ${days} d`;
 }
 
-function KpiTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function KpiTile({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <div className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-1">
-      <span className="font-mono text-[10px] uppercase tracking-wider text-gray-500">{label}</span>
-      <span className="text-2xl font-bold text-white leading-none">{value}</span>
-      {sub && <span className="font-mono text-[11px] text-gray-600 truncate">{sub}</span>}
+      <span className="font-mono text-[10px] uppercase tracking-wider text-gray-500">
+        {label}
+      </span>
+      <span className="text-2xl font-bold text-white leading-none">
+        {value}
+      </span>
+      {sub && (
+        <span className="font-mono text-[11px] text-gray-600 truncate">
+          {sub}
+        </span>
+      )}
     </div>
   );
 }
@@ -114,7 +107,9 @@ function MatchStatsRow({
           {stats.wins}W-{stats.losses}L
         </span>
         {stats.win_rate != null && (
-          <span className="text-tdf-magenta">{Math.round(stats.win_rate * 100)}% WR</span>
+          <span className="text-tdf-magenta">
+            {Math.round(stats.win_rate * 100)}% WR
+          </span>
         )}
         <span className="text-gray-600">·</span>
         <span className="flex flex-wrap items-center gap-x-1.5">
@@ -122,7 +117,9 @@ function MatchStatsRow({
             <span key={name}>
               <span className={characterColorClass(name)}>{name}</span>
               <span className="text-gray-500"> x{count}</span>
-              {i < topThree.length - 1 && <span className="text-gray-600">,</span>}
+              {i < topThree.length - 1 && (
+                <span className="text-gray-600">,</span>
+              )}
             </span>
           ))}
           {rest > 0 && <span className="text-gray-600">+{rest} más</span>}
@@ -138,9 +135,21 @@ function MatchStatsRow({
   );
 }
 
+function PlayerAvatar({ player }: { player: CFNPlayer }) {
+  if (player.avatar_url) {
+    return (
+      <img
+        src={player.avatar_url}
+        alt={player.display_name}
+        className="w-10 h-10 rounded-full object-cover shrink-0"
+      />
+    );
+  }
+  return <InitialsAvatar seed={player.display_name} size={10} />;
+}
+
 function PlayerCard({
   player,
-  profile,
   profilesLoading,
   isTopMr,
   maxLpOverall,
@@ -148,19 +157,20 @@ function PlayerCard({
   statsLoading,
   onOpenHistory,
 }: {
-  player: PlayerEntry;
-  profile?: CFNProfile;
+  player: CFNPlayer;
   profilesLoading: boolean;
   isTopMr: boolean;
   maxLpOverall: number;
   matchStats?: CFNMatchStats;
   statsLoading: boolean;
-  onOpenHistory: (player: PlayerEntry) => void;
+  onOpenHistory: (player: CFNPlayer) => void;
 }) {
-  const hasStats = profile && !profile.last_error && (profile.league_points != null || profile.character_name);
+  const hasStats =
+    !player.last_error &&
+    (player.league_points != null || player.character_name);
   const lpBarPct =
-    hasStats && profile.league_points != null && maxLpOverall > 0
-      ? Math.max(4, Math.round((profile.league_points / maxLpOverall) * 100))
+    hasStats && player.league_points != null && maxLpOverall > 0
+      ? Math.max(4, Math.round((player.league_points / maxLpOverall) * 100))
       : 0;
 
   // stopPropagation + preventDefault: las cards con perfil de Liquipedia
@@ -180,7 +190,7 @@ function PlayerCard({
             // Top MR
           </span>
         )}
-        {player.isTdf && (
+        {player.is_tdf && (
           <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-purple">
             TDF
           </span>
@@ -188,12 +198,12 @@ function PlayerCard({
       </div>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <InitialsAvatar seed={player.name} size={10} />
+          <PlayerAvatar player={player} />
           <div className="min-w-0">
-            <p className="font-semibold truncate">{player.name}</p>
+            <p className="font-semibold truncate">{player.display_name}</p>
             <p className="font-mono text-xs text-gray-600">
-              CFN {player.cfnId}
-              {player.liquipediaUrl && (
+              CFN {player.cfn_id}
+              {player.liquipedia_url && (
                 <span className="text-tdf-purple"> · Liquipedia ↗</span>
               )}
             </p>
@@ -201,9 +211,11 @@ function PlayerCard({
               <Skeleton className="h-3 w-16 mt-1" />
             ) : (
               hasStats &&
-              profile.character_name && (
-                <p className={`font-mono text-xs mt-1 ${characterColorClass(profile.character_name)}`}>
-                  {profile.character_name}
+              player.character_name && (
+                <p
+                  className={`font-mono text-xs mt-1 ${characterColorClass(player.character_name)}`}
+                >
+                  {player.character_name}
                 </p>
               )
             )}
@@ -216,20 +228,29 @@ function PlayerCard({
           </div>
         ) : hasStats ? (
           <div className="text-right shrink-0">
-            {profile.master_rating != null && (
+            {player.master_rating != null && (
               <span className="font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta/40 px-2 py-1">
-                {profile.master_rating} MR
+                {player.master_rating} MR
               </span>
             )}
-            {profile.league_points != null && (
+            {player.league_points != null && (
               <>
-                <p className="font-mono text-xs text-gray-500 mt-1">{profile.league_points} LP</p>
+                <p className="font-mono text-xs text-gray-500 mt-1">
+                  {player.league_points} LP
+                </p>
                 <div className="w-24 h-1 bg-tdf-line mt-1 ml-auto overflow-hidden">
-                  <div className="h-full bg-tdf-magenta" style={{ width: `${lpBarPct}%` }} />
+                  <div
+                    className="h-full bg-tdf-magenta"
+                    style={{ width: `${lpBarPct}%` }}
+                  />
                 </div>
               </>
             )}
-            <p className="font-mono text-[10px] text-gray-700 mt-1">{relativeTime(profile.updated_at)}</p>
+            {player.updated_at && (
+              <p className="font-mono text-[10px] text-gray-700 mt-1">
+                {relativeTime(player.updated_at)}
+              </p>
+            )}
           </div>
         ) : (
           <span className="font-mono text-xs uppercase text-gray-600 border border-tdf-line px-2 py-1 shrink-0">
@@ -237,20 +258,29 @@ function PlayerCard({
           </span>
         )}
       </div>
-      <MatchStatsRow stats={matchStats} loading={statsLoading} onOpenHistory={handleOpenHistory} />
+      <MatchStatsRow
+        stats={matchStats}
+        loading={statsLoading}
+        onOpenHistory={handleOpenHistory}
+      />
     </>
   );
 
   const className =
     "hud-frame bg-tdf-charcoal px-5 pt-8 pb-4 flex flex-col transition-all duration-200 relative" +
     (isTopMr ? " border-tdf-magenta" : "") +
-    (player.liquipediaUrl
+    (player.liquipedia_url
       ? " hover:border-tdf-magenta hover:shadow-[0_0_20px_-4px_rgba(196,20,122,0.7)] cursor-pointer"
       : "");
 
-  if (player.liquipediaUrl) {
+  if (player.liquipedia_url) {
     return (
-      <a href={player.liquipediaUrl} target="_blank" rel="noreferrer" className={className}>
+      <a
+        href={player.liquipedia_url}
+        target="_blank"
+        rel="noreferrer"
+        className={className}
+      >
         {content}
       </a>
     );
@@ -259,54 +289,186 @@ function PlayerCard({
   return <div className={className}>{content}</div>;
 }
 
+/** Formulario de auto-registro — solo visible logueado. No distingue
+ * "nunca pidió nada" de "ya está aprobado" (el backend devuelve null
+ * en los dos casos, ver GET /cfn/register/me): una vez aprobado, la
+ * persona ya se ve en la lista de abajo, así que mostrar el formulario
+ * de nuevo en ese caso es solo una molestia menor, no un error real. */
+function RegistrationForm({
+  registration,
+  onRegistered,
+}: {
+  registration: CFNRegistration | null;
+  onRegistered: (r: CFNRegistration) => void;
+}) {
+  const { token } = useAuth();
+  const [cfnId, setCfnId] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const resized = await resizeImageFile(file, 120, 0.85);
+      setAvatarPreview(resized);
+    } catch {
+      setError("No se pudo procesar esa imagen.");
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token) return;
+    const trimmed = cfnId.trim();
+    if (!/^\d{5,20}$/.test(trimmed)) {
+      setError("El CFN ID tiene que ser solo números.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const result = await registerCfn(
+        token,
+        trimmed,
+        avatarPreview ?? undefined,
+      );
+      onRegistered(result);
+    } catch {
+      setError(
+        "No se pudo enviar la solicitud. Puede que ese CFN ID ya esté registrado.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (registration?.status === "pending") {
+    return (
+      <div className="hud-frame bg-tdf-charcoal px-5 py-4 mb-8">
+        <p className="font-mono text-xs uppercase text-tdf-magenta mb-1">
+          Solicitud enviada
+        </p>
+        <p className="text-sm text-gray-400">
+          Tu CFN {registration.cfn_id} está pendiente de revisión por staff. Te
+          vas a ver en la lista una vez que se apruebe.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="hud-frame bg-tdf-charcoal px-5 py-4 mb-8 flex flex-wrap items-end gap-3"
+    >
+      <div className="flex-1 min-w-[200px]">
+        <p className="font-mono text-xs uppercase text-gray-500 mb-2">
+          Súmate a la lista
+        </p>
+        <input
+          value={cfnId}
+          onChange={(e) => setCfnId(e.target.value)}
+          placeholder="Tu CFN ID (solo números)"
+          className="w-full bg-tdf-dark border border-tdf-line px-3 py-2 text-sm font-mono"
+        />
+        {registration?.status === "rejected" && (
+          <p className="font-mono text-[11px] text-gray-600 mt-1">
+            Tu solicitud anterior no se aprobó. Puedes intentar de nuevo.
+          </p>
+        )}
+        {error && (
+          <p className="font-mono text-[11px] text-red-400 mt-1">{error}</p>
+        )}
+      </div>
+      <label className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase cursor-pointer shrink-0">
+        {avatarPreview ? "Imagen lista ✓" : "Subir foto (opcional)"}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelected}
+          className="hidden"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={submitting || !cfnId.trim()}
+        className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white disabled:opacity-50 shrink-0"
+      >
+        {submitting ? "Enviando..." : "Enviar solicitud"}
+      </button>
+    </form>
+  );
+}
+
 export default function JugadoresPage() {
-  const [profiles, setProfiles] = useState<Map<string, CFNProfile>>(new Map());
-  const [profilesLoading, setProfilesLoading] = useState(true);
-  const [matchStats, setMatchStats] = useState<Map<string, CFNMatchStats>>(new Map());
+  const { user, token } = useAuth();
+  const [players, setPlayers] = useState<CFNPlayer[]>([]);
+  const [playersLoading, setPlayersLoading] = useState(true);
+  const [matchStats, setMatchStats] = useState<Map<string, CFNMatchStats>>(
+    new Map(),
+  );
   const [statsLoading, setStatsLoading] = useState(true);
   // 7 días por defecto: las partidas más recientes que tenemos guardadas
   // hoy son de hace unos días — con 1 día por defecto la página se vería
   // vacía hasta que se acumulen partidas más nuevas con el cron.
   const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(7);
-  const [historyPlayer, setHistoryPlayer] = useState<PlayerEntry | null>(null);
+  const [historyPlayer, setHistoryPlayer] = useState<CFNPlayer | null>(null);
+  const [myRegistration, setMyRegistration] = useState<CFNRegistration | null>(
+    null,
+  );
 
   useEffect(() => {
     listCfnPlayers()
-      .then((data) => setProfiles(new Map(data.map((p) => [p.cfn_id, p]))))
-      .catch(() => setProfiles(new Map()))
-      .finally(() => setProfilesLoading(false));
+      .then(setPlayers)
+      .catch(() => setPlayers([]))
+      .finally(() => setPlayersLoading(false));
   }, []);
 
   useEffect(() => {
+    if (!token) {
+      setMyRegistration(null);
+      return;
+    }
+    getMyCfnRegistration(token)
+      .then(setMyRegistration)
+      .catch(() => setMyRegistration(null));
+  }, [token]);
+
+  useEffect(() => {
+    if (players.length === 0) return;
     setStatsLoading(true);
-    Promise.all(ALL_PLAYERS.map((p) => getMatchStats(p.cfnId, days).catch(() => null)))
+    Promise.all(
+      players.map((p) => getMatchStats(p.cfn_id, days).catch(() => null)),
+    )
       .then((results) => {
         const map = new Map<string, CFNMatchStats>();
         results.forEach((stats, i) => {
-          if (stats) map.set(ALL_PLAYERS[i].cfnId, stats);
+          if (stats) map.set(players[i].cfn_id, stats);
         });
         setMatchStats(map);
       })
       .catch(() => setMatchStats(new Map()))
       .finally(() => setStatsLoading(false));
-  }, [days]);
+  }, [players, days]);
 
-  const sortedPlayers = useMemo(() => sortByLp(ALL_PLAYERS, profiles), [profiles]);
+  const sortedPlayers = useMemo(() => sortByLp(players), [players]);
 
   const maxLpOverall = useMemo(
-    () => Math.max(0, ...ALL_PLAYERS.map((p) => profiles.get(p.cfnId)?.league_points ?? 0)),
-    [profiles]
+    () => Math.max(0, ...players.map((p) => p.league_points ?? 0)),
+    [players],
   );
 
   const topMrCfnId = useMemo(() => {
     let best: { cfnId: string; mr: number } | null = null;
-    for (const p of profiles.values()) {
+    for (const p of players) {
       if (p.master_rating != null && (!best || p.master_rating > best.mr)) {
         best = { cfnId: p.cfn_id, mr: p.master_rating };
       }
     }
     return best?.cfnId ?? null;
-  }, [profiles]);
+  }, [players]);
 
   // KPIs del grupo para la ventana de días seleccionada — a diferencia
   // del viejo "personaje más jugado" (que miraba el perfil actual, fijo),
@@ -316,10 +478,15 @@ export default function JugadoresPage() {
     let totalWins = 0;
     let totalDecided = 0;
     const characterCounts = new Map<string, number>();
-    let bestPlayer: { name: string; winRate: number; wins: number; losses: number } | null = null;
+    let bestPlayer: {
+      name: string;
+      winRate: number;
+      wins: number;
+      losses: number;
+    } | null = null;
 
-    for (const player of ALL_PLAYERS) {
-      const stats = matchStats.get(player.cfnId);
+    for (const player of players) {
+      const stats = matchStats.get(player.cfn_id);
       if (!stats) continue;
 
       totalMatches += stats.total_matches;
@@ -333,14 +500,20 @@ export default function JugadoresPage() {
 
       if (decided >= MIN_MATCHES_FOR_BEST_WR && stats.win_rate != null) {
         if (!bestPlayer || stats.win_rate > bestPlayer.winRate) {
-          bestPlayer = { name: player.name, winRate: stats.win_rate, wins: stats.wins, losses: stats.losses };
+          bestPlayer = {
+            name: player.display_name,
+            winRate: stats.win_rate,
+            wins: stats.wins,
+            losses: stats.losses,
+          };
         }
       }
     }
 
     let topCharacter: { name: string; count: number } | null = null;
     for (const [name, count] of characterCounts) {
-      if (!topCharacter || count > topCharacter.count) topCharacter = { name, count };
+      if (!topCharacter || count > topCharacter.count)
+        topCharacter = { name, count };
     }
 
     return {
@@ -349,47 +522,67 @@ export default function JugadoresPage() {
       topCharacter,
       bestPlayer,
     };
-  }, [matchStats]);
+  }, [players, matchStats]);
 
   return (
     <Layout>
       <SectionLabel index="05">Street Fighter 6 CFN</SectionLabel>
       <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
         <h1 className="text-3xl font-bold">Jugadores</h1>
-        <div className="flex gap-2 font-mono text-xs">
-          {DAY_OPTIONS.map((d) => (
-            <button
-              key={d}
-              onClick={() => setDays(d)}
-              className={`px-3 py-1 border transition-colors ${
-                days === d
-                  ? "border-tdf-magenta text-tdf-magenta"
-                  : "border-tdf-line text-gray-500 hover:text-white"
-              }`}
+        <div className="flex items-center gap-3">
+          {user?.is_staff && (
+            <Link
+              to="/staff/cfn"
+              className="font-mono text-xs uppercase text-tdf-purple hover:text-tdf-magenta transition-colors"
             >
-              {d}D
-            </button>
-          ))}
+              Panel de solicitudes →
+            </Link>
+          )}
+          <div className="flex gap-2 font-mono text-xs">
+            {DAY_OPTIONS.map((d) => (
+              <button
+                key={d}
+                onClick={() => setDays(d)}
+                className={`px-3 py-1 border transition-colors ${
+                  days === d
+                    ? "border-tdf-magenta text-tdf-magenta"
+                    : "border-tdf-line text-gray-500 hover:text-white"
+                }`}
+              >
+                {d}D
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <p className="text-gray-500 mb-1 max-w-xl">
         Rango, LP y personaje principal de la comunidad. TDF y la escena
-        chilena, todos en el mismo pozo. Se actualiza cada hora, no en
-        vivo. El resumen de arriba y las tarjetas de abajo son de los
-        últimos {days} día{days > 1 ? "s" : ""}.
+        chilena, todos en el mismo pozo. Se actualiza cada hora, no en vivo. El
+        resumen de arriba y las tarjetas de abajo son de los últimos {days} día
+        {days > 1 ? "s" : ""}.
       </p>
       <p className="font-mono text-[11px] text-gray-600 mb-6">
-        La etiqueta <span className="text-tdf-purple">TDF</span> marca a
-        quienes son parte del staff/colaboradores del club, el resto es
-        comunidad. Las tarjetas con <span className="text-tdf-purple">Liquipedia ↗</span> son
+        La etiqueta <span className="text-tdf-purple">TDF</span> marca a quienes
+        son parte del staff/colaboradores del club, el resto es comunidad. Las
+        tarjetas con <span className="text-tdf-purple">Liquipedia ↗</span> son
         clickeables, llevan a su perfil competitivo.
       </p>
+
+      {user && (
+        <RegistrationForm
+          registration={myRegistration}
+          onRegistered={setMyRegistration}
+        />
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-12">
         {statsLoading ? (
           <>
             {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-2">
+              <div
+                key={i}
+                className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-2"
+              >
                 <Skeleton className="h-2.5 w-20" />
                 <Skeleton className="h-6 w-14" />
                 <Skeleton className="h-2.5 w-16" />
@@ -401,16 +594,31 @@ export default function JugadoresPage() {
             <KpiTile
               label="Personaje del grupo"
               value={groupStats.topCharacter?.name ?? "N/D"}
-              sub={groupStats.topCharacter ? `${groupStats.topCharacter.count} partidas` : undefined}
+              sub={
+                groupStats.topCharacter
+                  ? `${groupStats.topCharacter.count} partidas`
+                  : undefined
+              }
             />
-            <KpiTile label="Partidas trackeadas" value={String(groupStats.totalMatches)} />
+            <KpiTile
+              label="Partidas trackeadas"
+              value={String(groupStats.totalMatches)}
+            />
             <KpiTile
               label="Win rate del grupo"
-              value={groupStats.groupWinRate != null ? `${Math.round(groupStats.groupWinRate * 100)}%` : "N/D"}
+              value={
+                groupStats.groupWinRate != null
+                  ? `${Math.round(groupStats.groupWinRate * 100)}%`
+                  : "N/D"
+              }
             />
             <KpiTile
               label="Mejor win rate"
-              value={groupStats.bestPlayer ? `${Math.round(groupStats.bestPlayer.winRate * 100)}%` : "N/D"}
+              value={
+                groupStats.bestPlayer
+                  ? `${Math.round(groupStats.bestPlayer.winRate * 100)}%`
+                  : "N/D"
+              }
               sub={
                 groupStats.bestPlayer
                   ? `${groupStats.bestPlayer.name} (${groupStats.bestPlayer.wins}W-${groupStats.bestPlayer.losses}L)`
@@ -424,13 +632,12 @@ export default function JugadoresPage() {
       <div className="grid sm:grid-cols-2 gap-3 pt-3">
         {sortedPlayers.map((p) => (
           <PlayerCard
-            key={p.cfnId}
+            key={p.cfn_id}
             player={p}
-            profile={profiles.get(p.cfnId)}
-            profilesLoading={profilesLoading}
-            isTopMr={p.cfnId === topMrCfnId}
+            profilesLoading={playersLoading}
+            isTopMr={p.cfn_id === topMrCfnId}
             maxLpOverall={maxLpOverall}
-            matchStats={matchStats.get(p.cfnId)}
+            matchStats={matchStats.get(p.cfn_id)}
             statsLoading={statsLoading}
             onOpenHistory={setHistoryPlayer}
           />
@@ -439,8 +646,8 @@ export default function JugadoresPage() {
 
       {historyPlayer && (
         <MatchHistoryModal
-          playerName={historyPlayer.name}
-          cfnId={historyPlayer.cfnId}
+          playerName={historyPlayer.display_name}
+          cfnId={historyPlayer.cfn_id}
           days={days}
           onClose={() => setHistoryPlayer(null)}
         />

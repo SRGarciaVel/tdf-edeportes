@@ -3,7 +3,9 @@ import type {
   EventItem,
   QuarterlyGoal,
   User,
-  CFNProfile,
+  CFNPlayer,
+  CFNRegistration,
+  CFNRegistrationPending,
   CFNMatchStats,
   CFNMatchRead,
   EncounterData,
@@ -133,9 +135,70 @@ export async function listGoals(year?: number): Promise<QuarterlyGoal[]> {
   return parseOrThrow<QuarterlyGoal[]>(res);
 }
 
-export async function listCfnPlayers(): Promise<CFNProfile[]> {
+export async function listCfnPlayers(): Promise<CFNPlayer[]> {
   const res = await fetch(`${API_URL}/cfn/players`);
-  return parseOrThrow<CFNProfile[]>(res);
+  return parseOrThrow<CFNPlayer[]>(res);
+}
+
+// auto-registro — requiere login, queda pendiente hasta que staff lo
+// apruebe (GET /cfn/registrations/pending). Rate-limited en el backend
+// (5/hora por IP).
+export async function registerCfn(
+  token: string,
+  cfnId: string,
+  avatarOverride?: string,
+): Promise<CFNRegistration> {
+  const res = await fetch(`${API_URL}/cfn/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ cfn_id: cfnId, avatar_override: avatarOverride }),
+  });
+  return parseOrThrow<CFNRegistration>(res);
+}
+
+// null si nunca pidió nada — el backend también devuelve null (no 404)
+// una vez aprobado, porque en ese caso ya aparece directo en /jugadores
+export async function getMyCfnRegistration(
+  token: string,
+): Promise<CFNRegistration | null> {
+  const res = await fetch(`${API_URL}/cfn/register/me`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<CFNRegistration | null>(res);
+}
+
+// solo staff (backend valida is_staff)
+export async function listPendingCfnRegistrations(
+  token: string,
+): Promise<CFNRegistrationPending[]> {
+  const res = await fetch(`${API_URL}/cfn/registrations/pending`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<CFNRegistrationPending[]>(res);
+}
+
+export async function approveCfnRegistration(
+  token: string,
+  id: string,
+  decision: { display_name?: string; is_tdf: boolean; liquipedia_url?: string },
+): Promise<CFNRegistration> {
+  const res = await fetch(`${API_URL}/cfn/registrations/${id}/approve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(decision),
+  });
+  return parseOrThrow<CFNRegistration>(res);
+}
+
+export async function rejectCfnRegistration(
+  token: string,
+  id: string,
+): Promise<CFNRegistration> {
+  const res = await fetch(`${API_URL}/cfn/registrations/${id}/reject`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<CFNRegistration>(res);
 }
 
 export async function getMatchStats(

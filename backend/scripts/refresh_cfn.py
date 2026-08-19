@@ -15,6 +15,28 @@ Pensado para correr por cron cada 1 hora (SPECS.md #12), no en cada
 request — ver app/api/cfn.py, que solo lee de la base.
 """
 
+"""Refresca el cache de stats de CFN y el historial de partidas para los
+jugadores configurados.
+
+Uso:
+    docker compose exec backend python scripts/refresh_cfn.py
+    docker compose exec backend python scripts/refresh_cfn.py --debug
+
+Con --debug guarda screenshots + HTML de cada paso en
+backend/debug_output/ (el navegador siempre corre headless, sin ventana —
+un contenedor no tiene servidor gráfico) — usar esto la primera vez, o
+cualquier vez que Capcom haya cambiado algo y el scraper empiece a
+devolver todo en None.
+
+Pensado para correr por cron cada 1 hora (SPECS.md #12), no en cada
+request — ver app/api/cfn.py, que solo lee de la base.
+
+El roster de a quién trackear YA NO vive hardcodeado acá — viene de
+cfn_registrations (status="approved", ver app/models/cfn_registration.py
+y el flujo de auto-registro + panel de staff). Alguien nuevo aprobado
+entra a la próxima corrida solo, sin tocar este archivo.
+"""
+
 import argparse
 import sys
 from pathlib import Path
@@ -22,30 +44,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.database import SessionLocal
-from app.models import CFNMatch, CFNProfile
+from app.models import CFNMatch, CFNProfile, CFNRegistration
 from app.services.cfn_scraper import refresh_all_players
 
-# CFN ID -> nombre a mostrar (SPECS.md #12)
-# Craime y Blaz sacados hasta consultarles personalmente si quieren
-# aparecer en el sitio — no se les preguntó antes de agregarlos. IDs
-# documentados en SPECS.md para reponer fácil cuando confirmen.
-PLAYERS: dict[str, str] = {
-    "2844671427": "Sirxtias",
-    "2908057346": "Drachen",
-    "4100957688": "BF",
-    "1733837998": "AckermanFG",
-    "1964247128": "TDF Super Ñema",
-    "2281859090": "Jager Eins",
-    "2449521700": "Zackito",
-    "1027356162": "Younghou",
-    "3987753314": "Pochoclo23",
-}
 
-
-def save_profiles(db, results: list[dict]) -> tuple[int, int]:
+def save_profiles(db, results: list[dict], players: dict[str, str]) -> tuple[int, int]:
     ok, failed = 0, 0
     for r in results:
-        display_name = PLAYERS.get(r["cfn_id"], r["display_name"] or r["cfn_id"])
+        display_name = players.get(r["cfn_id"], r["display_name"] or r["cfn_id"])
         profile = db.query(CFNProfile).filter(CFNProfile.cfn_id == r["cfn_id"]).first()
         if profile is None:
             profile = CFNProfile(cfn_id=r["cfn_id"])
@@ -122,11 +128,13 @@ def main() -> None:
 
     db = SessionLocal()
 
-    # partidas ya guardadas de corridas anteriores — se pasan al scraper
-    # para que NO vuelva a abrir el modal de detalle en esas (ver
-    # get_match_history en cfn_scraper.py), solo en las genuinamente
-    # nuevas. Sin esto, cada corrida del cron reabriría el modal de las
-    # ~10-20 partidas de la página entera, no solo el puñado nuevo.
+    players = {
+        reg.cfn_id: reg.display_name
+        for reg in db.query(CFNRegistration)
+        .filter(CFNRegistration.status == "approved")
+        .all()
+    }
+
     # partidas que YA tienen opponent_cfn_id resuelto de una corrida
     # anterior — se pasan al scraper para que NO vuelva a abrir el modal
     # de detalle en esas (ver get_match_history en cfn_scraper.py), solo
@@ -146,18 +154,18 @@ def main() -> None:
         .all()
     )
 
-    print(f"Consultando {len(PLAYERS)} jugadores...")
+    print(f"Consultando {len(players)} jugadores...")
     profiles, matches = refresh_all_players(
-        list(PLAYERS.keys()), debug=args.debug, known_match_keys=known_match_keys
+        list(players.keys()), debug=args.debug, known_match_keys=known_match_keys
     )
 
-    ok, failed = save_profiles(db, profiles)
+    ok, failed = save_profiles(db, profiles, players)
 
     print(f"\nHistorial: {len(matches)} partidas encontradas en total")
     new, skipped, updated = save_matches(db, matches)
     print(f"  {new} nuevas guardadas, {skipped} ya existían, {updated} corregidas")
 
-    tracked_ids = set(PLAYERS.keys())
+    tracked_ids = set(players.keys())
     encounters = [
         m
         for m in matches
@@ -166,8 +174,8 @@ def main() -> None:
     if encounters:
         print(f"\n¡{len(encounters)} cruce(s) entre gente trackeada detectados!")
         for e in encounters:
-            own_name = PLAYERS.get(e["cfn_id"], e["cfn_id"])
-            rival_name = PLAYERS.get(e["opponent_cfn_id"], e["opponent_cfn_id"])
+            own_name = players.get(e["cfn_id"], e["cfn_id"])
+            rival_name = players.get(e["opponent_cfn_id"], e["opponent_cfn_id"])
             print(f"  {own_name} vs {rival_name} — {e['played_at']}")
 
     db.close()

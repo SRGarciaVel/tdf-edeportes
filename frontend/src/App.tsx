@@ -8,6 +8,8 @@ import JugadoresPage from "./pages/JugadoresPage";
 import NosotrosPage from "./pages/NosotrosPage";
 import ObjetivosPage from "./pages/ObjetivosPage";
 import PuntosPage from "./pages/PuntosPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import StaffCfnPage from "./pages/StaffCfnPage";
 import TierListGalleryPage from "./pages/TierListGalleryPage";
 import TierListPage from "./pages/TierListPage";
 import TierListSharedPage from "./pages/TierListSharedPage";
@@ -22,6 +24,14 @@ export default function App() {
           <Route path="/calendario" element={<CalendarioPage />} />
           <Route path="/torneos" element={<TorneosPage />} />
           <Route path="/jugadores" element={<JugadoresPage />} />
+          <Route
+            path="/staff/cfn"
+            element={
+              <ProtectedRoute>
+                <StaffCfnPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/objetivos" element={<ObjetivosPage />} />
           <Route path="/nosotros" element={<NosotrosPage />} />
           <Route path="/puntos" element={<PuntosPage />} />

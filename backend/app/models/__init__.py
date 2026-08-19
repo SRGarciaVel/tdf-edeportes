@@ -1,5 +1,6 @@
 from app.models.cfn_match import CFNMatch
 from app.models.cfn_profile import CFNProfile
+from app.models.cfn_registration import CFNRegistration
 from app.models.event import Event
 from app.models.event_comment import EventComment
 from app.models.quarterly_goal import QuarterlyGoal
@@ -9,14 +10,15 @@ from app.models.tier_list_template import TierListTemplate
 from app.models.user import User
 
 __all__ = [
-    "User",
-    "Role",
-    "user_roles",
+    "CFNMatch",
+    "CFNProfile",
+    "CFNRegistration",
     "Event",
     "EventComment",
     "QuarterlyGoal",
-    "CFNProfile",
-    "CFNMatch",
+    "Role",
     "TierList",
     "TierListTemplate",
+    "User",
+    "user_roles",
 ]
