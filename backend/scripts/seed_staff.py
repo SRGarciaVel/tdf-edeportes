@@ -14,9 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.core.database import SessionLocal  # noqa: E402
-from app.models import Role, User  # noqa: E402
-from app.services.twitch import (  # noqa: E402
+from app.core.database import SessionLocal
+from app.models import Role, User
+from app.services.twitch import (
     TwitchAuthError,
     fetch_users_by_login,
     get_app_access_token,
@@ -30,6 +30,7 @@ STAFF: dict[str, str] = {
     "l_DracheN_l": "Contenido Multimedia",
     "zacenfg": "Gestión de Recursos y TO",
     "AckermanFG": "Programador",
+    "pochoclo23": "Colaborador Externo",
 }
 
 ROLE_CATALOG = [
@@ -51,7 +52,9 @@ def ensure_role_catalog(db) -> dict[str, Role]:
             db.add(role)
             roles[name] = role
     db.commit()
-    return {name: db.query(Role).filter(Role.name == name).first() for name in ROLE_CATALOG}
+    return {
+        name: db.query(Role).filter(Role.name == name).first() for name in ROLE_CATALOG
+    }
 
 
 def main() -> None:
