@@ -887,9 +887,11 @@ export default function TierListPage() {
               {rows.map((row, i) => (
                 <div key={row.id} className="flex">
                   <div
-                    className={`w-16 shrink-0 flex items-center justify-center border ${row.color}`}
+                    className={`w-16 shrink-0 flex items-center justify-center border px-1 py-2 ${row.color}`}
                   >
-                    <span className="font-bold text-lg">{row.label}</span>
+                    <span className="font-bold text-lg text-center break-words leading-tight">
+                      {row.label}
+                    </span>
                   </div>
                   <SortableZone
                     id={row.id}
