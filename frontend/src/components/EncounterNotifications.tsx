@@ -17,10 +17,10 @@ function timeAgo(iso: string): string {
 }
 
 /** Avisa cuando dos jugadores trackeados por TDF se cruzaron en una
- * partida — el backend ya filtra a las últimas 24 horas y dedupea el par
+ * partida — el backend ya filtra a las últimas 48 horas y dedupea el par
  * (GET /cfn/encounters/recent), así que todo lo que llega acá se
  * muestra tal cual. No se guarda "visto" en localStorage a propósito:
- * la idea es que quede de registro visible durante esas 24 horas, no que
+ * la idea es que quede de registro visible durante esas 48 horas, no que
  * se pueda cerrar para siempre y perderlo. */
 export default function EncounterNotifications() {
   const [encounters, setEncounters] = useState<EncounterData[]>([]);

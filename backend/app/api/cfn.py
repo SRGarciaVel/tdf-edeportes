@@ -82,14 +82,20 @@ def get_recent_matches(
 def get_recent_encounters(
     db: Annotated[Session, Depends(get_db)],
 ) -> list[EncounterRead]:
-    """Cruces entre dos jugadores trackeados por TDF en las últimas 24
+    """Cruces entre dos jugadores trackeados por TDF en las últimas 48
     horas — no cualquier partida, solo cuando el rival TAMBIÉN es alguien
     que seguimos (opponent_cfn_id se resuelve en cfn_scraper.py). Cada
     cruce así queda en cfn_matches dos veces (una por jugador, cada uno
     con el otro como "opponent"), así que acá se dedupea por par sin
     importar el orden antes de devolver — evita mostrar el mismo cruce
-    dos veces. Público, sin auth, mismo criterio que el resto de /cfn."""
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    dos veces. Público, sin auth, mismo criterio que el resto de /cfn.
+
+    48hs, no 24 — con ~9 personas trackeadas los cruces reales son raros
+    (en la corrida real del 19-08-2026, de 80 partidas solo 1 fue un
+    cruce genuino), así que una ventana de 24hs deja el aviso vacío la
+    mayoría del tiempo. Cada cruce ya muestra hace cuánto pasó, así que
+    ampliar la ventana no lo hace sentir menos "reciente"."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
     rows = (
         db.query(CFNMatch)
         .filter(CFNMatch.opponent_cfn_id.isnot(None), CFNMatch.played_at >= cutoff)
