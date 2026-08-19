@@ -139,10 +139,19 @@ def get_recent_encounters(
         .all()
     )
 
-    profiles = {
-        p.cfn_id: p.display_name or p.cfn_id for p in db.query(CFNProfile).all()
+    # cfn_registrations, no cfn_profiles — es la fuente de verdad real del
+    # nombre (ver GET /cfn/players, mismo criterio). cfn_profiles es un
+    # cache que solo se actualiza cuando corre el cron cada hora: si
+    # alguien le cambia el nombre a su registro, este endpoint mostraría
+    # el nombre viejo hasta la próxima corrida si leyera de ahí en vez de
+    # acá — pasó de verdad con "BF" -> "BazthyFreeman" (19-08-2026).
+    names = {
+        reg.cfn_id: reg.display_name
+        for reg in db.query(CFNRegistration)
+        .filter(CFNRegistration.status == "approved")
+        .all()
     }
-    tracked_ids = set(profiles.keys())
+    tracked_ids = set(names.keys())
 
     seen: set[tuple[str, str, datetime]] = set()
     encounters: list[EncounterRead] = []
@@ -160,9 +169,9 @@ def get_recent_encounters(
         encounters.append(
             EncounterRead(
                 player_a_cfn_id=m.cfn_id,
-                player_a_name=profiles.get(m.cfn_id, m.cfn_id),
+                player_a_name=names.get(m.cfn_id, m.cfn_id),
                 player_b_cfn_id=m.opponent_cfn_id,
-                player_b_name=profiles[m.opponent_cfn_id],
+                player_b_name=names[m.opponent_cfn_id],
                 played_at=m.played_at,
             )
         )

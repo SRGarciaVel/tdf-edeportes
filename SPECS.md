@@ -211,7 +211,7 @@ Objetivo: mostrar rango/LP/MR/personaje de jugadores conocidos de Street
 Fighter 6, tanto de TDF como de la escena chilena en general.
 
 **Jugadores a trackear (CFN ID numérico):**
-- TDF: Sirxtias `2844671427`, Drachen `2908057346`, BF `4100957688`,
+- TDF: Sirxtias `2844671427`, Drachen `2908057346`, BazthyFreeman `4100957688`,
   AckermanFG `1733837998`, TDF Super Ñema `1964247128` — más comunidad
   cercana al club sin rol formal de staff: Jager Eins `2281859090`,
   Zackito `2449521700`
