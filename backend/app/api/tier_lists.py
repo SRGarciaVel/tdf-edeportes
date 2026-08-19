@@ -21,7 +21,15 @@ from app.schemas.tier_list import (
 router = APIRouter(tags=["tierlists"])
 
 MAX_TIERS = 12
-MAX_ITEMS = 60
+# eran una sola constante compartida (MAX_ITEMS = 60) — se separan porque
+# son límites de cosas distintas: una plantilla grande y legítima (ej. un
+# roster completo de dulces chilenos, más de 100 fácil) no tiene nada que
+# ver con cuántos ítems tiene sentido amontonar en UN solo tier al
+# ranquear. Bug real reportado por Seba: subir 144 imágenes a una
+# plantilla nueva daba 400 "Demasiados ítems en la plantilla" porque
+# 144 > 60.
+MAX_TEMPLATE_ITEMS = 300
+MAX_TIER_ITEMS = 100
 MAX_IMAGE_DATA_URL_LEN = 200_000  # ~150KB en base64, generoso para 120x120
 IMAGE_DATA_URL_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp);base64,")
 MAX_CREATOR_NAME_LEN = 40
@@ -113,7 +121,7 @@ def create_template(
     """Requiere login — son imágenes que sube la persona, quedan
     asociadas a su cuenta (SPECS.md, sección de tier lists: por qué esto
     exige login y el ranking en sí no)."""
-    if len(payload.items) > MAX_ITEMS:
+    if len(payload.items) > MAX_TEMPLATE_ITEMS:
         raise HTTPException(400, "Demasiados ítems en la plantilla")
     for item in payload.items:
         if item.image is None or not IMAGE_DATA_URL_RE.match(item.image):
@@ -254,7 +262,7 @@ def create_tier_list(
     resolved_tiers: dict[str, list[dict]] = {}
 
     for tier_label, item_ids in payload.tiers.items():
-        if len(item_ids) > MAX_ITEMS:
+        if len(item_ids) > MAX_TIER_ITEMS:
             raise HTTPException(400, f"Demasiados ítems en el tier '{tier_label}'")
         resolved: list[dict] = []
         for item_id in item_ids:
