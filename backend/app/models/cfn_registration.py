@@ -61,6 +61,17 @@ class CFNRegistration(Base):
     # momento si hace falta moderar — ver PATCH /cfn/register/me/background
     # (self) y POST/DELETE /cfn/players/{cfn_id}/background (staff).
     card_background_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    # brillo promedio (0.0 negro puro, 1.0 blanco puro) de
+    # card_background_url, calculado UNA sola vez en el navegador de
+    # quien sube la foto (canvas, muestreo de píxeles) y guardado acá —
+    # así el frontend no tiene que recalcularlo en cada carga de página
+    # para cada visitante. Se usa para atenuar más la foto cuanto más
+    # clara sea (overlay más fuerte con fotos claras, más suave con
+    # oscuras) sin cambiar nunca el color del texto — conversación de
+    # diseño, 20-08-2026. Null si nunca se subió una foto, o si se subió
+    # antes de que existiera este campo (cae a un valor medio por
+    # default en el frontend).
+    card_background_brightness: Mapped[float | None] = mapped_column(nullable=True)
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

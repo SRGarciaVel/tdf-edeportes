@@ -15,7 +15,7 @@ import {
   updateMyCardBackground,
 } from "../lib/api";
 import { characterColorClass, characterColorHex } from "../lib/characterColors";
-import { resizeImageFile } from "../lib/imageResize";
+import { getImageBrightness, resizeImageFile } from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
 import type { CFNMatchStats, CFNPlayer, CFNRegistration } from "../lib/types";
 
@@ -199,17 +199,40 @@ function EmberFallback() {
   );
 }
 
-function CardBackgroundPhoto({ url }: { url: string }) {
+function CardBackgroundPhoto({
+  url,
+  brightness,
+}: {
+  url: string;
+  brightness: number | null;
+}) {
+  // mismo mapeo probado en el teaser HTML: foto clara -> overlay más
+  // fuerte (se atenúa más), foto oscura -> overlay más suave (se deja
+  // ver con más fuerza). El color del texto nunca cambia, solo cuánto
+  // se ve la foto. brightness null (fotos subidas antes de que
+  // existiera este campo) cae a un valor medio, ni muy fuerte ni muy
+  // suave.
+  const overlayAlpha = 0.15 + (brightness ?? 0.45) * 0.55;
+
   return (
+    // altura FIJA a propósito, no inset-0 con una diagonal — la card
+    // varía de altura según cuánto contenido tenga cada jugador
+    // (stats, badge de TDF, etc.), así que una diagonal de esquina a
+    // esquina "filtraba" la foto por todo el ancho en la zona de abajo
+    // (W-L, CFN, Liquipedia) en las cards más altas, tapando texto de
+    // verdad (encontrado por Seba, 20-08-2026). Con altura fija, la
+    // foto SIEMPRE queda arriba (zona de identidad: avatar/nombre/MR)
+    // y la zona de datos de abajo siempre está sobre charcoal sólido,
+    // sin excepción, sin importar la altura total de la card.
     <div
-      className="absolute inset-0"
+      className="absolute top-0 left-0 right-0 h-32 overflow-hidden pointer-events-none"
       style={{
         backgroundImage: `url(${url})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        opacity: 0.65,
-        WebkitMaskImage: "linear-gradient(115deg, transparent 30%, black 68%)",
-        maskImage: "linear-gradient(115deg, transparent 30%, black 68%)",
+        opacity: 0.8,
+        WebkitMaskImage: "linear-gradient(100deg, transparent 32%, black 80%)",
+        maskImage: "linear-gradient(100deg, transparent 32%, black 80%)",
       }}
     >
       <div
@@ -218,6 +241,24 @@ function CardBackgroundPhoto({ url }: { url: string }) {
           background:
             "linear-gradient(135deg, rgba(196,20,122,0.35), rgba(91,42,134,0.45))",
           mixBlendMode: "color",
+        }}
+      />
+      {/* atenuación adaptativa según el brillo real de la foto —
+          probado primero con un análisis real (canvas) en un teaser
+          HTML antes de meterlo acá (conversación de diseño,
+          20-08-2026) */}
+      <div
+        className="absolute inset-0"
+        style={{ background: "#0D0710", opacity: overlayAlpha }}
+      />
+      {/* refuerzo extra: se apaga hacia abajo aunque esté dentro de la
+          caja, para que el borde inferior nunca corte la foto de forma
+          brusca contra el charcoal sólido de la zona de datos */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(to bottom, transparent 40%, #14101a 100%)",
         }}
       />
     </div>
@@ -297,7 +338,10 @@ function PlayerCard({
   const content = (
     <>
       {player.card_background_url ? (
-        <CardBackgroundPhoto url={player.card_background_url} />
+        <CardBackgroundPhoto
+          url={player.card_background_url}
+          brightness={player.card_background_brightness}
+        />
       ) : (
         <EmberFallback />
       )}
@@ -346,7 +390,7 @@ function PlayerCard({
               hasStats &&
               player.character_name && (
                 <p
-                  className={`font-body text-sm font-medium mt-0.5 ${characterColorClass(player.character_name)}`}
+                  className={`font-body text-sm font-medium mt-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${characterColorClass(player.character_name)}`}
                 >
                   {player.character_name}
                 </p>
@@ -363,12 +407,12 @@ function PlayerCard({
             {player.master_rating != null ? (
               <>
                 <span
-                  className={`font-display font-bold leading-none ${isTopMr ? "text-white text-[26px]" : "text-tdf-muted text-xl"}`}
+                  className={`font-display font-bold leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-white text-[26px]" : "text-tdf-muted text-xl"}`}
                 >
                   {player.master_rating}
                 </span>
                 <span
-                  className={`font-body text-[11px] font-semibold ${isTopMr ? "text-[#ff6b35]" : "text-tdf-muted"}`}
+                  className={`font-body text-[11px] font-semibold [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-[#ff6b35]" : "text-tdf-muted"}`}
                 >
                   MR
                 </span>
@@ -611,10 +655,14 @@ export default function JugadoresPage() {
     if (!token) return;
     try {
       const resized = await resizeImageFile(file, CARD_BACKGROUND_SIZE, 0.82);
+      // se calcula sobre la imagen YA redimensionada (lo que realmente
+      // se va a mostrar), una sola vez acá — no en cada carga de
+      // página para cada visitante (ver getImageBrightness)
+      const brightness = await getImageBrightness(resized);
       if (isOwn) {
-        await updateMyCardBackground(token, resized);
+        await updateMyCardBackground(token, resized, brightness);
       } else {
-        await setPlayerCardBackground(token, cfnId, resized);
+        await setPlayerCardBackground(token, cfnId, resized, brightness);
       }
       refreshPlayers();
     } catch {

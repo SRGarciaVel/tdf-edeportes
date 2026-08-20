@@ -44,6 +44,11 @@ class CFNPlayerRead(BaseModel):
     # reemplazar o sacar en cualquier momento. None: el frontend cae al
     # estado por default (sin foto personalizada).
     card_background_url: str | None
+    # 0.0 (negro) a 1.0 (blanco), calculado UNA vez al subir — el
+    # frontend lo usa para atenuar más la foto cuanto más clara sea, sin
+    # cambiar nunca el color del texto. None si nunca se subió una foto,
+    # o si se subió antes de que existiera este campo.
+    card_background_brightness: float | None
     league_rank: str | None
     league_points: int | None
     master_rating: int | None
@@ -111,9 +116,12 @@ class CFNRegistrationDecision(BaseModel):
 
 class CardBackgroundUpdate(BaseModel):
     """Body para subir/reemplazar la foto de fondo de una card — mismo
-    formato/límite que las imágenes de tier list."""
+    formato/límite que las imágenes de tier list. brightness es
+    opcional para no romper si algún cliente viejo no lo manda, pero el
+    frontend real siempre lo calcula al subir (ver /jugadores)."""
 
     card_background_url: str = Field(min_length=1, max_length=200_000)
+    card_background_brightness: float | None = Field(default=None, ge=0, le=1)
 
 
 class CFNMatchStats(BaseModel):

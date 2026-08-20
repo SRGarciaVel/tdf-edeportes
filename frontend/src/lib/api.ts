@@ -161,11 +161,15 @@ export async function registerCfn(
 export async function updateMyCardBackground(
   token: string,
   cardBackgroundUrl: string,
+  cardBackgroundBrightness: number,
 ): Promise<CFNRegistration> {
   const res = await fetch(`${API_URL}/cfn/register/me/background`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
-    body: JSON.stringify({ card_background_url: cardBackgroundUrl }),
+    body: JSON.stringify({
+      card_background_url: cardBackgroundUrl,
+      card_background_brightness: cardBackgroundBrightness,
+    }),
   });
   return parseOrThrow<CFNRegistration>(res);
 }
@@ -175,11 +179,15 @@ export async function setPlayerCardBackground(
   token: string,
   cfnId: string,
   cardBackgroundUrl: string,
+  cardBackgroundBrightness: number,
 ): Promise<CFNRegistration> {
   const res = await fetch(`${API_URL}/cfn/players/${cfnId}/background`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },
-    body: JSON.stringify({ card_background_url: cardBackgroundUrl }),
+    body: JSON.stringify({
+      card_background_url: cardBackgroundUrl,
+      card_background_brightness: cardBackgroundBrightness,
+    }),
   });
   return parseOrThrow<CFNRegistration>(res);
 }

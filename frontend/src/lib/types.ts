@@ -51,6 +51,7 @@ export interface CFNPlayer {
   liquipedia_url: string | null;
   avatar_url: string | null;
   card_background_url: string | null;
+  card_background_brightness: number | null;
   league_rank: string | null;
   league_points: number | null;
   master_rating: number | null;

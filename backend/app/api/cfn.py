@@ -47,6 +47,7 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
             liquipedia_url=reg.liquipedia_url,
             avatar_url=reg.avatar_override or (user.avatar_url if user else None),
             card_background_url=reg.card_background_url,
+            card_background_brightness=reg.card_background_brightness,
             league_rank=profile.league_rank if profile else None,
             league_points=profile.league_points if profile else None,
             master_rating=profile.master_rating if profile else None,
@@ -356,6 +357,7 @@ def update_my_card_background(
             403, "Necesitás tener tu registro aprobado para personalizar tu card"
         )
     registration.card_background_url = payload.card_background_url
+    registration.card_background_brightness = payload.card_background_brightness
     db.commit()
     db.refresh(registration)
     return registration
@@ -385,6 +387,7 @@ def set_player_card_background(
     solo si card_background_url ya tenía algo antes)."""
     registration = _get_approved_registration(db, cfn_id)
     registration.card_background_url = payload.card_background_url
+    registration.card_background_brightness = payload.card_background_brightness
     db.commit()
     db.refresh(registration)
     return registration
@@ -401,4 +404,5 @@ def remove_player_card_background(
     haga nada — para cuando hay que moderar algo indebido ya mismo."""
     registration = _get_approved_registration(db, cfn_id)
     registration.card_background_url = None
+    registration.card_background_brightness = None
     db.commit()
