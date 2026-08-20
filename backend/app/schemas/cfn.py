@@ -170,3 +170,32 @@ class EncounterRead(BaseModel):
     player_b_cfn_id: str
     player_b_name: str
     played_at: datetime
+
+
+class UnlinkedCandidate(BaseModel):
+    """Sugerencia de cuenta para vincular — solo se arma cuando el
+    nombre de usuario de Twitch coincide EXACTO (sin distinguir
+    mayúsculas) con el nombre guardado del roster viejo. Nunca una
+    sugerencia "parecida" — el riesgo de vincular la cuenta equivocada
+    no es solo estético, esa cuenta queda con permiso de editar la card
+    (ver PATCH /cfn/register/me/background)."""
+
+    user_id: str
+    twitch_username: str
+    display_name: str
+    avatar_url: str | None
+
+
+class UnlinkedRegistration(BaseModel):
+    """Fila del roster viejo (migrado antes de que existiera el
+    auto-registro, ver migración de datos b7e7dd7cf3e5) sin ninguna
+    cuenta de Twitch asociada todavía — por eso no tiene avatar real ni
+    puede autogestionar su propia foto de fondo."""
+
+    cfn_id: str
+    display_name: str
+    candidate: UnlinkedCandidate | None
+
+
+class LinkAccountRequest(BaseModel):
+    user_id: str

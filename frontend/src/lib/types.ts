@@ -79,6 +79,26 @@ export interface CFNRegistrationPending {
   twitch_avatar_url: string | null;
 }
 
+export interface UnlinkedCandidate {
+  user_id: string;
+  twitch_username: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+export interface UnlinkedRegistration {
+  cfn_id: string;
+  display_name: string;
+  candidate: UnlinkedCandidate | null;
+}
+
+export interface UserSearchResult {
+  id: string;
+  twitch_username: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
 export interface CFNMatchStats {
   cfn_id: string;
   days: number;

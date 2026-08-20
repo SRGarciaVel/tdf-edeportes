@@ -20,6 +20,9 @@ from app.schemas.cfn import (
     CFNRegistrationPending,
     CFNRegistrationRead,
     EncounterRead,
+    LinkAccountRequest,
+    UnlinkedCandidate,
+    UnlinkedRegistration,
 )
 
 router = APIRouter(prefix="/cfn", tags=["cfn"])
@@ -406,3 +409,89 @@ def remove_player_card_background(
     registration.card_background_url = None
     registration.card_background_brightness = None
     db.commit()
+
+
+@router.get("/registrations/unlinked", response_model=list[UnlinkedRegistration])
+def list_unlinked_registrations(
+    db: Annotated[Session, Depends(get_db)],
+    _staff: Annotated[User, Depends(require_staff)],
+) -> list[UnlinkedRegistration]:
+    """Roster viejo (migrado antes del auto-registro) sin ninguna cuenta
+    de Twitch asociada — por eso no tiene avatar real ni puede
+    autogestionar su foto de fondo. Solo staff. Sugiere una cuenta SOLO
+    si el nombre de usuario de Twitch coincide exacto (sin distinguir
+    mayúsculas) — nunca una sugerencia "parecida", ver UnlinkedCandidate
+    para el motivo (vincular mal le da a alguien permiso sobre la card
+    de otra persona)."""
+    unlinked = (
+        db.query(CFNRegistration)
+        .filter(
+            CFNRegistration.status == "approved",
+            CFNRegistration.user_id.is_(None),
+        )
+        .order_by(CFNRegistration.display_name)
+        .all()
+    )
+
+    result = []
+    for reg in unlinked:
+        candidate_user = (
+            db.query(User).filter(User.twitch_username.ilike(reg.display_name)).first()
+        )
+        candidate = (
+            UnlinkedCandidate(
+                user_id=str(candidate_user.id),
+                twitch_username=candidate_user.twitch_username,
+                display_name=candidate_user.display_name,
+                avatar_url=candidate_user.avatar_url,
+            )
+            if candidate_user
+            else None
+        )
+        result.append(
+            UnlinkedRegistration(
+                cfn_id=reg.cfn_id, display_name=reg.display_name, candidate=candidate
+            )
+        )
+    return result
+
+
+@router.post("/registrations/{cfn_id}/link-account", response_model=CFNRegistrationRead)
+def link_account(
+    cfn_id: str,
+    payload: LinkAccountRequest,
+    db: Annotated[Session, Depends(get_db)],
+    _staff: Annotated[User, Depends(require_staff)],
+) -> CFNRegistration:
+    """Vincula una cuenta de Twitch a una fila del roster viejo — solo
+    staff, siempre a mano (nunca automático, ver list_unlinked_registrations).
+    Una vez vinculada, el avatar de Twitch aparece solo (misma lógica de
+    siempre en GET /cfn/players) y esa cuenta puede autogestionar su
+    propia foto de fondo desde ahí en adelante."""
+    registration = _get_approved_registration(db, cfn_id)
+    if registration.user_id is not None:
+        raise HTTPException(400, "Este jugador ya tiene una cuenta vinculada")
+
+    try:
+        target_user_id = uuid.UUID(payload.user_id)
+    except ValueError:
+        raise HTTPException(404, "Cuenta no encontrada") from None
+
+    target_user = db.get(User, target_user_id)
+    if target_user is None:
+        raise HTTPException(404, "Cuenta no encontrada")
+
+    already_linked = (
+        db.query(CFNRegistration)
+        .filter(CFNRegistration.user_id == target_user_id)
+        .first()
+    )
+    if already_linked is not None:
+        raise HTTPException(
+            400, "Esa cuenta ya está vinculada a otro jugador del roster"
+        )
+
+    registration.user_id = target_user_id
+    db.commit()
+    db.refresh(registration)
+    return registration

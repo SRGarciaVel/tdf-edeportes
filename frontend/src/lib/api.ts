@@ -6,6 +6,8 @@ import type {
   CFNPlayer,
   CFNRegistration,
   CFNRegistrationPending,
+  UnlinkedRegistration,
+  UserSearchResult,
   CFNMatchStats,
   CFNMatchRead,
   EncounterData,
@@ -226,6 +228,47 @@ export async function listPendingCfnRegistrations(
     headers: authHeaders(token),
   });
   return parseOrThrow<CFNRegistrationPending[]>(res);
+}
+
+// roster viejo (migrado antes del auto-registro) sin cuenta de Twitch
+// asociada — con sugerencia solo cuando el nombre calza exacto
+export async function listUnlinkedRegistrations(
+  token: string,
+): Promise<UnlinkedRegistration[]> {
+  const res = await fetch(`${API_URL}/cfn/registrations/unlinked`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<UnlinkedRegistration[]>(res);
+}
+
+// búsqueda manual de cuentas, para cuando no hay sugerencia automática
+export async function searchUsers(
+  token: string,
+  query: string,
+): Promise<UserSearchResult[]> {
+  const res = await fetch(
+    `${API_URL}/users/search?q=${encodeURIComponent(query)}`,
+    { headers: authHeaders(token) },
+  );
+  return parseOrThrow<UserSearchResult[]>(res);
+}
+
+// vincula una cuenta de Twitch a una fila del roster viejo — siempre a
+// mano, nunca automático (ver listUnlinkedRegistrations)
+export async function linkAccount(
+  token: string,
+  cfnId: string,
+  userId: string,
+): Promise<CFNRegistration> {
+  const res = await fetch(
+    `${API_URL}/cfn/registrations/${cfnId}/link-account`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      body: JSON.stringify({ user_id: userId }),
+    },
+  );
+  return parseOrThrow<CFNRegistration>(res);
 }
 
 export async function approveCfnRegistration(
