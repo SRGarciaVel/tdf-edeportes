@@ -111,6 +111,47 @@ son bloqueantes para el uso diario del club.
       si corresponde, migrar de recursos gratuitos a infraestructura paga
       (hosting, dominio propio) — condicionado a que el club sea sustentable.
 
+## Ideas paradas — Hub "SF6" en el Navbar (sin fecha, sin empezar)
+
+**Origen:** conversación de diseño del 20-08-2026, a partir de explorar qué más
+se puede sacarle a Buckler's Boot Camp además de lo que ya trackeamos. Seba
+quiere un menú desplegable propio en el Navbar dedicado solo a Street
+Fighter 6 (no a TDF como club), separado de `/jugadores`. Nada de esto
+arranca hasta que se retome explícitamente — queda documentado para no
+depender de que la conversación se acuerde sola.
+
+- [ ] **Meta actual** — uso de personajes (`/stats/usagerate`) y diagrama de
+      matchups/win rate entre personajes (`/stats/dia`), overall y también
+      la versión filtrada solo a rango Master (`_master`, más relevante para
+      preparación competitiva real que el promedio mezclado con todos los
+      rangos). Datos globales de Capcom, no de TDF. Se actualiza una vez al
+      mes (el segundo jueves), así que el cron que lo alimente puede ser
+      mensual, no horario como el resto del tracker — mucho más liviano de
+      mantener. Los números reales están en JS, no en el HTML plano
+      (confirmado al intentar traerlos directo) — mismo enfoque de scraper
+      con navegador real que ya usamos, no un método más simple.
+- [ ] **Notas de parche** — análisis/resumen de los battle change list que
+      Capcom publica (`streetfighter.com/6/buckler/battle_change`). Todavía
+      sin definir el enfoque técnico (¿scraping y resumen automático?
+      ¿alguien de staff lo redacta a mano con la info oficial como fuente?).
+- [ ] **Estadísticas avanzadas por jugador de TDF** (Drive Impact, Perfect
+      Parry, Punish Counters, Corner Pressure, etc.) — confirmado viable:
+      viven en la pestaña "Stats" > "Results" de cada perfil
+      (`/profile/{cfn_id}/play`), son promedios de Capcom sobre las últimas
+      100 partidas (no hay que reconstruir nada partida por partida), y
+      confirmado que SÍ son visibles en el perfil de otra persona estando
+      logueado con una cuenta distinta (no son datos privados del dueño del
+      perfil) — se puede scrapear con el mismo enfoque de sesión compartida
+      de siempre. Categorías concretas ya identificadas de una captura real:
+      "el que más Drive Impact se come", "mejor Perfect Parry de la
+      comunidad", "el Drive Impact más letal" (mejor punish counter con DI),
+      "el más agresivo" (tiempo acorralando rivales), "el mejor agarrador"
+      (throws conectados). Esto podría vivir en `/jugadores` en vez del hub
+      de SF6, ya que es específico de la gente de TDF — a definir cuando se
+      retome.
+- [ ] Espacio abierto para lo que vaya surgiendo — Seba mencionó "da para
+      hartos usos" sin cerrar la lista todavía.
+
 ## Notas de proceso
 
 - El orden de fases sigue la priorización directa del CEO: dashboard interno →
