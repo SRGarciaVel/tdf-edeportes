@@ -156,6 +156,49 @@ export async function registerCfn(
   return parseOrThrow<CFNRegistration>(res);
 }
 
+// la propia persona cambia su foto de fondo cuando quiera — requiere
+// tener el registro ya aprobado (el backend lo valida, 403 si no)
+export async function updateMyCardBackground(
+  token: string,
+  cardBackgroundUrl: string,
+): Promise<CFNRegistration> {
+  const res = await fetch(`${API_URL}/cfn/register/me/background`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ card_background_url: cardBackgroundUrl }),
+  });
+  return parseOrThrow<CFNRegistration>(res);
+}
+
+// staff sube o reemplaza la foto de CUALQUIER jugador (moderación)
+export async function setPlayerCardBackground(
+  token: string,
+  cfnId: string,
+  cardBackgroundUrl: string,
+): Promise<CFNRegistration> {
+  const res = await fetch(`${API_URL}/cfn/players/${cfnId}/background`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ card_background_url: cardBackgroundUrl }),
+  });
+  return parseOrThrow<CFNRegistration>(res);
+}
+
+// staff saca la foto de un jugador — vuelve al estado por default
+export async function removePlayerCardBackground(
+  token: string,
+  cfnId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/cfn/players/${cfnId}/background`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ?? `Error ${res.status}`);
+  }
+}
+
 // null si nunca pidió nada — el backend también devuelve null (no 404)
 // una vez aprobado, porque en ese caso ya aparece directo en /jugadores
 export async function getMyCfnRegistration(

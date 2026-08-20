@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
@@ -10,8 +10,11 @@ import {
   getMyCfnRegistration,
   listCfnPlayers,
   registerCfn,
+  removePlayerCardBackground,
+  setPlayerCardBackground,
+  updateMyCardBackground,
 } from "../lib/api";
-import { characterColorClass } from "../lib/characterColors";
+import { characterColorClass, characterColorHex } from "../lib/characterColors";
 import { resizeImageFile } from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
 import type { CFNMatchStats, CFNPlayer, CFNRegistration } from "../lib/types";
@@ -21,6 +24,9 @@ const DAY_OPTIONS = [1, 3, 7] as const;
 // "mejor win rate" — sin esto, alguien con 1 partida jugada y 1-0 le
 // gana a todo el grupo con un "100%" que no dice nada
 const MIN_MATCHES_FOR_BEST_WR = 3;
+// la foto de fondo es más grande que un avatar (ocupa media card), así
+// que se redimensiona a más resolución que los 120px del avatar
+const CARD_BACKGROUND_SIZE = 480;
 
 /** Ordena de mayor a menor LP — los que todavía no tienen stats quedan
  * al final. */
@@ -53,14 +59,14 @@ function KpiTile({
 }) {
   return (
     <div className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-1">
-      <span className="font-mono text-[10px] uppercase tracking-wider text-gray-500">
+      <span className="font-mono text-[10px] uppercase tracking-wider text-tdf-muted">
         {label}
       </span>
       <span className="text-2xl font-bold text-white leading-none">
         {value}
       </span>
       {sub && (
-        <span className="font-mono text-[11px] text-gray-600 truncate">
+        <span className="font-mono text-[11px] text-tdf-muted truncate">
           {sub}
         </span>
       )}
@@ -87,21 +93,18 @@ function MatchStatsRow({
 
   if (!stats || stats.total_matches === 0) {
     return (
-      <p className="font-mono text-[11px] text-gray-700 border-t border-tdf-line/60 mt-3 pt-2">
+      <p className="font-mono text-[11px] text-tdf-muted border-t border-tdf-line/60 mt-3 pt-2">
         Sin partidas en este período
       </p>
     );
   }
 
-  // se trunca a los 3 personajes más usados — con jugadores que rotan
-  // mucho de personaje, la lista completa en una sola línea se volvía
-  // ilegible (ver lessons.md); el detalle completo vive en el modal
   const entries = Object.entries(stats.characters);
   const topThree = entries.slice(0, 3);
   const rest = entries.length - topThree.length;
 
   return (
-    <div className="font-mono text-[11px] text-gray-500 border-t border-tdf-line/60 mt-3 pt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+    <div className="font-mono text-[11px] text-tdf-muted border-t border-tdf-line/60 mt-3 pt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
       <div className="flex flex-wrap items-center gap-x-2">
         <span className="text-white">
           {stats.wins}W-{stats.losses}L
@@ -111,18 +114,18 @@ function MatchStatsRow({
             {Math.round(stats.win_rate * 100)}% WR
           </span>
         )}
-        <span className="text-gray-600">·</span>
+        <span className="text-tdf-muted">·</span>
         <span className="flex flex-wrap items-center gap-x-1.5">
           {topThree.map(([name, count], i) => (
             <span key={name}>
               <span className={characterColorClass(name)}>{name}</span>
-              <span className="text-gray-500"> x{count}</span>
+              <span className="text-tdf-muted"> x{count}</span>
               {i < topThree.length - 1 && (
-                <span className="text-gray-600">,</span>
+                <span className="text-tdf-muted">,</span>
               )}
             </span>
           ))}
-          {rest > 0 && <span className="text-gray-600">+{rest} más</span>}
+          {rest > 0 && <span className="text-tdf-muted">+{rest} más</span>}
         </span>
       </div>
       <button
@@ -135,77 +138,207 @@ function MatchStatsRow({
   );
 }
 
-function PlayerAvatar({ player }: { player: CFNPlayer }) {
-  if (player.avatar_url) {
-    return (
-      <img
-        src={player.avatar_url}
-        alt={player.display_name}
-        className="w-10 h-10 rounded-full object-cover shrink-0"
+function PlayerAvatarRing({ player }: { player: CFNPlayer }) {
+  const ringColor = characterColorHex(player.character_name);
+  return (
+    <div
+      className="w-14 h-14 rounded-full p-[3px] shrink-0"
+      style={{
+        background: `conic-gradient(${ringColor}, #14101a, ${ringColor})`,
+      }}
+    >
+      {player.avatar_url ? (
+        <img
+          src={player.avatar_url}
+          alt={player.display_name}
+          className="w-full h-full rounded-full object-cover border-2 border-tdf-charcoal"
+        />
+      ) : (
+        <div className="w-full h-full rounded-full border-2 border-tdf-charcoal overflow-hidden flex items-center justify-center bg-tdf-dark">
+          <InitialsAvatar seed={player.display_name} size={10} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FlameIcon({ dim, gradientId }: { dim: boolean; gradientId: string }) {
+  return (
+    <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 2C10 6 6 8 6 13a6 6 0 0 0 12 0c0-2-1-3-2-4 0 2-1 3-2 2 1-3-1-5-2-9Z"
+        fill={dim ? "#aba4b7" : `url(#${gradientId})`}
+        stroke={dim ? "#aba4b7" : "#ff6b35"}
+        strokeWidth="0.5"
+        opacity={dim ? 0.35 : 1}
       />
-    );
-  }
-  return <InitialsAvatar seed={player.display_name} size={10} />;
+      {!dim && (
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ff6b35" />
+            <stop offset="100%" stopColor="#C4147A" />
+          </linearGradient>
+        </defs>
+      )}
+    </svg>
+  );
+}
+
+function EmberFallback() {
+  return (
+    <svg
+      className="absolute -right-5 -bottom-5 w-32 h-32 opacity-[0.05] pointer-events-none"
+      viewBox="0 0 100 100"
+      aria-hidden="true"
+    >
+      <path
+        d="M50 5 C 40 25, 60 30, 55 50 C 70 45, 75 65, 50 95 C 25 65, 30 45, 45 50 C 40 30, 60 25, 50 5 Z"
+        fill="#ff6b35"
+      />
+    </svg>
+  );
+}
+
+function CardBackgroundPhoto({ url }: { url: string }) {
+  return (
+    <div
+      className="absolute inset-0"
+      style={{
+        backgroundImage: `url(${url})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        opacity: 0.65,
+        WebkitMaskImage: "linear-gradient(115deg, transparent 30%, black 68%)",
+        maskImage: "linear-gradient(115deg, transparent 30%, black 68%)",
+      }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(196,20,122,0.35), rgba(91,42,134,0.45))",
+          mixBlendMode: "color",
+        }}
+      />
+    </div>
+  );
+}
+
+function CardBackgroundActions({
+  canUpload,
+  canRemove,
+  hasPhoto,
+  onUploadClick,
+  onRemove,
+}: {
+  canUpload: boolean;
+  canRemove: boolean;
+  hasPhoto: boolean;
+  onUploadClick: (e: React.MouseEvent) => void;
+  onRemove: (e: React.MouseEvent) => void;
+}) {
+  if (!canUpload && !canRemove) return null;
+  return (
+    <div className="absolute top-2 right-2 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      {canUpload && (
+        <button
+          onClick={onUploadClick}
+          className="font-body text-[10px] font-medium text-tdf-muted hover:text-white bg-tdf-dark/75 border border-tdf-line hover:border-tdf-magenta px-2 py-1 rounded"
+        >
+          ↑ {hasPhoto ? "Reemplazar" : "Subir foto"}
+        </button>
+      )}
+      {canRemove && hasPhoto && (
+        <button
+          onClick={onRemove}
+          className="font-body text-[10px] font-medium text-tdf-muted hover:text-red-300 bg-tdf-dark/75 border border-tdf-line hover:border-red-500 px-2 py-1 rounded"
+        >
+          ✕ Quitar
+        </button>
+      )}
+    </div>
+  );
 }
 
 function PlayerCard({
   player,
   profilesLoading,
   isTopMr,
-  maxLpOverall,
   matchStats,
   statsLoading,
+  isOwnCard,
+  isStaff,
   onOpenHistory,
+  onUploadBackground,
+  onRemoveBackground,
 }: {
   player: CFNPlayer;
   profilesLoading: boolean;
   isTopMr: boolean;
-  maxLpOverall: number;
   matchStats?: CFNMatchStats;
   statsLoading: boolean;
+  isOwnCard: boolean;
+  isStaff: boolean;
   onOpenHistory: (player: CFNPlayer) => void;
+  onUploadBackground: (cfnId: string, file: File, isOwn: boolean) => void;
+  onRemoveBackground: (cfnId: string) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const hasStats =
     !player.last_error &&
     (player.league_points != null || player.character_name);
-  const lpBarPct =
-    hasStats && player.league_points != null && maxLpOverall > 0
-      ? Math.max(4, Math.round((player.league_points / maxLpOverall) * 100))
-      : 0;
 
-  // stopPropagation + preventDefault: las cards con perfil de Liquipedia
-  // son un <a> completo hacia ese link — sin esto, el botón "Ver
-  // partidas" de adentro dispararía también la navegación externa
-  const handleOpenHistory = (e: React.MouseEvent) => {
+  const stopAnd = (fn: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onOpenHistory(player);
+    fn();
   };
 
   const content = (
     <>
-      <div className="absolute top-2 right-2 flex gap-2 z-10">
-        {isTopMr && (
-          <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-magenta">
-            // Top MR
-          </span>
-        )}
-        {player.is_tdf && (
-          <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-purple">
-            TDF
-          </span>
-        )}
-      </div>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <PlayerAvatar player={player} />
-          <div className="min-w-0">
-            <p className="font-semibold truncate">{player.display_name}</p>
-            <p className="font-mono text-xs text-gray-600">
-              CFN {player.cfn_id}
-              {player.liquipedia_url && (
-                <span className="text-tdf-purple"> · Liquipedia ↗</span>
-              )}
+      {player.card_background_url ? (
+        <CardBackgroundPhoto url={player.card_background_url} />
+      ) : (
+        <EmberFallback />
+      )}
+
+      <CardBackgroundActions
+        canUpload={isOwnCard || isStaff}
+        canRemove={isStaff}
+        hasPhoto={!!player.card_background_url}
+        onUploadClick={stopAnd(() => fileInputRef.current?.click())}
+        onRemove={stopAnd(() => onRemoveBackground(player.cfn_id))}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onUploadBackground(player.cfn_id, file, isOwnCard);
+          e.target.value = "";
+        }}
+      />
+
+      <div className="relative z-10">
+        <div className="absolute -top-1 right-0 flex gap-2 z-10">
+          {player.is_tdf && (
+            <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-purple">
+              TDF
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 mb-3">
+          {profilesLoading ? (
+            <Skeleton className="w-14 h-14 rounded-full shrink-0" />
+          ) : (
+            <PlayerAvatarRing player={player} />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="font-display font-bold text-lg truncate leading-tight [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
+              {player.display_name}
             </p>
             {profilesLoading ? (
               <Skeleton className="h-3 w-16 mt-1" />
@@ -213,7 +346,7 @@ function PlayerCard({
               hasStats &&
               player.character_name && (
                 <p
-                  className={`font-mono text-xs mt-1 ${characterColorClass(player.character_name)}`}
+                  className={`font-body text-sm font-medium mt-0.5 ${characterColorClass(player.character_name)}`}
                 >
                   {player.character_name}
                 </p>
@@ -221,57 +354,75 @@ function PlayerCard({
             )}
           </div>
         </div>
+
         {profilesLoading ? (
-          <div className="text-right shrink-0 flex flex-col items-end gap-1">
-            <Skeleton className="h-5 w-16" />
-            <Skeleton className="h-3 w-14" />
-          </div>
+          <Skeleton className="h-6 w-32 mb-3" />
         ) : hasStats ? (
-          <div className="text-right shrink-0">
-            {player.master_rating != null && (
-              <span className="font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta/40 px-2 py-1">
-                {player.master_rating} MR
+          <div className="flex items-center gap-2 mb-1">
+            <FlameIcon dim={!isTopMr} gradientId={`flame-${player.cfn_id}`} />
+            {player.master_rating != null ? (
+              <>
+                <span
+                  className={`font-display font-bold leading-none ${isTopMr ? "text-white text-[26px]" : "text-tdf-muted text-xl"}`}
+                >
+                  {player.master_rating}
+                </span>
+                <span
+                  className={`font-body text-[11px] font-semibold ${isTopMr ? "text-[#ff6b35]" : "text-tdf-muted"}`}
+                >
+                  MR
+                </span>
+              </>
+            ) : (
+              <span className="font-body text-xs text-tdf-muted">
+                Sin rango de Master todavía
               </span>
             )}
-            {player.league_points != null && (
-              <>
-                <p className="font-mono text-xs text-gray-500 mt-1">
-                  {player.league_points} LP
-                </p>
-                <div className="w-24 h-1 bg-tdf-line mt-1 ml-auto overflow-hidden">
-                  <div
-                    className="h-full bg-tdf-magenta"
-                    style={{ width: `${lpBarPct}%` }}
-                  />
-                </div>
-              </>
-            )}
-            {player.updated_at && (
-              <p className="font-mono text-[10px] text-gray-700 mt-1">
-                {relativeTime(player.updated_at)}
-              </p>
+            {isTopMr && (
+              <span className="ml-auto font-body text-[11px] font-semibold text-tdf-dark bg-gradient-to-r from-[#ff6b35] to-tdf-magenta px-2.5 py-1 rounded">
+                #1 comunidad
+              </span>
             )}
           </div>
         ) : (
-          <span className="font-mono text-xs uppercase text-gray-600 border border-tdf-line px-2 py-1 shrink-0">
+          <span className="font-body text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-1 inline-block mb-2">
             Próximamente
           </span>
         )}
+
+        {hasStats && player.league_points != null && (
+          <p className="font-body text-xs text-tdf-muted mb-3">
+            <span className="font-semibold">
+              {player.league_points.toLocaleString("es-CL")}
+            </span>{" "}
+            LP
+          </p>
+        )}
+
+        <MatchStatsRow
+          stats={matchStats}
+          loading={statsLoading}
+          onOpenHistory={stopAnd(() => onOpenHistory(player))}
+        />
+
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-tdf-line/60 font-body text-[11px] text-tdf-muted">
+          <span className="opacity-55">CFN {player.cfn_id}</span>
+          {player.liquipedia_url && (
+            <span className="text-tdf-purple font-medium">Liquipedia ↗</span>
+          )}
+          {player.updated_at && (
+            <span className="opacity-70">
+              {relativeTime(player.updated_at)}
+            </span>
+          )}
+        </div>
       </div>
-      <MatchStatsRow
-        stats={matchStats}
-        loading={statsLoading}
-        onOpenHistory={handleOpenHistory}
-      />
     </>
   );
 
   const className =
-    "hud-frame bg-tdf-charcoal px-5 pt-8 pb-4 flex flex-col transition-all duration-200 relative" +
-    (isTopMr ? " border-tdf-magenta" : "") +
-    (player.liquipedia_url
-      ? " hover:border-tdf-magenta hover:shadow-[0_0_20px_-4px_rgba(196,20,122,0.7)] cursor-pointer"
-      : "");
+    "hud-frame bg-tdf-charcoal px-5 pt-5 pb-4 flex flex-col transition-all duration-200 relative overflow-hidden group hover:-translate-y-0.5 hover:border-tdf-magenta hover:shadow-[0_12px_32px_-10px_rgba(196,20,122,0.55)]" +
+    (isTopMr ? " border-tdf-magenta" : "");
 
   if (player.liquipedia_url) {
     return (
@@ -289,11 +440,6 @@ function PlayerCard({
   return <div className={className}>{content}</div>;
 }
 
-/** Formulario de auto-registro — solo visible logueado. No distingue
- * "nunca pidió nada" de "ya está aprobado" (el backend devuelve null
- * en los dos casos, ver GET /cfn/register/me): una vez aprobado, la
- * persona ya se ve en la lista de abajo, así que mostrar el formulario
- * de nuevo en ese caso es solo una molestia menor, no un error real. */
 function RegistrationForm({
   registration,
   onRegistered,
@@ -350,7 +496,7 @@ function RegistrationForm({
         <p className="font-mono text-xs uppercase text-tdf-magenta mb-1">
           Solicitud enviada
         </p>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-tdf-muted font-body">
           Tu CFN {registration.cfn_id} está pendiente de revisión por staff. Te
           vas a ver en la lista una vez que se apruebe.
         </p>
@@ -358,13 +504,15 @@ function RegistrationForm({
     );
   }
 
+  if (registration?.status === "approved") return null;
+
   return (
     <form
       onSubmit={handleSubmit}
       className="hud-frame bg-tdf-charcoal px-5 py-4 mb-8 flex flex-wrap items-end gap-3"
     >
       <div className="flex-1 min-w-[200px]">
-        <p className="font-mono text-xs uppercase text-gray-500 mb-2">
+        <p className="font-mono text-xs uppercase text-tdf-muted mb-2">
           Súmate a la lista
         </p>
         <input
@@ -374,7 +522,7 @@ function RegistrationForm({
           className="w-full bg-tdf-dark border border-tdf-line px-3 py-2 text-sm font-mono"
         />
         {registration?.status === "rejected" && (
-          <p className="font-mono text-[11px] text-gray-600 mt-1">
+          <p className="font-mono text-[11px] text-tdf-muted mt-1">
             Tu solicitud anterior no se aprobó. Puedes intentar de nuevo.
           </p>
         )}
@@ -410,20 +558,22 @@ export default function JugadoresPage() {
     new Map(),
   );
   const [statsLoading, setStatsLoading] = useState(true);
-  // 7 días por defecto: las partidas más recientes que tenemos guardadas
-  // hoy son de hace unos días — con 1 día por defecto la página se vería
-  // vacía hasta que se acumulen partidas más nuevas con el cron.
   const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(7);
   const [historyPlayer, setHistoryPlayer] = useState<CFNPlayer | null>(null);
   const [myRegistration, setMyRegistration] = useState<CFNRegistration | null>(
     null,
   );
 
-  useEffect(() => {
+  function refreshPlayers() {
     listCfnPlayers()
       .then(setPlayers)
-      .catch(() => setPlayers([]))
-      .finally(() => setPlayersLoading(false));
+      .catch(() => setPlayers([]));
+  }
+
+  useEffect(() => {
+    refreshPlayers();
+    setPlayersLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -453,12 +603,37 @@ export default function JugadoresPage() {
       .finally(() => setStatsLoading(false));
   }, [players, days]);
 
-  const sortedPlayers = useMemo(() => sortByLp(players), [players]);
+  async function handleUploadBackground(
+    cfnId: string,
+    file: File,
+    isOwn: boolean,
+  ) {
+    if (!token) return;
+    try {
+      const resized = await resizeImageFile(file, CARD_BACKGROUND_SIZE, 0.82);
+      if (isOwn) {
+        await updateMyCardBackground(token, resized);
+      } else {
+        await setPlayerCardBackground(token, cfnId, resized);
+      }
+      refreshPlayers();
+    } catch {
+      // silencioso a propósito — si falla, la card simplemente no
+      // cambia, no hay nada crítico que perder acá
+    }
+  }
 
-  const maxLpOverall = useMemo(
-    () => Math.max(0, ...players.map((p) => p.league_points ?? 0)),
-    [players],
-  );
+  async function handleRemoveBackground(cfnId: string) {
+    if (!token) return;
+    try {
+      await removePlayerCardBackground(token, cfnId);
+      refreshPlayers();
+    } catch {
+      // idem
+    }
+  }
+
+  const sortedPlayers = useMemo(() => sortByLp(players), [players]);
 
   const topMrCfnId = useMemo(() => {
     let best: { cfnId: string; mr: number } | null = null;
@@ -470,9 +645,6 @@ export default function JugadoresPage() {
     return best?.cfnId ?? null;
   }, [players]);
 
-  // KPIs del grupo para la ventana de días seleccionada — a diferencia
-  // del viejo "personaje más jugado" (que miraba el perfil actual, fijo),
-  // esto se recalcula solo cada vez que cambia el filtro de días.
   const groupStats = useMemo(() => {
     let totalMatches = 0;
     let totalWins = 0;
@@ -546,7 +718,7 @@ export default function JugadoresPage() {
                 className={`px-3 py-1 border transition-colors ${
                   days === d
                     ? "border-tdf-magenta text-tdf-magenta"
-                    : "border-tdf-line text-gray-500 hover:text-white"
+                    : "border-tdf-line text-tdf-muted hover:text-white"
                 }`}
               >
                 {d}D
@@ -555,17 +727,19 @@ export default function JugadoresPage() {
           </div>
         </div>
       </div>
-      <p className="text-gray-500 mb-1 max-w-xl">
+      <p className="text-tdf-muted mb-1 max-w-xl font-body">
         Rango, LP y personaje principal de la comunidad. TDF y la escena
         chilena, todos en el mismo pozo. Se actualiza cada hora, no en vivo. El
         resumen de arriba y las tarjetas de abajo son de los últimos {days} día
         {days > 1 ? "s" : ""}.
       </p>
-      <p className="font-mono text-[11px] text-gray-600 mb-6">
-        La etiqueta <span className="text-tdf-purple">TDF</span> marca a quienes
-        son parte del staff/colaboradores del club, el resto es comunidad. Las
-        tarjetas con <span className="text-tdf-purple">Liquipedia ↗</span> son
-        clickeables, llevan a su perfil competitivo.
+      <p className="font-body text-xs text-tdf-muted mb-6">
+        La etiqueta <span className="text-tdf-purple font-medium">TDF</span>{" "}
+        marca a quienes son parte del staff/colaboradores del club, el resto es
+        comunidad. Las tarjetas con{" "}
+        <span className="text-tdf-purple font-medium">Liquipedia ↗</span> son
+        clickeables, llevan a su perfil competitivo. Cada quien puede subir su
+        propia foto de fondo desde su card.
       </p>
 
       {user && (
@@ -636,10 +810,16 @@ export default function JugadoresPage() {
             player={p}
             profilesLoading={playersLoading}
             isTopMr={p.cfn_id === topMrCfnId}
-            maxLpOverall={maxLpOverall}
             matchStats={matchStats.get(p.cfn_id)}
             statsLoading={statsLoading}
+            isOwnCard={
+              myRegistration?.status === "approved" &&
+              myRegistration.cfn_id === p.cfn_id
+            }
+            isStaff={!!user?.is_staff}
             onOpenHistory={setHistoryPlayer}
+            onUploadBackground={handleUploadBackground}
+            onRemoveBackground={handleRemoveBackground}
           />
         ))}
       </div>

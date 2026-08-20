@@ -55,7 +55,7 @@ export default function AnnouncementBar({
       </Link>
       <button
         onClick={handleDismiss}
-        className="text-gray-500 hover:text-white text-sm shrink-0"
+        className="text-tdf-muted hover:text-white text-sm shrink-0"
         aria-label="Cerrar aviso"
       >
         ✕

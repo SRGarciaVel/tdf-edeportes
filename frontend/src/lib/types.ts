@@ -50,6 +50,7 @@ export interface CFNPlayer {
   is_tdf: boolean;
   liquipedia_url: string | null;
   avatar_url: string | null;
+  card_background_url: string | null;
   league_rank: string | null;
   league_points: number | null;
   master_rating: number | null;

@@ -57,7 +57,7 @@ export default function TierListGalleryPage() {
           Armar la mía →
         </Link>
       </div>
-      <p className="text-gray-500 mb-8 max-w-xl">
+      <p className="text-tdf-muted mb-8 max-w-xl font-body">
         Todo lo que ya rankeó la comunidad, con quién la armó y con qué
         plantilla. Toca cualquiera para verla completa.
       </p>
@@ -77,13 +77,13 @@ export default function TierListGalleryPage() {
       )}
 
       {!loading && error && (
-        <p className="text-gray-500">
+        <p className="text-tdf-muted font-body">
           No se pudo cargar la galería. Intenta de nuevo en un rato.
         </p>
       )}
 
       {!loading && !error && tierLists.length === 0 && (
-        <p className="text-gray-500">
+        <p className="text-tdf-muted font-body">
           Todavía no hay ninguna tier list guardada.{" "}
           <Link
             to="/tierlist"
@@ -110,11 +110,11 @@ export default function TierListGalleryPage() {
                 >
                   {t.creator_name}
                 </p>
-                <p className="font-mono text-xs text-gray-500 mt-1">
+                <p className="font-mono text-xs text-tdf-muted mt-1">
                   {t.template_name ?? "Plantilla ya borrada"} · {t.item_count}{" "}
                   ítem{t.item_count === 1 ? "" : "s"}
                 </p>
-                <p className="font-mono text-[11px] text-gray-600 mt-2">
+                <p className="font-mono text-[11px] text-tdf-muted mt-2">
                   {new Date(t.created_at).toLocaleDateString("es-CL", {
                     dateStyle: "medium",
                   })}
@@ -128,7 +128,7 @@ export default function TierListGalleryPage() {
                     setConfirmDelete(t);
                   }}
                   disabled={deletingId === t.id}
-                  className="absolute top-2 right-2 text-gray-500 hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
+                  className="absolute top-2 right-2 text-tdf-muted hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
                   aria-label={`Borrar tier list de ${t.creator_name}`}
                 >
                   ✕
@@ -156,7 +156,7 @@ export default function TierListGalleryPage() {
               </h3>
               <button
                 onClick={() => setConfirmDelete(null)}
-                className="text-gray-500 hover:text-white text-sm"
+                className="text-tdf-muted hover:text-white text-sm"
                 aria-label="Cerrar"
               >
                 ✕

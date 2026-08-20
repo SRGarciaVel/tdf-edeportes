@@ -24,7 +24,14 @@
   /* panel con esquinas cortadas en diagonal, estilo cabinet/HUD de SF6 —
      reemplaza el rectángulo plano que teníamos antes. Un solo clip-path
      reutilizado en toda la web para consistencia (cards de nav, eventos,
-     jugadores, staff, modal). */
+     jugadores, staff, modal).
+
+     El degradado magenta->púrpura es el mismo ángulo y los mismos
+     colores del wordmark real de TDF (no un gris inventado) — le da
+     volumen a las cards en vez de un fondo plano, y refuerza identidad
+     de marca en vez de textura genérica (conversación de diseño,
+     20-08-2026). Muy sutil a propósito (10% de opacidad), no debe
+     competir con el contenido de arriba. */
   .hud-frame {
     @apply border border-tdf-line relative;
     clip-path: polygon(
@@ -34,6 +41,12 @@
       100% calc(100% - 14px),
       calc(100% - 14px) 100%,
       0 100%
+    );
+    background-image: linear-gradient(
+      135deg,
+      rgba(196, 20, 122, 0.1) 0%,
+      rgba(91, 42, 134, 0.1) 55%,
+      transparent 100%
     );
     box-shadow: 0 8px 28px -16px rgba(196, 20, 122, 0.45);
   }

@@ -25,7 +25,13 @@ const PLACEHOLDER_LEADERBOARD: LeaderboardEntry[] = [
   { rank: 10, username: "donjavierlive", points: 39500 },
 ];
 
-function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 3 }) {
+function PodiumCard({
+  entry,
+  place,
+}: {
+  entry: LeaderboardEntry;
+  place: 1 | 2 | 3;
+}) {
   const isFirst = place === 1;
   return (
     <div
@@ -33,13 +39,13 @@ function PodiumCard({ entry, place }: { entry: LeaderboardEntry; place: 1 | 2 | 
         isFirst ? "sm:-translate-y-4" : ""
       }`}
     >
-      <span className="font-mono text-xs text-gray-500">#{place}</span>
+      <span className="font-mono text-xs text-tdf-muted">#{place}</span>
       <InitialsAvatar seed={entry.username} size={isFirst ? 16 : 12} />
       <p className="font-semibold text-center">{entry.username}</p>
       <p className="font-mono text-tdf-magenta font-bold text-lg">
         {entry.points.toLocaleString("es-CL")}
       </p>
-      <p className="font-mono text-[10px] uppercase text-gray-600">Puntos</p>
+      <p className="font-mono text-[10px] uppercase text-tdf-muted">Puntos</p>
     </div>
   );
 }
@@ -52,7 +58,7 @@ export default function PuntosPage() {
     <Layout>
       <SectionLabel index="08">Ranking de la comunidad</SectionLabel>
       <h1 className="text-3xl font-bold mb-2">Puntos</h1>
-      <p className="text-gray-500 mb-2 max-w-xl">
+      <p className="text-tdf-muted mb-2 max-w-xl font-body">
         Los espectadores más activos del chat y el stream.
       </p>
       <p className="font-mono text-xs text-amber-500/80 mb-10 border border-amber-500/30 inline-block px-2 py-1">
@@ -69,7 +75,7 @@ export default function PuntosPage() {
       <div className="hud-frame bg-tdf-charcoal overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-tdf-line font-mono text-xs uppercase text-gray-500">
+            <tr className="border-b border-tdf-line font-mono text-xs uppercase text-tdf-muted">
               <th className="text-left px-4 py-3">Rank</th>
               <th className="text-left px-4 py-3">Usuario</th>
               <th className="text-right px-4 py-3">Puntos</th>
@@ -77,8 +83,13 @@ export default function PuntosPage() {
           </thead>
           <tbody>
             {rest.map((entry) => (
-              <tr key={entry.username} className="border-b border-tdf-line/60 last:border-0">
-                <td className="px-4 py-3 font-mono text-gray-500">{entry.rank}</td>
+              <tr
+                key={entry.username}
+                className="border-b border-tdf-line/60 last:border-0"
+              >
+                <td className="px-4 py-3 font-mono text-tdf-muted">
+                  {entry.rank}
+                </td>
                 <td className="px-4 py-3 flex items-center gap-3">
                   <InitialsAvatar seed={entry.username} size={7} />
                   {entry.username}

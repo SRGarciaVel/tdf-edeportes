@@ -14,24 +14,38 @@ function formatDate(iso: string): string {
 }
 
 function MatchRow({ match }: { match: CFNMatchRead }) {
-  const resultLabel = match.won === true ? "WIN" : match.won === false ? "LOSE" : "?";
+  const resultLabel =
+    match.won === true ? "WIN" : match.won === false ? "LOSE" : "?";
   const resultColor =
-    match.won === true ? "text-emerald-400" : match.won === false ? "text-red-400" : "text-gray-500";
+    match.won === true
+      ? "text-emerald-400"
+      : match.won === false
+        ? "text-red-400"
+        : "text-tdf-muted";
 
   return (
     <div className="flex items-center justify-between gap-3 py-2 border-b border-tdf-line/60 last:border-0">
       <div className="min-w-0">
-        <p className="font-mono text-[11px] text-gray-600">{formatDate(match.played_at)}</p>
+        <p className="font-mono text-[11px] text-tdf-muted">
+          {formatDate(match.played_at)}
+        </p>
         <p className="text-sm truncate">
-          <span className={characterColorClass(match.character_name)}>{match.character_name ?? "?"}</span>
-          <span className="text-gray-600"> vs </span>
+          <span className={characterColorClass(match.character_name)}>
+            {match.character_name ?? "?"}
+          </span>
+          <span className="text-tdf-muted"> vs </span>
           <span className="text-gray-300">{match.opponent_name ?? "?"}</span>
           {match.opponent_character && (
-            <span className={characterColorClass(match.opponent_character)}> ({match.opponent_character})</span>
+            <span className={characterColorClass(match.opponent_character)}>
+              {" "}
+              ({match.opponent_character})
+            </span>
           )}
         </p>
       </div>
-      <span className={`font-mono text-xs font-bold shrink-0 ${resultColor}`}>{resultLabel}</span>
+      <span className={`font-mono text-xs font-bold shrink-0 ${resultColor}`}>
+        {resultLabel}
+      </span>
     </div>
   );
 }
@@ -68,13 +82,13 @@ export default function MatchHistoryModal({
         <div className="px-6 py-4 border-b border-tdf-line flex items-center justify-between shrink-0">
           <div>
             <h2 className="font-semibold">{playerName}</h2>
-            <p className="font-mono text-xs text-gray-500">
+            <p className="font-mono text-xs text-tdf-muted">
               Últimas partidas · {days} día{days > 1 ? "s" : ""}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-white font-mono text-sm"
+            className="text-tdf-muted hover:text-white font-mono text-sm"
             aria-label="Cerrar"
           >
             ✕
@@ -82,10 +96,18 @@ export default function MatchHistoryModal({
         </div>
 
         <div className="px-6 py-2 overflow-y-auto">
-          {error && <p className="text-red-400 text-sm py-4">No se pudo cargar el historial.</p>}
-          {!error && matches === null && <p className="text-gray-500 text-sm py-4">Cargando...</p>}
+          {error && (
+            <p className="text-red-400 text-sm py-4">
+              No se pudo cargar el historial.
+            </p>
+          )}
+          {!error && matches === null && (
+            <p className="text-tdf-muted text-sm py-4 font-body">Cargando...</p>
+          )}
           {matches !== null && matches.length === 0 && (
-            <p className="text-gray-500 text-sm py-4">Sin partidas en este período.</p>
+            <p className="text-tdf-muted text-sm py-4 font-body">
+              Sin partidas en este período.
+            </p>
           )}
           {matches?.map((m, i) => (
             <MatchRow key={i} match={m} />

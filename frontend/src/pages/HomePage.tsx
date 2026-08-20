@@ -45,7 +45,7 @@ export default function HomePage() {
               />
             </h1>
             <div className="flex flex-col gap-6">
-              <p className="text-lg text-gray-400 max-w-xl">
+              <p className="text-lg text-tdf-muted max-w-xl font-body">
                 Streams, torneos y una comunidad que crece jugando Third Strike,
                 Street Fighter 6 y cualquier otro FG que se cruce.
               </p>
@@ -75,7 +75,7 @@ export default function HomePage() {
       <section className="mb-12">
         <SectionLabel index="02">En vivo</SectionLabel>
         <TwitchEmbed />
-        <p className="font-mono text-xs text-gray-500 mt-2">
+        <p className="font-mono text-xs text-tdf-muted mt-2">
           También puedes verlo directo en{" "}
           <a
             href="https://www.twitch.tv/tdfedeportes"
@@ -102,7 +102,7 @@ export default function HomePage() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-xl font-semibold">{nextEvent.title}</p>
-              <p className="font-mono text-xs text-gray-500 mt-1">
+              <p className="font-mono text-xs text-tdf-muted mt-1">
                 {new Date(nextEvent.start_at).toLocaleString("es-CL", {
                   dateStyle: "long",
                   timeStyle: "short",
@@ -150,7 +150,7 @@ export default function HomePage() {
             <p className="text-lg font-semibold text-tdf-magenta mb-1">
               {item.label}
             </p>
-            <p className="text-sm text-gray-500">{item.desc}</p>
+            <p className="text-sm text-tdf-muted font-body">{item.desc}</p>
           </Link>
         ))}
       </section>

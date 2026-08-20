@@ -38,7 +38,9 @@ export default function TwitchChatPanel() {
         style={{ right: open ? 0 : "-100%" }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-tdf-line shrink-0">
-          <span className="font-mono text-xs uppercase text-gray-400">Chat de Twitch</span>
+          <span className="font-mono text-xs uppercase text-tdf-muted">
+            Chat de Twitch
+          </span>
           <button
             onClick={() => setOpen(false)}
             className="font-mono text-xs uppercase text-tdf-magenta hover:text-white transition-colors"

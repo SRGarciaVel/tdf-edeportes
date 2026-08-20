@@ -12,7 +12,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <main className="min-h-screen bg-tdf-dark text-white flex items-center justify-center">
-        <p className="text-gray-400">Cargando...</p>
+        <p className="text-tdf-muted font-body">Cargando...</p>
       </main>
     );
   }

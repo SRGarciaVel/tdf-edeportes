@@ -39,13 +39,13 @@ export default function AuthCallbackPage() {
           <p className="text-tdf-magenta font-semibold">
             No se pudo completar el login
           </p>
-          <p className="text-sm text-gray-400">{error}</p>
+          <p className="text-sm text-tdf-muted font-body">{error}</p>
           <a href="/" className="text-tdf-purple underline text-sm">
             Volver al inicio
           </a>
         </>
       ) : (
-        <p className="text-gray-400">Completando login con Twitch...</p>
+        <p className="text-tdf-muted font-body">Completando login con Twitch...</p>
       )}
     </main>
   );

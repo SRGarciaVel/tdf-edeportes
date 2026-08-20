@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.core.limiter import limiter
 from app.models import CFNMatch, CFNProfile, CFNRegistration, User
 from app.schemas.cfn import (
+    CardBackgroundUpdate,
     CFNMatchRead,
     CFNMatchStats,
     CFNPlayerRead,
@@ -45,6 +46,7 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
             is_tdf=reg.is_tdf,
             liquipedia_url=reg.liquipedia_url,
             avatar_url=reg.avatar_override or (user.avatar_url if user else None),
+            card_background_url=reg.card_background_url,
             league_rank=profile.league_rank if profile else None,
             league_points=profile.league_points if profile else None,
             master_rating=profile.master_rating if profile else None,
@@ -333,3 +335,70 @@ def reject_registration(
     db.commit()
     db.refresh(registration)
     return registration
+
+
+@router.patch("/register/me/background", response_model=CFNRegistrationRead)
+def update_my_card_background(
+    payload: CardBackgroundUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_authenticated)],
+) -> CFNRegistration:
+    """La propia persona sube o cambia la foto de fondo de SU card,
+    cuando quiera — no solo al momento de registrarse (a diferencia de
+    avatar_override, que hoy solo se pone en POST /register). Requiere
+    tener una solicitud ya aprobada: no tiene sentido personalizar la
+    card de un registro que ni siquiera es público todavía."""
+    registration = (
+        db.query(CFNRegistration).filter(CFNRegistration.user_id == user.id).first()
+    )
+    if registration is None or registration.status != "approved":
+        raise HTTPException(
+            403, "Necesitás tener tu registro aprobado para personalizar tu card"
+        )
+    registration.card_background_url = payload.card_background_url
+    db.commit()
+    db.refresh(registration)
+    return registration
+
+
+def _get_approved_registration(db: Session, cfn_id: str) -> CFNRegistration:
+    registration = (
+        db.query(CFNRegistration)
+        .filter(CFNRegistration.cfn_id == cfn_id, CFNRegistration.status == "approved")
+        .first()
+    )
+    if registration is None:
+        raise HTTPException(404, "Jugador no encontrado")
+    return registration
+
+
+@router.post("/players/{cfn_id}/background", response_model=CFNRegistrationRead)
+def set_player_card_background(
+    cfn_id: str,
+    payload: CardBackgroundUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    _staff: Annotated[User, Depends(require_staff)],
+) -> CFNRegistration:
+    """Moderación — solo staff. Sube o reemplaza la foto de fondo de
+    CUALQUIER jugador del roster, tenga o no una puesta ya (mismo
+    endpoint sirve para "subir" y para "reemplazar", la diferencia es
+    solo si card_background_url ya tenía algo antes)."""
+    registration = _get_approved_registration(db, cfn_id)
+    registration.card_background_url = payload.card_background_url
+    db.commit()
+    db.refresh(registration)
+    return registration
+
+
+@router.delete("/players/{cfn_id}/background", status_code=204)
+def remove_player_card_background(
+    cfn_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    _staff: Annotated[User, Depends(require_staff)],
+) -> None:
+    """Moderación — solo staff. Saca la foto de fondo de un jugador
+    (vuelve al estado por default), sin necesitar que la propia persona
+    haga nada — para cuando hay que moderar algo indebido ya mismo."""
+    registration = _get_approved_registration(db, cfn_id)
+    registration.card_background_url = None
+    db.commit()

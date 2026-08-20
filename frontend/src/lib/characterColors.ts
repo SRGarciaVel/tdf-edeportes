@@ -63,19 +63,118 @@ export function characterColorClass(name: string | null | undefined): string {
   return CHARACTER_COLORS[name.toLowerCase()] ?? DEFAULT_COLOR;
 }
 
+// Valores hex reales de la paleta de Tailwind, solo para los tonos que
+// CHARACTER_COLORS usa arriba — hace falta esto aparte porque Tailwind
+// no puede armar una clase de color a partir de un hex dinámico en
+// tiempo de ejecución (su JIT necesita ver el nombre de la clase
+// completo y literal en el código fuente para incluirlo en el build
+// final, no puede resolver algo como `text-[${hex}]` armado en runtime).
+// Si se agrega un tono nuevo en CHARACTER_COLORS, agregar su hex acá
+// también — mismo tono, dos representaciones.
+const TAILWIND_HEX: Record<string, string> = {
+  "fuchsia-400": "#e879f9",
+  "fuchsia-500": "#d946ef",
+  "red-400": "#f87171",
+  "red-500": "#ef4444",
+  "red-600": "#dc2626",
+  "blue-400": "#60a5fa",
+  "blue-700": "#1d4ed8",
+  "lime-400": "#a3e635",
+  "emerald-400": "#34d399",
+  "emerald-500": "#10b981",
+  "yellow-400": "#facc15",
+  "yellow-500": "#eab308",
+  "orange-400": "#fb923c",
+  "orange-500": "#f97316",
+  "orange-600": "#ea580c",
+  "purple-400": "#c084fc",
+  "purple-500": "#a855f7",
+  "purple-600": "#9333ea",
+  "sky-400": "#38bdf8",
+  "sky-500": "#0ea5e9",
+  "teal-400": "#2dd4bf",
+  "teal-500": "#14b8a6",
+  "green-500": "#22c55e",
+  "amber-400": "#fbbf24",
+  "amber-500": "#f59e0b",
+  "amber-600": "#d97706",
+  "amber-700": "#b45309",
+  "violet-400": "#a78bfa",
+  "violet-500": "#8b5cf6",
+  "pink-400": "#f472b6",
+  "stone-300": "#d6d3d1",
+  "rose-400": "#fb7185",
+  "gray-400": "#9ca3af",
+  "cyan-300": "#67e8f9",
+};
+
+/** Valor hex real (no clase de Tailwind) del color de un personaje — para
+ * estilos inline donde el color cambia por jugador en tiempo de
+ * ejecución y una clase de Tailwind no sirve (ej. el degradado del
+ * anillo del avatar en /jugadores). Deriva del mismo mapa de arriba,
+ * así que un personaje nuevo agregado a CHARACTER_COLORS ya tiene su
+ * hex automático mientras el tono ya exista en TAILWIND_HEX. */
+export function characterColorHex(name: string | null | undefined): string {
+  const tone = characterColorClass(name).replace("text-", "");
+  return TAILWIND_HEX[tone] ?? "#5B2A86"; // tdf-purple como fallback
+}
+
 // Rosters para la tier list (SPECS.md — sección de tier lists). Nombres
 // tal cual los usa Capcom, mismo casing que se ve en el selector de
 // personaje del juego real.
 export const SF6_ROSTER = [
-  "A.K.I.", "Akuma", "Alex", "Blanka", "C. Viper", "Cammy", "Chun-Li",
-  "Dee Jay", "Dhalsim", "Ed", "E. Honda", "Elena", "Guile", "Ingrid",
-  "Jamie", "JP", "Juri", "Ken", "Kimberly", "Lily", "Luke", "M. Bison",
-  "Mai", "Manon", "Marisa", "Rashid", "Ryu", "Sagat", "Terry", "Yasmine",
+  "A.K.I.",
+  "Akuma",
+  "Alex",
+  "Blanka",
+  "C. Viper",
+  "Cammy",
+  "Chun-Li",
+  "Dee Jay",
+  "Dhalsim",
+  "Ed",
+  "E. Honda",
+  "Elena",
+  "Guile",
+  "Ingrid",
+  "Jamie",
+  "JP",
+  "Juri",
+  "Ken",
+  "Kimberly",
+  "Lily",
+  "Luke",
+  "M. Bison",
+  "Mai",
+  "Manon",
+  "Marisa",
+  "Rashid",
+  "Ryu",
+  "Sagat",
+  "Terry",
+  "Yasmine",
   "Zangief",
 ];
 
 export const THIRD_STRIKE_ROSTER = [
-  "Alex", "Chun-Li", "Dudley", "Elena", "Gill", "Hugo", "Ibuki", "Ken",
-  "Makoto", "Necro", "Oro", "Q", "Remy", "Ryu", "Sean", "Twelve", "Urien",
-  "Yang", "Yun", "Akuma",
+  "Alex",
+  "Chun-Li",
+  "Dudley",
+  "Elena",
+  "Gill",
+  "Hugo",
+  "Ibuki",
+  "Ken",
+  "Makoto",
+  "Necro",
+  "Oro",
+  "Q",
+  "Remy",
+  "Ryu",
+  "Sean",
+  "Twelve",
+  "Urien",
+  "Yang",
+  "Yun",
+  "Akuma",
 ];

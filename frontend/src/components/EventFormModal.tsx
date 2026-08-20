@@ -1,5 +1,10 @@
 import { useState } from "react";
-import type { EventFormValues, EventItem, EventType, EventVisibility } from "../lib/types";
+import type {
+  EventFormValues,
+  EventItem,
+  EventType,
+  EventVisibility,
+} from "../lib/types";
 
 interface Props {
   initialDate: string | null; // YYYY-MM-DD, para prellenar al crear
@@ -30,13 +35,19 @@ export default function EventFormModal({
       ? toLocalInputValue(editingEvent.start_at)
       : initialDate
         ? `${initialDate}T18:00`
-        : ""
+        : "",
   );
-  const [endAt, setEndAt] = useState(toLocalInputValue(editingEvent?.end_at ?? null));
-  const [description, setDescription] = useState(editingEvent?.description ?? "");
-  const [externalUrl, setExternalUrl] = useState(editingEvent?.external_url ?? "");
+  const [endAt, setEndAt] = useState(
+    toLocalInputValue(editingEvent?.end_at ?? null),
+  );
+  const [description, setDescription] = useState(
+    editingEvent?.description ?? "",
+  );
+  const [externalUrl, setExternalUrl] = useState(
+    editingEvent?.external_url ?? "",
+  );
   const [visibility, setVisibility] = useState<EventVisibility>(
-    editingEvent?.visibility ?? "staff"
+    editingEvent?.visibility ?? "staff",
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -118,7 +129,11 @@ export default function EventFormModal({
               type="datetime-local"
               value={startAt}
               onChange={(e) => setStartAt(e.target.value)}
-              min={editingEvent ? undefined : toLocalInputValue(new Date().toISOString())}
+              min={
+                editingEvent
+                  ? undefined
+                  : toLocalInputValue(new Date().toISOString())
+              }
               className="bg-black/40 border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-white transition-colors"
             />
           </label>
@@ -170,7 +185,7 @@ export default function EventFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="text-sm text-gray-400 hover:text-white"
+              className="text-sm text-tdf-muted hover:text-white"
             >
               Cancelar
             </button>

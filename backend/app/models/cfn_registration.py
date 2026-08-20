@@ -53,6 +53,14 @@ class CFNRegistration(Base):
     # /jugadores cae al avatar de Twitch del usuario si tiene cuenta, o
     # al círculo de iniciales de siempre si no tiene ninguno de los dos
     avatar_override: Mapped[str | None] = mapped_column(String, nullable=True)
+    # foto de fondo de la card en /jugadores — a diferencia de
+    # avatar_override (la foto de perfil chica), esto es la imagen grande
+    # que le da identidad a la esquina de la card. La persona la puede
+    # subir/cambiar cuando quiera después de estar aprobada (no solo al
+    # registrarse), y staff la puede reemplazar o sacar en cualquier
+    # momento si hace falta moderar — ver PATCH /cfn/register/me/background
+    # (self) y POST/DELETE /cfn/players/{cfn_id}/background (staff).
+    card_background_url: Mapped[str | None] = mapped_column(String, nullable=True)
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

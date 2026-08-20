@@ -125,7 +125,7 @@ export default function TierListSharedPage() {
   if (error) {
     return (
       <Layout>
-        <p className="text-gray-500">No se encontró esta tier list.</p>
+        <p className="text-tdf-muted font-body">No se encontró esta tier list.</p>
         <Link
           to="/tierlist"
           className="text-tdf-purple hover:text-tdf-magenta underline"
@@ -139,7 +139,7 @@ export default function TierListSharedPage() {
   if (!data) {
     return (
       <Layout>
-        <p className="text-gray-500">Cargando...</p>
+        <p className="text-tdf-muted font-body">Cargando...</p>
       </Layout>
     );
   }
@@ -165,7 +165,7 @@ export default function TierListSharedPage() {
     <Layout>
       <SectionLabel index="09">Tier list</SectionLabel>
       <h1 className="text-3xl font-bold mb-2">Tier list de la comunidad</h1>
-      <p className="text-gray-500 mb-8">
+      <p className="text-tdf-muted mb-8 font-body">
         Armada por <span className="text-tdf-purple">{data.creator_name}</span>
         {data.template_name && (
           <>
@@ -251,7 +251,7 @@ export default function TierListSharedPage() {
               </h3>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="text-gray-500 hover:text-white text-sm"
+                className="text-tdf-muted hover:text-white text-sm"
                 aria-label="Cerrar"
               >
                 ✕

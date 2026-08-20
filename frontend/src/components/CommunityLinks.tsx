@@ -24,11 +24,19 @@ function SevenTvIcon({ size = 18 }: { size?: number }) {
 }
 
 const ICON_LINKS = [
-  { label: "Twitch", href: "https://www.twitch.tv/tdfedeportes", Icon: SiTwitch },
+  {
+    label: "Twitch",
+    href: "https://www.twitch.tv/tdfedeportes",
+    Icon: SiTwitch,
+  },
   // corregido contra el "About" real de Twitch (11-08-2026) — el que
   // había antes no era el invite correcto del club
   { label: "Discord", href: "https://discord.gg/2qV394FD9w", Icon: SiDiscord },
-  { label: "Instagram", href: "https://www.instagram.com/tdf_edeportes", Icon: SiInstagram },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/tdf_edeportes",
+    Icon: SiInstagram,
+  },
   { label: "X", href: "https://x.com/TDFedeportes", Icon: SiX },
   {
     label: "7TV",
@@ -37,7 +45,11 @@ const ICON_LINKS = [
   },
 ];
 
-export default function CommunityLinks({ className = "" }: { className?: string }) {
+export default function CommunityLinks({
+  className = "",
+}: {
+  className?: string;
+}) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       {ICON_LINKS.map(({ label, href, Icon }) => (
@@ -47,7 +59,7 @@ export default function CommunityLinks({ className = "" }: { className?: string 
           target="_blank"
           rel="noreferrer"
           aria-label={label}
-          className="text-gray-400 hover:text-tdf-magenta transition-colors"
+          className="text-tdf-muted hover:text-tdf-magenta transition-colors"
         >
           <Icon size={18} />
         </a>

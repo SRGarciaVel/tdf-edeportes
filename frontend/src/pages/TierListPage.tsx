@@ -728,7 +728,7 @@ export default function TierListPage() {
           Ver tier lists de la comunidad →
         </Link>
       </div>
-      <p className="text-gray-500 mb-8 max-w-xl">
+      <p className="text-tdf-muted mb-8 max-w-xl font-body">
         Elige una plantilla armada por la comunidad, o crea la tuya si tienes
         sesión iniciada. Arrastra cada ítem al tier que quieras (y también
         dentro de un mismo tier, para reordenar), agrega o saca tiers con los
@@ -740,7 +740,7 @@ export default function TierListPage() {
       {!activeTemplate && (
         <div className="mb-10">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-mono text-xs uppercase text-gray-400">
+            <h2 className="font-mono text-xs uppercase text-tdf-muted">
               Plantillas de la comunidad
             </h2>
             {user ? (
@@ -751,7 +751,7 @@ export default function TierListPage() {
                 {creating ? "Cancelar" : "+ Crear una nueva"}
               </button>
             ) : (
-              <span className="font-mono text-[11px] text-gray-600">
+              <span className="font-mono text-[11px] text-tdf-muted">
                 Inicia sesión con Twitch para crear una plantilla nueva.
               </span>
             )}
@@ -780,7 +780,7 @@ export default function TierListPage() {
                   onChange={handleFilesSelected}
                   className="hidden"
                 />
-                <span className="font-mono text-[11px] text-gray-600">
+                <span className="font-mono text-[11px] text-tdf-muted">
                   Se redimensionan solas a 120x120, {newItems.length} cargada
                   {newItems.length === 1 ? "" : "s"}.
                 </span>
@@ -822,10 +822,10 @@ export default function TierListPage() {
           )}
 
           {loadingTemplates && (
-            <p className="text-sm text-gray-600">Cargando...</p>
+            <p className="text-sm text-tdf-muted font-body">Cargando...</p>
           )}
           {!loadingTemplates && templates.length === 0 && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-tdf-muted font-body">
               Todavía no hay ninguna plantilla, sé el primero en crear una.
             </p>
           )}
@@ -844,7 +844,7 @@ export default function TierListPage() {
                   >
                     {t.name}
                   </p>
-                  <p className="font-mono text-xs text-gray-500 mt-1">
+                  <p className="font-mono text-xs text-tdf-muted mt-1">
                     {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
                     <span className="text-tdf-purple">{t.creator_name}</span>
                   </p>
@@ -858,7 +858,7 @@ export default function TierListPage() {
                       setConfirmDeleteTemplate(t);
                     }}
                     disabled={deletingTemplateId === t.id}
-                    className="absolute top-2 right-2 text-gray-500 hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
+                    className="absolute top-2 right-2 text-tdf-muted hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
                     aria-label={`Borrar plantilla ${t.name}`}
                   >
                     ✕
@@ -887,7 +887,7 @@ export default function TierListPage() {
                   </h3>
                   <button
                     onClick={() => setConfirmDeleteTemplate(null)}
-                    className="text-gray-500 hover:text-white text-sm"
+                    className="text-tdf-muted hover:text-white text-sm"
                     aria-label="Cerrar"
                   >
                     ✕
@@ -901,7 +901,7 @@ export default function TierListPage() {
                   </span>
                   ?
                 </p>
-                <p className="font-mono text-[11px] text-gray-500 mb-5">
+                <p className="font-mono text-[11px] text-tdf-muted mb-5">
                   Los rankings ya compartidos con esta plantilla van a seguir
                   funcionando igual, pero nadie va a poder crear uno nuevo con
                   ella.
@@ -933,7 +933,7 @@ export default function TierListPage() {
       {activeTemplate && (
         <>
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-            <p className="font-mono text-xs text-gray-500">
+            <p className="font-mono text-xs text-tdf-muted">
               Usando: <span className="text-white">{activeTemplate.name}</span>{" "}
               · por{" "}
               <span className="text-tdf-purple">
@@ -947,7 +947,7 @@ export default function TierListPage() {
                   className={`font-mono text-xs uppercase px-3 py-1.5 border transition-colors ${
                     editMode
                       ? "bg-tdf-magenta border-tdf-magenta text-white"
-                      : "border-tdf-line text-gray-400 hover:border-tdf-magenta hover:text-white"
+                      : "border-tdf-line text-tdf-muted hover:border-tdf-magenta hover:text-white"
                   }`}
                 >
                   {editMode ? "Listo" : "Editar"}
@@ -955,7 +955,7 @@ export default function TierListPage() {
               )}
               <button
                 onClick={() => setActiveTemplate(null)}
-                className="font-mono text-xs text-gray-500 hover:text-white transition-colors"
+                className="font-mono text-xs text-tdf-muted hover:text-white transition-colors"
               >
                 ← Elegir otra plantilla
               </button>
@@ -1018,7 +1018,7 @@ export default function TierListPage() {
                   >
                     <button
                       onClick={() => setSettingsRowId(row.id)}
-                      className="text-gray-400 hover:text-tdf-magenta transition-colors text-sm leading-none"
+                      className="text-tdf-muted hover:text-tdf-magenta transition-colors text-sm leading-none"
                       aria-label="Configurar tier"
                     >
                       ⚙
@@ -1027,7 +1027,7 @@ export default function TierListPage() {
                       <button
                         onClick={() => moveRow(row.id, -1)}
                         disabled={i === 0}
-                        className="text-gray-500 hover:text-white disabled:opacity-20 text-[10px] leading-none px-1"
+                        className="text-tdf-muted hover:text-white disabled:opacity-20 text-[10px] leading-none px-1"
                         aria-label="Subir tier"
                       >
                         ▲
@@ -1035,7 +1035,7 @@ export default function TierListPage() {
                       <button
                         onClick={() => moveRow(row.id, 1)}
                         disabled={i === rows.length - 1}
-                        className="text-gray-500 hover:text-white disabled:opacity-20 text-[10px] leading-none px-1"
+                        className="text-tdf-muted hover:text-white disabled:opacity-20 text-[10px] leading-none px-1"
                         aria-label="Bajar tier"
                       >
                         ▼
@@ -1053,7 +1053,7 @@ export default function TierListPage() {
               + Agregar tier
             </button>
 
-            <p className="font-mono text-xs uppercase text-gray-500 mb-2">
+            <p className="font-mono text-xs uppercase text-tdf-muted mb-2">
               Sin ranquear
             </p>
             <SortableZone
@@ -1097,19 +1097,19 @@ export default function TierListPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-mono text-xs uppercase text-gray-400">
+                  <h3 className="font-mono text-xs uppercase text-tdf-muted">
                     Editar tier
                   </h3>
                   <button
                     onClick={() => setSettingsRowId(null)}
-                    className="text-gray-500 hover:text-white text-sm"
+                    className="text-tdf-muted hover:text-white text-sm"
                     aria-label="Cerrar"
                   >
                     ✕
                   </button>
                 </div>
 
-                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">
+                <p className="font-mono text-[10px] uppercase text-tdf-muted mb-2">
                   Color
                 </p>
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -1127,7 +1127,7 @@ export default function TierListPage() {
                   ))}
                 </div>
 
-                <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">
+                <p className="font-mono text-[10px] uppercase text-tdf-muted mb-2">
                   Nombre
                 </p>
                 <input
@@ -1182,7 +1182,7 @@ export default function TierListPage() {
             <div className="mt-6 flex flex-col gap-1.5 max-w-xs">
               <label
                 htmlFor="guest-name"
-                className="font-mono text-[11px] uppercase text-gray-500"
+                className="font-mono text-[11px] uppercase text-tdf-muted"
               >
                 Tu nombre (para la galería de la comunidad)
               </label>
@@ -1237,7 +1237,7 @@ export default function TierListPage() {
                   </h3>
                   <button
                     onClick={() => setConfirmDeleteItem(null)}
-                    className="text-gray-500 hover:text-white text-sm"
+                    className="text-tdf-muted hover:text-white text-sm"
                     aria-label="Cerrar"
                   >
                     ✕

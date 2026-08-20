@@ -1,4 +1,10 @@
-import { getMonthGrid, MONTH_NAMES, WEEKDAY_NAMES, dateKey, eventDateKeys } from "../lib/calendar";
+import {
+  getMonthGrid,
+  MONTH_NAMES,
+  WEEKDAY_NAMES,
+  dateKey,
+  eventDateKeys,
+} from "../lib/calendar";
 import type { EventItem } from "../lib/types";
 
 const TYPE_DOT_COLOR: Record<string, string> = {
@@ -44,7 +50,7 @@ export default function MonthCalendar({
       <div className="flex items-center justify-between px-4 py-3 border-b border-tdf-line">
         <button
           onClick={onPrevMonth}
-          className="font-mono text-gray-400 hover:text-tdf-magenta transition-colors px-2"
+          className="font-mono text-tdf-muted hover:text-tdf-magenta transition-colors px-2"
           aria-label="Mes anterior"
         >
           ←
@@ -54,14 +60,14 @@ export default function MonthCalendar({
         </h2>
         <button
           onClick={onNextMonth}
-          className="font-mono text-gray-400 hover:text-tdf-magenta transition-colors px-2"
+          className="font-mono text-tdf-muted hover:text-tdf-magenta transition-colors px-2"
           aria-label="Mes siguiente"
         >
           →
         </button>
       </div>
 
-      <div className="grid grid-cols-7 text-center font-mono text-xs uppercase text-gray-500 border-b border-tdf-line">
+      <div className="grid grid-cols-7 text-center font-mono text-xs uppercase text-tdf-muted border-b border-tdf-line">
         {WEEKDAY_NAMES.map((day) => (
           <div key={day} className="py-2">
             {day}
@@ -80,10 +86,12 @@ export default function MonthCalendar({
               key={cell.key}
               onClick={() => onSelectDate(cell.key)}
               className={`aspect-square border-b border-r border-tdf-line/60 p-1.5 text-left flex flex-col gap-1 transition-colors relative ${
-                cell.isCurrentMonth ? "text-white" : "text-gray-700"
+                cell.isCurrentMonth ? "text-white" : "text-tdf-muted"
               } ${isSelected ? "" : "hover:bg-white/5"}`}
             >
-              {isSelected && <span className="spray-mark absolute inset-0" aria-hidden />}
+              {isSelected && (
+                <span className="spray-mark absolute inset-0" aria-hidden />
+              )}
               <span
                 className={`relative z-10 font-mono text-xs ${
                   isToday ? "font-bold text-tdf-magenta" : ""

@@ -67,7 +67,9 @@ export default function EncounterNotifications() {
           <span className="font-mono text-[11px] bg-tdf-magenta/20 text-tdf-magenta px-1.5 py-0.5 rounded-full">
             {encounters.length}
           </span>
-          <span className="text-gray-500 text-xs">{collapsed ? "▲" : "▼"}</span>
+          <span className="text-tdf-muted text-xs">
+            {collapsed ? "▲" : "▼"}
+          </span>
         </button>
 
         {!collapsed && (
@@ -83,7 +85,7 @@ export default function EncounterNotifications() {
                     vs{" "}
                     <span className="text-tdf-purple">{e.player_b_name}</span>
                   </p>
-                  <p className="font-mono text-[10px] text-gray-500">
+                  <p className="font-mono text-[10px] text-tdf-muted">
                     {timeAgo(e.played_at)}
                   </p>
                 </div>

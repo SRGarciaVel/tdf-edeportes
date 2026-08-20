@@ -21,7 +21,11 @@ export default function Navbar() {
     <header className="border-b border-tdf-line bg-tdf-charcoal/60 backdrop-blur sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-6">
         <NavLink to="/" className="flex items-center gap-2 shrink-0">
-          <img src="/brand/logo-wordmark.webp" alt="TDF" className="h-7 w-auto" />
+          <img
+            src="/brand/logo-wordmark.webp"
+            alt="TDF"
+            className="h-7 w-auto"
+          />
           <span className="text-white/60 text-sm font-mono">e-deportes</span>
         </NavLink>
 
@@ -32,7 +36,7 @@ export default function Navbar() {
               to={link.to}
               className={({ isActive }) =>
                 `hover:text-tdf-magenta transition-colors ${
-                  isActive ? "text-tdf-magenta" : "text-gray-400"
+                  isActive ? "text-tdf-magenta" : "text-tdf-muted"
                 }`
               }
             >
@@ -63,7 +67,7 @@ export default function Navbar() {
               to={link.to}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                isActive ? "text-tdf-magenta" : "text-gray-400"
+                isActive ? "text-tdf-magenta" : "text-tdf-muted"
               }
             >
               {link.label}

@@ -39,6 +39,11 @@ class CFNPlayerRead(BaseModel):
     # la cuenta que lo registró, si no None — el frontend cae al
     # círculo de iniciales de siempre cuando esto es None
     avatar_url: str | None
+    # foto de fondo de la card — la propia persona la puede subir/cambiar
+    # cuando quiera (no solo al registrarse), y staff la puede
+    # reemplazar o sacar en cualquier momento. None: el frontend cae al
+    # estado por default (sin foto personalizada).
+    card_background_url: str | None
     league_rank: str | None
     league_points: int | None
     master_rating: int | None
@@ -102,6 +107,13 @@ class CFNRegistrationDecision(BaseModel):
     display_name: str | None = None
     is_tdf: bool = False
     liquipedia_url: str | None = None
+
+
+class CardBackgroundUpdate(BaseModel):
+    """Body para subir/reemplazar la foto de fondo de una card — mismo
+    formato/límite que las imágenes de tier list."""
+
+    card_background_url: str = Field(min_length=1, max_length=200_000)
 
 
 class CFNMatchStats(BaseModel):

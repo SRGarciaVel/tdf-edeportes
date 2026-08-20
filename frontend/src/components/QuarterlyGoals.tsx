@@ -10,15 +10,24 @@ const STATUS_LABEL: Record<GoalStatus, string> = {
 const STATUS_COLOR: Record<GoalStatus, string> = {
   en_progreso: "text-tdf-purple",
   cumplido: "text-green-400",
-  descartado: "text-gray-500",
+  descartado: "text-tdf-muted",
 };
 
-export default function QuarterlyGoals({ goals, loading = false }: { goals: QuarterlyGoal[]; loading?: boolean }) {
+export default function QuarterlyGoals({
+  goals,
+  loading = false,
+}: {
+  goals: QuarterlyGoal[];
+  loading?: boolean;
+}) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((q) => (
-          <div key={q} className="border border-white/10 p-4 flex flex-col gap-3">
+          <div
+            key={q}
+            className="border border-white/10 p-4 flex flex-col gap-3"
+          >
             <Skeleton className="h-4 w-8" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-3/4" />
@@ -29,7 +38,9 @@ export default function QuarterlyGoals({ goals, loading = false }: { goals: Quar
   }
 
   if (goals.length === 0) {
-    return <p className="text-sm text-gray-600">Sin objetivos cargados todavía.</p>;
+    return (
+      <p className="text-sm text-tdf-muted font-body">Sin objetivos cargados todavía.</p>
+    );
   }
 
   const byQuarter = new Map<number, QuarterlyGoal[]>();
@@ -49,7 +60,9 @@ export default function QuarterlyGoals({ goals, loading = false }: { goals: Quar
               <li key={goal.id}>
                 <p className="text-sm font-medium">{goal.title}</p>
                 {goal.description && (
-                  <p className="text-xs text-gray-500 mt-0.5">{goal.description}</p>
+                  <p className="text-xs text-tdf-muted mt-0.5 font-body">
+                    {goal.description}
+                  </p>
                 )}
                 <span className={`text-xs ${STATUS_COLOR[goal.status]}`}>
                   {STATUS_LABEL[goal.status]}
@@ -57,7 +70,7 @@ export default function QuarterlyGoals({ goals, loading = false }: { goals: Quar
               </li>
             ))}
             {(byQuarter.get(q) ?? []).length === 0 && (
-              <li className="text-xs text-gray-700">N/D</li>
+              <li className="text-xs text-tdf-muted">N/D</li>
             )}
           </ul>
         </div>

@@ -60,14 +60,14 @@ function ApproveModal({
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-white text-sm"
+            className="text-tdf-muted hover:text-white text-sm"
             aria-label="Cerrar"
           >
             ✕
           </button>
         </div>
 
-        <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">
+        <p className="font-mono text-[10px] uppercase text-tdf-muted mb-2">
           Nombre a mostrar
         </p>
         <input
@@ -85,7 +85,7 @@ function ApproveModal({
           <span className="text-sm text-gray-300">Marcar como TDF</span>
         </label>
 
-        <p className="font-mono text-[10px] uppercase text-gray-500 mb-2">
+        <p className="font-mono text-[10px] uppercase text-tdf-muted mb-2">
           Link de Liquipedia (opcional)
         </p>
         <input
@@ -153,7 +153,7 @@ export default function StaffCfnPage() {
     <Layout>
       <SectionLabel index="05">Street Fighter 6 CFN</SectionLabel>
       <h1 className="text-3xl font-bold mb-2">Solicitudes de CFN</h1>
-      <p className="text-gray-500 mb-8 max-w-xl">
+      <p className="text-tdf-muted mb-8 max-w-xl font-body">
         Gente que pidió sumarse a /jugadores con su propio CFN ID. No aparecen
         ahí hasta que se aprueban acá.
       </p>
@@ -173,13 +173,13 @@ export default function StaffCfnPage() {
       )}
 
       {!loading && error && (
-        <p className="text-gray-500">
+        <p className="text-tdf-muted font-body">
           No se pudo cargar la lista. Intenta de nuevo en un rato.
         </p>
       )}
 
       {!loading && !error && pending.length === 0 && (
-        <p className="text-gray-500">No hay solicitudes pendientes.</p>
+        <p className="text-tdf-muted font-body">No hay solicitudes pendientes.</p>
       )}
 
       {!loading && !error && pending.length > 0 && (
@@ -201,11 +201,11 @@ export default function StaffCfnPage() {
               <div className="flex-1 min-w-[180px]">
                 <p className="font-semibold">
                   {p.display_name}{" "}
-                  <span className="font-mono text-xs text-gray-500">
+                  <span className="font-mono text-xs text-tdf-muted">
                     (@{p.twitch_username})
                   </span>
                 </p>
-                <p className="font-mono text-xs text-gray-600">
+                <p className="font-mono text-xs text-tdf-muted">
                   CFN {p.cfn_id}
                 </p>
               </div>

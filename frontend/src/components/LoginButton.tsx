@@ -27,7 +27,7 @@ export default function LoginButton() {
         )}
         <button
           onClick={logout}
-          className="text-sm text-gray-400 hover:text-white underline"
+          className="text-sm text-tdf-muted hover:text-white underline"
         >
           Salir
         </button>
