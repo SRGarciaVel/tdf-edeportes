@@ -152,6 +152,37 @@ depender de que la conversación se acuerde sola.
 - [ ] Espacio abierto para lo que vaya surgiendo — Seba mencionó "da para
       hartos usos" sin cerrar la lista todavía.
 
+## Ideas paradas — Hub "Third Strike" (sin fecha, sin empezar)
+
+**Origen:** Seba investigó fuentes de datos con Google AI Mode (20-08-2026)
+para un hub similar al de SF6, pero para Third Strike — juego recurrente en
+la comunidad, sin la infraestructura oficial tipo Buckler's Boot Camp que
+tiene SF6. Antes de sumarlo, se verificaron las afirmaciones de esa
+investigación (las respuestas de "modo IA" a veces inventan detalles
+específicos que suenan reales pero no lo son) — acá quedó lo confirmado de
+verdad, no lo que decía la IA de Google sin chequear.
+
+- **Fightcade** — la plataforma donde vive la comunidad competitiva actual
+  de Third Strike. Tiene una API pública real (`fightcade.com/api/`) y un
+  wrapper de código abierto genuino, `fightcade-api` de xBiggs (confirmado
+  en npm/GitHub/JSR, no inventado). El juego está trackeado bajo el ID
+  `sfiii3n` — ojo que también existe `sfiii3nr1` (otra variante de ROM),
+  hay que confirmar cuál juega la comunidad antes de asumir.
+  **Bloqueante activo ahora mismo (confirmado en vivo el 20-08-2026):** la
+  API pública de Fightcade está caída por cambios de Cloudflare — un sitio
+  de terceros que la usa (fightcade.voidtalker.com) muestra el aviso en
+  vivo. No es algo resuelto, es un bloqueo actual. Primer paso obligado al
+  retomar esto: volver a probar si la API ya responde antes de construir
+  nada arriba.
+- **Start.gg** — API GraphQL real y bien documentada, pero para otra cosa:
+  torneos/brackets/resultados de eventos, no estadísticas de jugadores.
+  Complementario, no un reemplazo de Fightcade.
+- **Sin verificar todavía, no confiar sin chequear más:** un repo llamado
+  "3rd_training_lua" para frame data, y DIAMBRA AI (plataforma de
+  entrenamiento de IA para jugar el juego, no pensada como fuente de datos
+  para un sitio — el fit que sugirió la IA de Google parece forzado, hay
+  que confirmarlo antes de darlo por bueno).
+
 ## Notas de proceso
 
 - El orden de fases sigue la priorización directa del CEO: dashboard interno →
