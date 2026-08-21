@@ -149,6 +149,17 @@ depender de que la conversación se acuerde sola.
       mismo patrón — muy probable dado que la URL de la página real usa
       exactamente `/stats/dia/{yyyymm}`, misma convención. Confirmar
       con un fetch directo la próxima vez que se retome.
+
+      **Confirmación final, 21-08-2026:** Seba probó
+      `/api/en/stats/dia/{yyyymm}` a mano y también responde limpio, sin
+      sesión — **los dos endpoints de Meta Actual están 100% confirmados
+      y listos para implementar**, sin ninguna duda técnica pendiente.
+      Estructura del diagrama: por cada personaje, un `total`/`_win_rate`
+      general y un array `values` con el resultado contra cada rival —
+      `val` es un puntaje sobre 10 (5.0 = parejo, más alto = favorable),
+      `thm` un indicador rápido -1/0/1 (probablemente para el color
+      azul/naranja del gráfico real), y `"-.---"` cuando faltan
+      partidas suficientes para ese matchup puntual.
 - [ ] **Notas de parche** — análisis/resumen de los battle change list que
       Capcom publica (`streetfighter.com/6/buckler/battle_change`). Todavía
       sin definir el enfoque técnico (¿scraping y resumen automático?
