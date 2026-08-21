@@ -48,21 +48,23 @@ function Sf6Dropdown() {
         <span className="text-[10px]">{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div className="absolute top-full left-0 mt-2 w-44 hud-frame bg-tdf-charcoal border border-tdf-line py-1 z-50">
-          {SF6_LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              onClick={() => setOpen(false)}
-              className={({ isActive }) =>
-                `block px-3 py-2 hover:text-tdf-magenta hover:bg-tdf-dark/60 transition-colors ${
-                  isActive ? "text-tdf-magenta" : "text-tdf-muted"
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
+        <div className="absolute top-full left-0 mt-2 w-44 z-50">
+          <div className="hud-frame bg-tdf-charcoal border border-tdf-line py-1">
+            {SF6_LINKS.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                onClick={() => setOpen(false)}
+                className={({ isActive }) =>
+                  `block px-3 py-2 hover:text-tdf-magenta hover:bg-tdf-dark/60 transition-colors ${
+                    isActive ? "text-tdf-magenta" : "text-tdf-muted"
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
         </div>
       )}
     </div>
