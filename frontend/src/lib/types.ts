@@ -229,17 +229,23 @@ export interface DiaCharacterRecord {
 // la forma real tiene más anidación de la que necesitamos usar — el
 // resto de campos (sf, _dsort, etc.) no se usan en el frontend, no
 // hace falta tipar todo lo que Capcom manda
+export interface DiaLeagueBucket {
+  opponent_header?: DiaCharacterHeader[];
+  records: DiaCharacterRecord[];
+}
+
+// dos formas reales distintas, confirmadas 21-08-2026 — "overall" trae
+// todo bajo ci.ci_sort (registros con su propio input_type C/M
+// mezclados en una sola lista). "Solo Master" viene separado por tipo
+// de control en la raíz (c = Classic, m = Modern sin confirmar si
+// existe) y por sub-liga adentro de cada uno (d_sort, las 4 ligas de
+// Master como claves, sin un "ALL" que las junte) — los registros ahí
+// NO traen su propio input_type, va implícito en la rama c/m.
 export interface DiaData {
   diaData: {
-    ci: {
-      ci_sort: Record<
-        string,
-        {
-          opponent_header: DiaCharacterHeader[];
-          records: DiaCharacterRecord[];
-        }
-      >;
-    };
+    ci?: { ci_sort: Record<string, DiaLeagueBucket> };
+    c?: { d_sort: Record<string, DiaLeagueBucket> };
+    m?: { d_sort: Record<string, DiaLeagueBucket> };
   };
 }
 

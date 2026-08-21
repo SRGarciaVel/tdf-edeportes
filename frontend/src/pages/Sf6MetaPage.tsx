@@ -185,11 +185,29 @@ export default function Sf6MetaPage() {
   }, [usageSnapshot]);
 
   const diaRecords = useMemo(() => {
-    const ciSort = diaSnapshot?.data?.diaData?.ci?.ci_sort;
-    if (!ciSort) return [];
-    const firstKey = Object.keys(ciSort)[0];
-    return ciSort[firstKey]?.records ?? [];
-  }, [diaSnapshot]);
+    const diaData = diaSnapshot?.data?.diaData;
+    if (!diaData) return [];
+
+    // "Todos los rangos": todo bajo ci.ci_sort, cada registro ya trae
+    // su propio input_type (C/M) — se filtra después en characterOptions
+    if (diaData.ci) {
+      const firstKey = Object.keys(diaData.ci.ci_sort)[0];
+      return diaData.ci.ci_sort[firstKey]?.records ?? [];
+    }
+
+    // "Solo Master": raíz separada por tipo de control (c/m), y adentro
+    // de cada una, por sub-liga (d_sort) sin un "ALL" que las junte —
+    // se usa la primera sub-liga disponible (la más amplia, "MASTER")
+    // en vez de promediar entre las 4, para no complicar de más sin
+    // haber confirmado si vale la pena. Los registros de acá no traen
+    // su propio input_type (va implícito en la rama), se lo agregamos
+    // a mano para que el resto del código funcione igual sin ifs nuevos.
+    const branch = inputType === "C" ? diaData.c : diaData.m;
+    if (!branch) return [];
+    const firstLeague = Object.keys(branch.d_sort)[0];
+    const records = branch.d_sort[firstLeague]?.records ?? [];
+    return records.map((r) => ({ ...r, input_type: inputType }));
+  }, [diaSnapshot, inputType]);
 
   const characterOptions = useMemo(() => {
     const seen = new Map<string, string>();
