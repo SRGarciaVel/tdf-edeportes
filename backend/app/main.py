@@ -4,7 +4,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api import auth, cfn, events, goals, health, tier_lists, users
+from app.api import auth, cfn, events, goals, health, sf6, tier_lists, users
 from app.core.config import settings
 from app.core.limiter import limiter
 
@@ -41,6 +41,7 @@ app.include_router(goals.router)
 app.include_router(cfn.router)
 app.include_router(tier_lists.router)
 app.include_router(users.router)
+app.include_router(sf6.router)
 
 
 @app.get("/")

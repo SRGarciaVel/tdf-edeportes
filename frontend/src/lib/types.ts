@@ -179,3 +179,72 @@ export interface TierListTemplateSummaryData {
   creator_name: string;
   created_at: string;
 }
+
+// --- Meta actual de SF6 (dato global de Capcom, no de TDF) ---
+
+export interface UsageRateCharacter {
+  character_tool_name: string;
+  character_alpha: string;
+  play_rate: number;
+  previous_rate: number;
+}
+
+export interface UsageRateLeague {
+  league_rank: number;
+  league_alpha: string;
+  val: UsageRateCharacter[];
+}
+
+export interface UsageRateOperationType {
+  operation_type: number;
+  val: UsageRateLeague[];
+}
+
+export interface UsageRateData {
+  usagerateData: UsageRateOperationType[];
+}
+
+export interface DiaCharacterHeader {
+  id: number;
+  name_alpha: string;
+  tool_name: string;
+  input_type: "C" | "M";
+}
+
+export interface DiaMatchupValue {
+  _oid: number;
+  thm: number;
+  val: string;
+}
+
+export interface DiaCharacterRecord {
+  id: number;
+  name_alpha: string;
+  tool_name: string;
+  input_type: "C" | "M";
+  total: string;
+  values: DiaMatchupValue[];
+}
+
+// la forma real tiene más anidación de la que necesitamos usar — el
+// resto de campos (sf, _dsort, etc.) no se usan en el frontend, no
+// hace falta tipar todo lo que Capcom manda
+export interface DiaData {
+  diaData: {
+    ci: {
+      ci_sort: Record<
+        string,
+        {
+          opponent_header: DiaCharacterHeader[];
+          records: DiaCharacterRecord[];
+        }
+      >;
+    };
+  };
+}
+
+export interface MetaSnapshot<T = unknown> {
+  snapshot_type: string;
+  month: string;
+  data: T;
+}

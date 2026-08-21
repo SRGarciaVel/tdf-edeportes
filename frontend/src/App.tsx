@@ -9,6 +9,7 @@ import NosotrosPage from "./pages/NosotrosPage";
 import ObjetivosPage from "./pages/ObjetivosPage";
 import PuntosPage from "./pages/PuntosPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Sf6MetaPage from "./pages/Sf6MetaPage";
 import StaffCfnPage from "./pages/StaffCfnPage";
 import TierListGalleryPage from "./pages/TierListGalleryPage";
 import TierListPage from "./pages/TierListPage";
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/calendario" element={<CalendarioPage />} />
           <Route path="/torneos" element={<TorneosPage />} />
           <Route path="/jugadores" element={<JugadoresPage />} />
+          <Route path="/sf6/meta" element={<Sf6MetaPage />} />
           <Route
             path="/staff/cfn"
             element={

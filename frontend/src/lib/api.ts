@@ -17,6 +17,7 @@ import type {
   TierMetaData,
   TierListTemplateData,
   TierListTemplateSummaryData,
+  MetaSnapshot,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -430,4 +431,13 @@ export async function deleteTierList(token: string, id: string): Promise<void> {
 export async function listTierLists(): Promise<TierListSummaryData[]> {
   const res = await fetch(`${API_URL}/tierlists`);
   return parseOrThrow<TierListSummaryData[]>(res);
+}
+
+// meta actual de SF6 — dato global de Capcom, no de TDF. Público, sin
+// auth. 404 si el cron mensual todavía no corrió para ese tipo.
+export async function getSf6Meta<T = unknown>(
+  snapshotType: "usagerate" | "usagerate_master" | "dia" | "dia_master",
+): Promise<MetaSnapshot<T>> {
+  const res = await fetch(`${API_URL}/sf6/meta/${snapshotType}`);
+  return parseOrThrow<MetaSnapshot<T>>(res);
 }

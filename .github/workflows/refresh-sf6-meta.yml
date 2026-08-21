@@ -1,0 +1,36 @@
+name: Refrescar meta de SF6
+
+"on":
+  schedule:
+    # el 9, 10 y 11 de cada mes a las 10:00 UTC — Capcom publica el
+    # segundo jueves de cada mes, así que unos días de margen alrededor
+    # de esa fecha (no un día fijo, "segundo jueves" varía) aseguran que
+    # al menos una corrida encuentre el dato ya publicado sin tener que
+    # calcular la fecha exacta cada vez. fetch_latest_snapshot ya cae
+    # solo al mes anterior si el actual no está listo, así que correr
+    # de más no hace daño, solo confirma el dato una vez que aparece.
+    - cron: "0 10 9,10,11 * *"
+  workflow_dispatch: {} # permite correrlo a mano desde la pestaña Actions, útil para probar
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        # sin Playwright acá — esto es una API pública real, no hace
+        # falta navegador ni sesión (a diferencia de refresh-cfn.yml)
+        run: pip install -r requirements.txt
+
+      - name: Refrescar meta de SF6
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/refresh_sf6_meta.py
