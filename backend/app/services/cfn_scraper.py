@@ -53,6 +53,21 @@ PROFILE_URL_TEMPLATE = BASE_URL + "/profile/{cfn_id}"
 # "History" es un link directo, no un tab que se abre por JS — no hace
 # falta clickear nada, se navega derecho a esta URL
 BATTLELOG_URL_TEMPLATE = BASE_URL + "/profile/{cfn_id}/battlelog"
+# a diferencia de History, el sub-tab "Results" (donde viven Drive
+# Impact/Perfect Parry/etc.) NO tiene URL propia — confirmado por Seba,
+# 20-08-2026: clickear ese sub-tab no cambia la URL del navegador, solo
+# cambia el contenido de la página. Por eso el scraper tiene que
+# navegar acá y DESPUÉS clickear el sub-tab a mano (ver
+# get_advanced_stats), no puede ir directo como con el historial.
+# /en/ a propósito: nuestra sesión del navegador está en español
+# (locale "es-CL", ver refresh_all_players) — el historial de partidas
+# sale en español por eso ("VICTORIA"/"DERROTA"). Pero la única
+# referencia real que tenemos de esta página es una captura en inglés
+# (Seba, 20-08-2026), así que los selectores de texto de abajo están
+# en inglés — forzar /en/ acá evita que fallen por un mismatch de
+# idioma. Confirmado que el sitio soporta esta variante de URL (se vio
+# en una captura anterior, /en/profile/.../battlelog).
+STATS_URL_TEMPLATE = BASE_URL + "/en/profile/{cfn_id}/play"
 
 # CFN de AckermanFG (Seba) — es la cuenta dueña de la sesión que se carga,
 # así que sirve para confirmar que el login "prendió" antes de consultar
@@ -497,15 +512,95 @@ def get_match_history(
     return matches
 
 
+def _extract_labeled_value(page: Page, label: str) -> float | None:
+    """Busca la fila que tiene exactamente ese texto de label y extrae
+    el primer número que aparece en esa misma fila (asume label y valor
+    conviven en un contenedor común, como se ve en la captura: "Perfect
+    Parries" a la izquierda, "0.9 times" a la derecha, misma fila).
+
+    NO confirmado contra HTML real todavía — solo tenemos una captura
+    de pantalla, no el DOM (SPECS.md, conversación 20-08-2026). Revisar
+    con --debug la primera corrida real y ajustar si el layout no
+    calza. Devuelve None en vez de tirar error si no encuentra nada,
+    para que un selector que falle no tumbe el resto del refresh."""
+    try:
+        row = page.locator(f':text-is("{label}")').locator("..").first
+        text = row.inner_text(timeout=3000)
+        match = re.search(r"([\d]+\.?[\d]*)", text.replace(label, "", 1))
+        return float(match.group(1)) if match else None
+    except Exception:  # noqa: BLE001 — selector sin confirmar contra HTML real, cualquier fallo debe devolver None, no tumbar el resto del refresh
+        return None
+
+
+def get_advanced_stats(
+    context: BrowserContext, cfn_id: str, debug: bool = False
+) -> dict:
+    """ "Records" — promedios de Capcom sobre las últimas 100 partidas,
+    de la pestaña Stats > Results del perfil. A diferencia de
+    get_player_stats (estado actual: rango/LP/MR) esto es "cómo juega
+    en promedio" — de acá sale el ranking de /jugadores tipo "el que
+    más Drive Impact se come" (SPECS.md, conversación 20-08-2026).
+
+    El sub-tab "Results" no tiene URL propia (confirmado por Seba) —
+    hay que clickearlo a mano después de cargar la página, no se puede
+    ir directo como con el historial de partidas.
+    """
+    page = context.new_page()
+    result: dict = {
+        "cfn_id": cfn_id,
+        "drive_impact_received": None,
+        "drive_parry_perfect": None,
+        "drive_impact_punish_landed": None,
+        "corner_time_opponent": None,
+        "throws_landed": None,
+    }
+    try:
+        page.goto(
+            STATS_URL_TEMPLATE.format(cfn_id=cfn_id),
+            wait_until="domcontentloaded",
+            timeout=45000,
+        )
+        _dismiss_cookie_banner(page)
+        _close_open_modal(page)
+
+        # click al sub-tab "Results" — NO confirmado si ya viene
+        # seleccionado por default o si hace falta clickearlo siempre;
+        # si el locator no encuentra nada (count()==0) simplemente no
+        # clickea nada y sigue, por si ya está activo
+        results_tab = page.get_by_text("Results", exact=True).first
+        if results_tab.count() > 0:
+            results_tab.click(timeout=5000)
+            page.wait_for_timeout(800)
+
+        _debug_dump(page, f"stats_results_{cfn_id}", debug)
+
+        result["drive_impact_received"] = _extract_labeled_value(page, "Received")
+        result["drive_parry_perfect"] = _extract_labeled_value(page, "Perfect Parries")
+        result["drive_impact_punish_landed"] = _extract_labeled_value(
+            page, "Punish Counters Landed"
+        )
+        result["corner_time_opponent"] = _extract_labeled_value(
+            page, "Time Spent Cornering Opponents"
+        )
+        result["throws_landed"] = _extract_labeled_value(page, "Times Landed")
+
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("get_advanced_stats falló para %s: %s", cfn_id, exc)
+    finally:
+        page.close()
+    return result
+
+
 def refresh_all_players(
     cfn_ids: list[str],
     debug: bool = False,
     known_match_keys: frozenset[tuple[str, datetime, str]] = frozenset(),
-) -> tuple[list[dict], list[dict]]:
+) -> tuple[list[dict], list[dict], list[dict]]:
     """Carga la sesión guardada una sola vez y consulta todos los CFN IDs
     con ella — evita repetir el login (que ni siquiera se automatiza) por
-    jugador. Devuelve (perfiles, partidas) — un solo browser/sesión para
-    ambos, no se abre una sesión aparte para el historial.
+    jugador. Devuelve (perfiles, partidas, records) — un solo
+    browser/sesión para los tres, no se abre una sesión aparte para cada
+    tipo de dato.
 
     `known_match_keys` se pasa tal cual a get_match_history — ver ahí para
     qué sirve (evitar el costo extra de abrir el modal de detalle en
@@ -541,9 +636,11 @@ def refresh_all_players(
 
         profiles = []
         matches = []
+        advanced_stats = []
         for cfn_id in cfn_ids:
             profiles.append(get_player_stats(context, cfn_id, debug))
             matches.extend(get_match_history(context, cfn_id, debug, known_match_keys))
+            advanced_stats.append(get_advanced_stats(context, cfn_id, debug))
 
         browser.close()
-        return profiles, matches
+        return profiles, matches, advanced_stats

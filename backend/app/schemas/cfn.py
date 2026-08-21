@@ -53,6 +53,15 @@ class CFNPlayerRead(BaseModel):
     league_points: int | None
     master_rating: int | None
     character_name: str | None
+    # "Records" — promedios de las últimas 100 partidas (ver
+    # get_advanced_stats en cfn_scraper.py), no "estado actual" como el
+    # resto de arriba. Todos opcionales: si el scrape de esta sección
+    # falló, el resto del perfil sigue funcionando igual.
+    drive_impact_received: float | None
+    drive_parry_perfect: float | None
+    drive_impact_punish_landed: float | None
+    corner_time_opponent: float | None
+    throws_landed: float | None
     updated_at: datetime | None
     last_error: str | None
 

@@ -74,6 +74,101 @@ function KpiTile({
   );
 }
 
+// "Records" — promedios de las últimas 100 partidas que Capcom ya
+// calcula solo (Stats > Results del perfil), no algo que reconstruimos
+// nosotros partida por partida. Todas las categorías ordenan de mayor
+// a menor — no hay ninguna donde "menos" sea mejor.
+const RECORD_CATEGORIES: {
+  key:
+    | "drive_impact_received"
+    | "drive_parry_perfect"
+    | "drive_impact_punish_landed"
+    | "corner_time_opponent"
+    | "throws_landed";
+  label: string;
+  unit: string;
+  decimals: number;
+}[] = [
+  {
+    key: "drive_impact_received",
+    label: "El que más Drive Impact se come",
+    unit: "por partida",
+    decimals: 1,
+  },
+  {
+    key: "drive_parry_perfect",
+    label: "Mejor Perfect Parry",
+    unit: "por partida",
+    decimals: 1,
+  },
+  {
+    key: "drive_impact_punish_landed",
+    label: "El Drive Impact más letal",
+    unit: "punish counters por partida",
+    decimals: 1,
+  },
+  {
+    key: "corner_time_opponent",
+    label: "El más agresivo",
+    unit: "segundos acorralando al rival",
+    decimals: 1,
+  },
+  {
+    key: "throws_landed",
+    label: "El mejor agarrador",
+    unit: "throws conectados por partida",
+    decimals: 1,
+  },
+];
+
+function RecordCard({
+  label,
+  unit,
+  winner,
+  value,
+  decimals,
+}: {
+  label: string;
+  unit: string;
+  winner: CFNPlayer | null;
+  value: number | null;
+  decimals: number;
+}) {
+  return (
+    <div className="hud-frame bg-tdf-charcoal px-4 py-3 flex flex-col gap-2">
+      <span className="font-mono text-[10px] uppercase tracking-wider text-tdf-muted">
+        {label}
+      </span>
+      {winner && value != null ? (
+        <div className="flex items-center gap-2.5">
+          {winner.avatar_url ? (
+            <img
+              src={winner.avatar_url}
+              alt={winner.display_name}
+              className="w-9 h-9 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <InitialsAvatar seed={winner.display_name} size={9} />
+          )}
+          <div className="min-w-0">
+            <p className="font-display font-bold truncate leading-tight">
+              {winner.display_name}
+            </p>
+            <p className="font-body text-xs text-tdf-muted">
+              <span className="text-white font-semibold">
+                {value.toFixed(decimals)}
+              </span>{" "}
+              {unit}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="font-body text-xs text-tdf-muted">Sin datos todavía</p>
+      )}
+    </div>
+  );
+}
+
 function MatchStatsRow({
   stats,
   loading,
@@ -693,6 +788,21 @@ export default function JugadoresPage() {
     return best?.cfnId ?? null;
   }, [players]);
 
+  const records = useMemo(() => {
+    return RECORD_CATEGORIES.map((cat) => {
+      let winner: CFNPlayer | null = null;
+      let bestValue: number | null = null;
+      for (const p of players) {
+        const value = p[cat.key];
+        if (value != null && (bestValue == null || value > bestValue)) {
+          winner = p;
+          bestValue = value;
+        }
+      }
+      return { ...cat, winner, value: bestValue };
+    });
+  }, [players]);
+
   const groupStats = useMemo(() => {
     let totalMatches = 0;
     let totalWins = 0;
@@ -850,6 +960,26 @@ export default function JugadoresPage() {
           </>
         )}
       </div>
+
+      {!playersLoading && records.some((r) => r.winner) && (
+        <div className="mb-12">
+          <p className="font-mono text-xs uppercase text-tdf-muted mb-3">
+            // Records — promedio de las últimas 100 partidas de cada uno
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {records.map((r) => (
+              <RecordCard
+                key={r.key}
+                label={r.label}
+                unit={r.unit}
+                winner={r.winner}
+                value={r.value}
+                decimals={r.decimals}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-3 pt-3">
         {sortedPlayers.map((p) => (

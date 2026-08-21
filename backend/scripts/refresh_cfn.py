@@ -121,6 +121,31 @@ def save_matches(db, matches: list[dict]) -> tuple[int, int, int]:
     return new, skipped, updated
 
 
+def save_advanced_stats(db, stats: list[dict]) -> int:
+    """ "Records" — promedios de las últimas 100 partidas (ver
+    get_advanced_stats en cfn_scraper.py). Se guardan en la misma fila
+    de CFNProfile que MR/LP, no en una tabla aparte — es el mismo tipo
+    de cache (estado actual recalculado cada corrida), solo que en vez
+    de "rango actual" es "promedio de cómo juega". Requiere que la fila
+    ya exista (la crea save_profiles, que corre antes en main()).
+    Silenciosamente no hace nada si el perfil todavía no existe — no
+    debería pasar en la práctica, pero evita un crash feo si el orden
+    de llamadas cambia alguna vez."""
+    saved = 0
+    for s in stats:
+        profile = db.query(CFNProfile).filter(CFNProfile.cfn_id == s["cfn_id"]).first()
+        if profile is None:
+            continue
+        profile.drive_impact_received = s["drive_impact_received"]
+        profile.drive_parry_perfect = s["drive_parry_perfect"]
+        profile.drive_impact_punish_landed = s["drive_impact_punish_landed"]
+        profile.corner_time_opponent = s["corner_time_opponent"]
+        profile.throws_landed = s["throws_landed"]
+        saved += 1
+    db.commit()
+    return saved
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
@@ -155,11 +180,16 @@ def main() -> None:
     )
 
     print(f"Consultando {len(players)} jugadores...")
-    profiles, matches = refresh_all_players(
+    profiles, matches, advanced_stats = refresh_all_players(
         list(players.keys()), debug=args.debug, known_match_keys=known_match_keys
     )
 
     ok, failed = save_profiles(db, profiles, players)
+
+    saved_records = save_advanced_stats(db, advanced_stats)
+    print(
+        f"\nRecords: {saved_records} perfiles con stats de Drive Impact/Perfect Parry actualizados"
+    )
 
     print(f"\nHistorial: {len(matches)} partidas encontradas en total")
     new, skipped, updated = save_matches(db, matches)

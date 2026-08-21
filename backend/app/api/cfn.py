@@ -55,6 +55,13 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
             league_points=profile.league_points if profile else None,
             master_rating=profile.master_rating if profile else None,
             character_name=profile.character_name if profile else None,
+            drive_impact_received=profile.drive_impact_received if profile else None,
+            drive_parry_perfect=profile.drive_parry_perfect if profile else None,
+            drive_impact_punish_landed=(
+                profile.drive_impact_punish_landed if profile else None
+            ),
+            corner_time_opponent=profile.corner_time_opponent if profile else None,
+            throws_landed=profile.throws_landed if profile else None,
             updated_at=profile.updated_at if profile else None,
             last_error=profile.last_error if profile else None,
         )

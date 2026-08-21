@@ -56,6 +56,11 @@ export interface CFNPlayer {
   league_points: number | null;
   master_rating: number | null;
   character_name: string | null;
+  drive_impact_received: number | null;
+  drive_parry_perfect: number | null;
+  drive_impact_punish_landed: number | null;
+  corner_time_opponent: number | null;
+  throws_landed: number | null;
   updated_at: string | null;
   last_error: string | null;
 }
