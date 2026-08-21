@@ -114,7 +114,16 @@ export default function Sf6MetaPage() {
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(
     null,
   );
-  const [inputType, setInputType] = useState<"M" | "C">("M");
+  const [inputType, setInputType] = useState<"M" | "C">("C");
+
+  // "Modern" no existe en Solo Master (ver botón deshabilitado más
+  // abajo) — si alguien lo tenía elegido y cambia a Master, se vuelve
+  // solo a Classic en vez de quedar en una combinación sin datos
+  useEffect(() => {
+    if (rankMode === "master" && inputType === "M") {
+      setInputType("C");
+    }
+  }, [rankMode, inputType]);
 
   useEffect(() => {
     setLoading(true);
@@ -271,8 +280,8 @@ export default function Sf6MetaPage() {
         </div>
       </div>
       <p className="text-tdf-muted mb-8 max-w-xl font-body">
-        Dato global de Capcom, de todo el juego — no específico de TDF. Se
-        actualiza una vez al mes.
+        Información extraída de los datos que recopila Capcom. Se actualiza una
+        vez al mes.
         {usageSnapshot && (
           <span className="block font-mono text-xs mt-1 opacity-70">
             Datos de {formatMonth(usageSnapshot.month)}
@@ -314,19 +323,32 @@ export default function Sf6MetaPage() {
                 // Matchups
               </h2>
               <div className="flex gap-2 font-mono text-[11px]">
-                {(["M", "C"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setInputType(t)}
-                    className={`px-2 py-1 border transition-colors ${
-                      inputType === t
-                        ? "border-tdf-magenta text-tdf-magenta"
-                        : "border-tdf-line text-tdf-muted"
-                    }`}
-                  >
-                    {t === "M" ? "Modern" : "Classic"}
-                  </button>
-                ))}
+                {(["M", "C"] as const).map((t) => {
+                  // "Modern" no trae datos en Solo Master (estructura
+                  // real confirmada 21-08-2026: solo existe la rama
+                  // Classic) — se deshabilita en vez de dejar que
+                  // alguien lo clickee y se encuentre con "sin datos"
+                  const disabled = t === "M" && rankMode === "master";
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => !disabled && setInputType(t)}
+                      disabled={disabled}
+                      title={
+                        disabled ? "No disponible en Solo Master" : undefined
+                      }
+                      className={`px-2 py-1 border transition-colors ${
+                        disabled
+                          ? "border-tdf-line text-tdf-muted opacity-40 cursor-not-allowed"
+                          : inputType === t
+                            ? "border-tdf-magenta text-tdf-magenta"
+                            : "border-tdf-line text-tdf-muted"
+                      }`}
+                    >
+                      {t === "M" ? "Modern" : "Classic"}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
