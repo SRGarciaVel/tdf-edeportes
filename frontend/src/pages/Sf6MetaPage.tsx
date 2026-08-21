@@ -139,11 +139,49 @@ export default function Sf6MetaPage() {
   // default. No confirmado al 100% el orden exacto de operation_type,
   // pero el índice 0 es la vista general en los datos reales que vimos.
   const usageCharacters = useMemo(() => {
-    const all = usageSnapshot?.data?.usagerateData?.[0]?.val?.find(
-      (l) => l.league_rank === 0,
+    const leagues = usageSnapshot?.data?.usagerateData?.[0]?.val;
+    if (!leagues || leagues.length === 0) return [];
+
+    // "Todos los rangos" trae una liga league_rank=0 ("ALL") que ya es
+    // el promedio general — se usa directo. "Solo Master" NO tiene esa
+    // liga (viene subdividida en MASTER/HIGH MASTER/GRAND MASTER/
+    // ULTIMATE MASTER, sin agregado) — se promedia a mano entre esas 4
+    // para armar un "Master en general" (estructura real confirmada
+    // por Seba, 21-08-2026 — es genuinamente distinta a la de overall,
+    // no un bug de tratar los dos formatos igual).
+    const overall = leagues.find((l) => l.league_rank === 0);
+    if (overall) {
+      return [...overall.val].sort((a, b) => b.play_rate - a.play_rate);
+    }
+
+    const sums = new Map<
+      string,
+      { alpha: string; playRate: number; prevRate: number; count: number }
+    >();
+    for (const league of leagues) {
+      for (const c of league.val) {
+        const entry = sums.get(c.character_tool_name) ?? {
+          alpha: c.character_alpha,
+          playRate: 0,
+          prevRate: 0,
+          count: 0,
+        };
+        entry.playRate += c.play_rate;
+        entry.prevRate += c.previous_rate;
+        entry.count += 1;
+        sums.set(c.character_tool_name, entry);
+      }
+    }
+
+    const averaged: UsageRateCharacter[] = [...sums.entries()].map(
+      ([toolName, v]) => ({
+        character_tool_name: toolName,
+        character_alpha: v.alpha,
+        play_rate: v.playRate / v.count,
+        previous_rate: v.prevRate / v.count,
+      }),
     );
-    if (!all) return [];
-    return [...all.val].sort((a, b) => b.play_rate - a.play_rate);
+    return averaged.sort((a, b) => b.play_rate - a.play_rate);
   }, [usageSnapshot]);
 
   const diaRecords = useMemo(() => {
