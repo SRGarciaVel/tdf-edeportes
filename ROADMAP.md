@@ -125,11 +125,30 @@ depender de que la conversación se acuerde sola.
       la versión filtrada solo a rango Master (`_master`, más relevante para
       preparación competitiva real que el promedio mezclado con todos los
       rangos). Datos globales de Capcom, no de TDF. Se actualiza una vez al
-      mes (el segundo jueves), así que el cron que lo alimente puede ser
-      mensual, no horario como el resto del tracker — mucho más liviano de
-      mantener. Los números reales están en JS, no en el HTML plano
-      (confirmado al intentar traerlos directo) — mismo enfoque de scraper
-      con navegador real que ya usamos, no un método más simple.
+      mes (el segundo jueves).
+
+      **Actualización 20-08-2026 — mucho más simple de lo previsto:**
+      confirmado que existe una API JSON pública y real, sin sesión ni
+      cookies, ni cualquier tipo de autenticación:
+      `https://www.streetfighter.com/6/buckler/api/en/stats/usagerate/{yyyymm}`
+      (ej. `.../202607` para julio 2026) — probado en vivo, trae
+      `character_tool_name`, `character_alpha`, `play_rate` (el % que
+      buscamos), `previous_rate` (mes anterior, sirve para mostrar
+      tendencia), separado por `league_rank`/`league_alpha` (0=ALL,
+      1=ROOKIE...8=MASTER) y por `operation_type` (0/1/2, probablemente
+      All/Modern/Classic, sin confirmar el mapeo exacto todavía).
+
+      Esto significa que Meta Actual **no necesita Playwright para nada**
+      — a diferencia de todo lo demás que trackeamos, alcanza con una
+      llamada HTTP simple, sin navegador, sin sesión compartida, sin
+      cookies de Capcom. Mucho más liviano y confiable de mantener.
+
+      Sin confirmar todavía (bloqueado por una limitación de herramienta
+      de Claude, no algo que haga falta investigar de fondo): si
+      `/api/en/stats/dia/{yyyymm}` (el diagrama de matchups) sigue el
+      mismo patrón — muy probable dado que la URL de la página real usa
+      exactamente `/stats/dia/{yyyymm}`, misma convención. Confirmar
+      con un fetch directo la próxima vez que se retome.
 - [ ] **Notas de parche** — análisis/resumen de los battle change list que
       Capcom publica (`streetfighter.com/6/buckler/battle_change`). Todavía
       sin definir el enfoque técnico (¿scraping y resumen automático?
