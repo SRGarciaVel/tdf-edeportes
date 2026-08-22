@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import AnnouncementBar from "../components/AnnouncementBar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
@@ -25,14 +24,6 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <AnnouncementBar
-        storageKey="tierlist-launch"
-        eyebrow="NUEVO"
-        message="Ya puedes armar tu Tier List de personajes con la comunidad."
-        ctaLabel="Probarla"
-        ctaTo="/tierlist"
-      />
-
       <section className="spray-bg py-12">
         <div className="relative z-10 flex flex-col gap-6">
           <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
