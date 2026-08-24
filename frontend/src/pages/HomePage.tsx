@@ -70,13 +70,23 @@ export default function HomePage() {
                 posicionado a ojo contra toda la sección (eso hacía que
                 se desalineara con la mascota real, encontrado por
                 Seba, 21-08-2026). Así sigue a la imagen sin importar
-                el tamaño de pantalla ni cuánto texto haya al lado. */}
+                el tamaño de pantalla ni cuánto texto haya al lado.
+
+                "ellipse", no "circle" a propósito: la imagen del logo
+                es más alta que ancha (700x905), y un "circle" en una
+                caja no cuadrada calcula su radio hasta la esquina más
+                lejana — eso lo hace más ancho que la caja, y como el
+                contenedor lo recorta ahí, el degradado nunca llega a
+                desvanecerse antes del corte (se veía un borde duro,
+                encontrado por Seba, 21-08-2026). "ellipse" calcula cada
+                eje por separado, así que sí se ajusta a la proporción
+                real del contenedor. */}
             <div className="relative shrink-0 mx-auto lg:mx-0">
               <div
                 className="absolute inset-0 m-auto w-[140%] h-[140%] pointer-events-none -z-10"
                 style={{
                   background:
-                    "radial-gradient(circle, rgba(196,20,122,0.35) 0%, rgba(91,42,134,0.18) 45%, transparent 70%)",
+                    "radial-gradient(ellipse, rgba(196,20,122,0.35) 0%, rgba(91,42,134,0.18) 45%, transparent 70%)",
                 }}
               />
               <img
