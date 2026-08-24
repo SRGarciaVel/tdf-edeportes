@@ -25,26 +25,13 @@ export default function HomePage() {
   return (
     <Layout>
       <section className="relative spray-bg py-16 overflow-hidden">
-        {/* resplandor real de marca detrás de la mascota — mismo truco
-            que ya usamos en el logo del navbar, escalado para un hero.
-            No es una foto de banco genérica: es el degradado real
-            magenta->púrpura del wordmark, sacado del teaser aprobado
-            (conversación de diseño, 21-08-2026) */}
-        <div
-          className="absolute right-[8%] top-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none -z-10"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(196,20,122,0.35) 0%, rgba(91,42,134,0.18) 45%, transparent 70%)",
-          }}
-        />
-
         <div className="relative z-10 flex flex-col gap-8">
           <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
 
           <div className="flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-16">
             <div className="flex flex-col gap-6 max-w-xl">
               <h1 className="font-display font-bold uppercase text-4xl sm:text-5xl lg:text-6xl leading-[1.02]">
-                Streams, torneos
+                Streams, 33
                 <br />y{" "}
                 <span
                   className="bg-clip-text text-transparent"
@@ -52,13 +39,13 @@ export default function HomePage() {
                     backgroundImage: "linear-gradient(90deg, #C4147A, #5B2A86)",
                   }}
                 >
-                  comunidad real
+                  malo 6
                 </span>
               </h1>
               <p className="text-lg text-tdf-muted font-body">
-                Third Strike, Street Fighter 6, y cualquier otro FG que se
-                cruce. Una comunidad chilena que crece jugando, no un club de
-                nombre nomás.
+                Salas abiertas de Third Strike y retro, torneos, streams de cada
+                uno de nosotros. No importa si es tu primera vez con fighting
+                games, acá se aprende a cabezazos contra la pared.
               </p>
               <div className="flex flex-wrap gap-4 font-mono text-sm uppercase">
                 <a
@@ -78,14 +65,29 @@ export default function HomePage() {
               </div>
             </div>
 
-            <img
-              src="/brand/logo-full.webp"
-              alt="TDF e-deportes"
-              className="w-64 sm:w-80 lg:w-96 h-auto shrink-0 mx-auto lg:mx-0"
-              style={{
-                filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.5))",
-              }}
-            />
+            {/* resplandor real de marca detrás de la mascota — vive
+                DENTRO del mismo contenedor relative que la imagen, no
+                posicionado a ojo contra toda la sección (eso hacía que
+                se desalineara con la mascota real, encontrado por
+                Seba, 21-08-2026). Así sigue a la imagen sin importar
+                el tamaño de pantalla ni cuánto texto haya al lado. */}
+            <div className="relative shrink-0 mx-auto lg:mx-0">
+              <div
+                className="absolute inset-0 m-auto w-[140%] h-[140%] pointer-events-none -z-10"
+                style={{
+                  background:
+                    "radial-gradient(circle, rgba(196,20,122,0.35) 0%, rgba(91,42,134,0.18) 45%, transparent 70%)",
+                }}
+              />
+              <img
+                src="/brand/logo-full.webp"
+                alt="TDF e-deportes"
+                className="relative z-10 w-64 sm:w-80 lg:w-96 h-auto"
+                style={{
+                  filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.5))",
+                }}
+              />
+            </div>
           </div>
         </div>
       </section>
