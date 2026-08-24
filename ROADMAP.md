@@ -111,76 +111,68 @@ son bloqueantes para el uso diario del club.
       si corresponde, migrar de recursos gratuitos a infraestructura paga
       (hosting, dominio propio) — condicionado a que el club sea sustentable.
 
-## Ideas paradas — Hub "SF6" en el Navbar (sin fecha, sin empezar)
+## Hub "SF6" en el Navbar
 
 **Origen:** conversación de diseño del 20-08-2026, a partir de explorar qué más
-se puede sacarle a Buckler's Boot Camp además de lo que ya trackeamos. Seba
-quiere un menú desplegable propio en el Navbar dedicado solo a Street
-Fighter 6 (no a TDF como club), separado de `/jugadores`. Nada de esto
-arranca hasta que se retome explícitamente — queda documentado para no
-depender de que la conversación se acuerde sola.
+se puede sacarle a Buckler's Boot Camp además de lo que ya trackeamos.
 
-- [ ] **Meta actual** — uso de personajes (`/stats/usagerate`) y diagrama de
-      matchups/win rate entre personajes (`/stats/dia`), overall y también
-      la versión filtrada solo a rango Master (`_master`, más relevante para
-      preparación competitiva real que el promedio mezclado con todos los
-      rangos). Datos globales de Capcom, no de TDF. Se actualiza una vez al
-      mes (el segundo jueves).
-
-      **Actualización 20-08-2026 — mucho más simple de lo previsto:**
-      confirmado que existe una API JSON pública y real, sin sesión ni
-      cookies, ni cualquier tipo de autenticación:
-      `https://www.streetfighter.com/6/buckler/api/en/stats/usagerate/{yyyymm}`
-      (ej. `.../202607` para julio 2026) — probado en vivo, trae
-      `character_tool_name`, `character_alpha`, `play_rate` (el % que
-      buscamos), `previous_rate` (mes anterior, sirve para mostrar
-      tendencia), separado por `league_rank`/`league_alpha` (0=ALL,
-      1=ROOKIE...8=MASTER) y por `operation_type` (0/1/2, probablemente
-      All/Modern/Classic, sin confirmar el mapeo exacto todavía).
-
-      Esto significa que Meta Actual **no necesita Playwright para nada**
-      — a diferencia de todo lo demás que trackeamos, alcanza con una
-      llamada HTTP simple, sin navegador, sin sesión compartida, sin
-      cookies de Capcom. Mucho más liviano y confiable de mantener.
-
-      Sin confirmar todavía (bloqueado por una limitación de herramienta
-      de Claude, no algo que haga falta investigar de fondo): si
-      `/api/en/stats/dia/{yyyymm}` (el diagrama de matchups) sigue el
-      mismo patrón — muy probable dado que la URL de la página real usa
-      exactamente `/stats/dia/{yyyymm}`, misma convención. Confirmar
-      con un fetch directo la próxima vez que se retome.
-
-      **Confirmación final, 21-08-2026:** Seba probó
-      `/api/en/stats/dia/{yyyymm}` a mano y también responde limpio, sin
-      sesión — **los dos endpoints de Meta Actual están 100% confirmados
-      y listos para implementar**, sin ninguna duda técnica pendiente.
-      Estructura del diagrama: por cada personaje, un `total`/`_win_rate`
-      general y un array `values` con el resultado contra cada rival —
-      `val` es un puntaje sobre 10 (5.0 = parejo, más alto = favorable),
-      `thm` un indicador rápido -1/0/1 (probablemente para el color
-      azul/naranja del gráfico real), y `"-.---"` cuando faltan
-      partidas suficientes para ese matchup puntual.
+- [x] **Meta actual** (`/sf6/meta`) — uso de personajes y diagrama de
+      matchups, overall y Solo Master, con toggle Modern/Classic. Datos
+      globales de Capcom vía API JSON pública real, sin sesión ni Playwright
+      (`GET .../api/en/stats/{usagerate,dia}{_master}/{yyyymm}`) — requiere
+      headers de navegador (User-Agent/Referer) o Capcom devuelve 403.
+      Cache mensual en `sf6_meta_snapshots` (JSONB), refrescado por
+      `refresh-sf6-meta.yml` (GitHub Actions, días 9-11 de cada mes o a
+      mano vía `workflow_dispatch`). Estructura de "Solo Master" es
+      genuinamente distinta a la de "todos los rangos" (sin liga "ALL",
+      sin rama "m"/Modern para matchups todavía confirmada) — Modern queda
+      deshabilitado en Solo Master hasta confirmar esa rama. Verificado en
+      producción con datos reales, 21-08-2026.
 - [ ] **Notas de parche** — análisis/resumen de los battle change list que
       Capcom publica (`streetfighter.com/6/buckler/battle_change`). Todavía
       sin definir el enfoque técnico (¿scraping y resumen automático?
       ¿alguien de staff lo redacta a mano con la info oficial como fuente?).
-- [ ] **Estadísticas avanzadas por jugador de TDF** (Drive Impact, Perfect
-      Parry, Punish Counters, Corner Pressure, etc.) — confirmado viable:
-      viven en la pestaña "Stats" > "Results" de cada perfil
-      (`/profile/{cfn_id}/play`), son promedios de Capcom sobre las últimas
-      100 partidas (no hay que reconstruir nada partida por partida), y
-      confirmado que SÍ son visibles en el perfil de otra persona estando
-      logueado con una cuenta distinta (no son datos privados del dueño del
-      perfil) — se puede scrapear con el mismo enfoque de sesión compartida
-      de siempre. Categorías concretas ya identificadas de una captura real:
-      "el que más Drive Impact se come", "mejor Perfect Parry de la
-      comunidad", "el Drive Impact más letal" (mejor punish counter con DI),
-      "el más agresivo" (tiempo acorralando rivales), "el mejor agarrador"
-      (throws conectados). Esto podría vivir en `/jugadores` en vez del hub
-      de SF6, ya que es específico de la gente de TDF — a definir cuando se
-      retome.
+- [x] **Records por jugador de TDF** (Drive Impact, Perfect Parry, Punish
+      Counters, Corner Pressure, throws) — vive en `/jugadores`, no en el
+      hub de SF6 (es específico de la gente de TDF, no del juego en
+      general). Scrapeado de la pestaña Stats > Results de cada perfil,
+      promedios de Capcom sobre las últimas 100 partidas. Verificado con
+      datos reales en producción, 20-08-2026.
 - [ ] Espacio abierto para lo que vaya surgiendo — Seba mencionó "da para
       hartos usos" sin cerrar la lista todavía.
+
+## Rediseño del Navbar
+
+**Origen:** conversación de diseño del 21-08-2026, a partir de sentir que el
+navbar quedó recargado tras sumar el dropdown de SF6.
+
+- [x] Barra doble: aviso (antes `AnnouncementBar` suelto solo en Home, ahora
+      fusionado y visible en todo el sitio, sin botón de cerrar a propósito
+      — un click sin querer lo perdía para siempre) + barra principal.
+- [x] Logo flotante que atraviesa el borde entre ambas barras, con brillo
+      real de marca (resplandor de fondo + drop-shadow directo sobre las
+      letras).
+- [x] Links reagrupados: Inicio/Calendario/Jugadores directos, Comunidad▾,
+      SF6▾ (con caja/borde, distinto del estilo plano de Comunidad).
+- [x] Búsqueda real (no simulada) sobre Jugadores/Torneos/Tier Lists/Páginas
+      del sitio — filtrado 100% del lado del cliente, sin endpoint nuevo en
+      el backend (la comunidad es chica, hubiera sido sobre-ingeniería).
+- [x] Framer Motion + Lucide React sumados como dependencias (decisión de
+      Seba, 21-08-2026) — animan los paneles desplegables, el drawer
+      mobile, la línea bajo el link activo, y el palpitar del botón "Ver
+      stream". Bundle creció ~40% (355KB → 494KB) por la librería, costo
+      esperado y aceptado.
+- [x] Anillo + glow en el avatar del usuario logueado.
+
+## Pendiente de esta sesión, sin roadmap propio todavía
+
+- [ ] **Hero de Home** — se armó y aprobó el teaser (mascota grande con
+      resplandor de marca detrás, CTA "Ver stream"/"Ver calendario"), pero
+      nunca se aplicó al código real de `HomePage.tsx`. El navbar se llevó
+      el resto de la sesión.
+- [ ] `npm audit`: 2 vulnerabilidades moderadas en `react-router-dom`
+      (encontradas al instalar Framer Motion/Lucide, no relacionadas a
+      esas dos) — sin resolver, `npm audit fix` debería alcanzar.
 
 ## Ideas paradas — Hub "Third Strike" (sin fecha, sin empezar)
 
