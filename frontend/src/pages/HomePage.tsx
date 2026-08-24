@@ -80,11 +80,23 @@ export default function HomePage() {
                 desvanecerse antes del corte (se veía un borde duro,
                 encontrado por Seba, 21-08-2026). "ellipse" calcula cada
                 eje por separado, así que sí se ajusta a la proporción
-                real del contenedor. */}
+                real del contenedor.
+
+                Centrado en top:32%, no en el medio del archivo (50%):
+                el archivo completo es mascota + wordmark "TDF" abajo,
+                y centrar en el archivo entero deja el resplandor a
+                mitad de camino entre los dos, no sobre la mascota en
+                sí (se veía corrido hacia arriba/derecha respecto al
+                personaje, encontrado por Seba, 21-08-2026). La mascota
+                ocupa el ~55-60% de arriba del archivo, así que su
+                centro real cae cerca del 30% del alto total. */}
             <div className="relative shrink-0 mx-auto lg:mx-0">
               <div
-                className="absolute inset-0 m-auto w-[140%] h-[140%] pointer-events-none -z-10"
+                className="absolute w-[140%] h-[140%] pointer-events-none -z-10"
                 style={{
+                  left: "50%",
+                  top: "32%",
+                  transform: "translate(-50%, -50%)",
                   background:
                     "radial-gradient(ellipse, rgba(196,20,122,0.35) 0%, rgba(91,42,134,0.18) 45%, transparent 70%)",
                 }}
