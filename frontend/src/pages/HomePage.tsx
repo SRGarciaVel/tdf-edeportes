@@ -24,21 +24,41 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <section className="spray-bg py-12">
-        <div className="relative z-10 flex flex-col gap-6">
+      <section className="relative spray-bg py-16 overflow-hidden">
+        {/* resplandor real de marca detrás de la mascota — mismo truco
+            que ya usamos en el logo del navbar, escalado para un hero.
+            No es una foto de banco genérica: es el degradado real
+            magenta->púrpura del wordmark, sacado del teaser aprobado
+            (conversación de diseño, 21-08-2026) */}
+        <div
+          className="absolute right-[8%] top-1/2 -translate-y-1/2 w-[600px] h-[600px] pointer-events-none -z-10"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(196,20,122,0.35) 0%, rgba(91,42,134,0.18) 45%, transparent 70%)",
+          }}
+        />
+
+        <div className="relative z-10 flex flex-col gap-8">
           <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">
-            <h1 className="shrink-0">
-              <img
-                src="/brand/logo-full.webp"
-                alt="TDF e-deportes"
-                className="w-40 sm:w-52 h-auto"
-              />
-            </h1>
-            <div className="flex flex-col gap-6">
-              <p className="text-lg text-tdf-muted max-w-xl font-body">
-                Streams, torneos y una comunidad que crece jugando Third Strike,
-                Street Fighter 6 y cualquier otro FG que se cruce.
+
+          <div className="flex flex-col lg:flex-row lg:items-center gap-10 lg:gap-16">
+            <div className="flex flex-col gap-6 max-w-xl">
+              <h1 className="font-display font-bold uppercase text-4xl sm:text-5xl lg:text-6xl leading-[1.02]">
+                Streams, torneos
+                <br />y{" "}
+                <span
+                  className="bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage: "linear-gradient(90deg, #C4147A, #5B2A86)",
+                  }}
+                >
+                  comunidad real
+                </span>
+              </h1>
+              <p className="text-lg text-tdf-muted font-body">
+                Third Strike, Street Fighter 6, y cualquier otro FG que se
+                cruce. Una comunidad chilena que crece jugando, no un club de
+                nombre nomás.
               </p>
               <div className="flex flex-wrap gap-4 font-mono text-sm uppercase">
                 <a
@@ -57,6 +77,15 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
+
+            <img
+              src="/brand/logo-full.webp"
+              alt="TDF e-deportes"
+              className="w-64 sm:w-80 lg:w-96 h-auto shrink-0 mx-auto lg:mx-0"
+              style={{
+                filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.5))",
+              }}
+            />
           </div>
         </div>
       </section>
