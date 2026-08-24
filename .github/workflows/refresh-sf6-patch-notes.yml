@@ -1,0 +1,29 @@
+name: Refrescar notas de parche de SF6
+
+"on":
+  workflow_dispatch: {} # sin cron fijo a propósito — los parches de balance
+  # no salen en fecha regular, Seba lo dispara a mano desde la pestaña
+  # Actions cuando se entera que salió uno nuevo
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        # sin Playwright acá tampoco — HTML normal del servidor, no
+        # hace falta navegador (mismo criterio que refresh-sf6-meta.yml)
+        run: pip install -r requirements.txt
+
+      - name: Refrescar notas de parche de SF6
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python scripts/refresh_sf6_patch_notes.py

@@ -10,6 +10,7 @@ import ObjetivosPage from "./pages/ObjetivosPage";
 import PuntosPage from "./pages/PuntosPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sf6MetaPage from "./pages/Sf6MetaPage";
+import Sf6PatchNotesPage from "./pages/Sf6PatchNotesPage";
 import StaffCfnPage from "./pages/StaffCfnPage";
 import TierListGalleryPage from "./pages/TierListGalleryPage";
 import TierListPage from "./pages/TierListPage";
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/torneos" element={<TorneosPage />} />
           <Route path="/jugadores" element={<JugadoresPage />} />
           <Route path="/sf6/meta" element={<Sf6MetaPage />} />
+          <Route path="/sf6/patch-notes" element={<Sf6PatchNotesPage />} />
           <Route
             path="/staff/cfn"
             element={

@@ -18,6 +18,7 @@ import type {
   TierListTemplateData,
   TierListTemplateSummaryData,
   MetaSnapshot,
+  PatchNote,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -440,4 +441,18 @@ export async function getSf6Meta<T = unknown>(
 ): Promise<MetaSnapshot<T>> {
   const res = await fetch(`${API_URL}/sf6/meta/${snapshotType}`);
   return parseOrThrow<MetaSnapshot<T>>(res);
+}
+
+// notas de parche de SF6 — dato global de Capcom, no de TDF. Público,
+// sin auth. 404 si nunca se corrió el script de refresco todavía (no
+// hay cron automático, se dispara a mano cuando sale un parche nuevo).
+export async function getLatestPatchNote(): Promise<PatchNote> {
+  const res = await fetch(`${API_URL}/sf6/patch-notes/latest`);
+  return parseOrThrow<PatchNote>(res);
+}
+
+// historial completo guardado, más reciente primero
+export async function listPatchNotes(): Promise<PatchNote[]> {
+  const res = await fetch(`${API_URL}/sf6/patch-notes`);
+  return parseOrThrow<PatchNote[]>(res);
 }

@@ -254,3 +254,31 @@ export interface MetaSnapshot<T = unknown> {
   month: string;
   data: T;
 }
+
+// --- Notas de parche de SF6 (dato global de Capcom, no de TDF) ---
+
+export interface PatchChange {
+  move_name: string | null;
+  category: string;
+  details: string;
+}
+
+export interface PatchCharacter {
+  tool_name: string;
+  alpha: string;
+  summary: string;
+  changes: PatchChange[];
+}
+
+export interface PatchNoteData {
+  title: string;
+  overall_concept: string;
+  universal_changes: PatchChange[];
+  characters: PatchCharacter[];
+}
+
+export interface PatchNote {
+  patch_id: string;
+  title: string;
+  data: PatchNoteData;
+}

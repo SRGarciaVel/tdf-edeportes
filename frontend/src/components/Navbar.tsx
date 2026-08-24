@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Calendar,
+  FileText,
   Gamepad2,
   Home,
   Info,
@@ -36,7 +37,10 @@ const COMUNIDAD_LINKS = [
   { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
 ];
 
-const SF6_LINKS = [{ to: "/sf6/meta", label: "Meta actual", Icon: Gamepad2 }];
+const SF6_LINKS = [
+  { to: "/sf6/meta", label: "Meta actual", Icon: Gamepad2 },
+  { to: "/sf6/patch-notes", label: "Notas de parche", Icon: FileText },
+];
 
 // para el buscador de "Páginas" — destinos fijos del sitio, no datos
 // que haya que traer de ningún lado (ver SearchPanel más abajo)
