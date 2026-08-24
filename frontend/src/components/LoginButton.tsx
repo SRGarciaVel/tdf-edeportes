@@ -16,7 +16,8 @@ export default function LoginButton() {
           <img
             src={user.avatar_url}
             alt={user.display_name}
-            className="w-8 h-8 rounded-full"
+            className="w-8 h-8 rounded-full border-2 border-tdf-magenta"
+            style={{ boxShadow: "0 0 8px rgba(196,20,122,0.5)" }}
           />
         )}
         <span className="text-sm">{user.display_name}</span>

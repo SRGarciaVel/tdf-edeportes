@@ -99,9 +99,11 @@ function AnimatedNavLink({
 function NavDropdown({
   label,
   links,
+  bordered = false,
 }: {
   label: string;
   links: NavDropdownLink[];
+  bordered?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -121,7 +123,15 @@ function NavDropdown({
       <button
         onClick={() => setOpen((v) => !v)}
         className={`font-mono text-xs uppercase tracking-wide transition-colors flex items-center gap-1 ${
-          open ? "text-tdf-magenta" : "text-tdf-muted hover:text-tdf-magenta"
+          bordered ? "border px-3 py-2" : ""
+        } ${
+          open
+            ? bordered
+              ? "border-tdf-magenta text-tdf-magenta"
+              : "text-tdf-magenta"
+            : bordered
+              ? "border-tdf-line text-tdf-muted hover:border-tdf-magenta hover:text-white"
+              : "text-tdf-muted hover:text-tdf-magenta"
         }`}
       >
         {label}
@@ -385,7 +395,13 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 bg-tdf-charcoal/85 backdrop-blur border-b border-tdf-line">
+    <header
+      className="sticky top-0 z-40 bg-tdf-charcoal/85 backdrop-blur"
+      style={{
+        borderBottom: "1px solid rgba(196,20,122,0.25)",
+        boxShadow: "0 4px 30px -12px rgba(196,20,122,0.35)",
+      }}
+    >
       {/* barra superior angosta — antes era el AnnouncementBar suelto
           solo en Home, ahora vive fusionado acá arriba y se ve en todo
           el sitio (conversación de diseño, 21-08-2026). Sin botón de
@@ -421,11 +437,11 @@ export default function Navbar() {
           barras, mismo truco visual que se probó en el teaser, con la
           esquina cortada de siempre en vez de un óvalo genérico */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <div className="absolute left-1/2 -top-8 -translate-x-1/2 z-10 hidden md:flex">
+        <div className="absolute left-1/2 -top-6 -translate-x-1/2 z-10 hidden md:flex">
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.2 }}
-            className="relative w-24 h-24 flex items-center justify-center bg-tdf-charcoal border border-tdf-line hud-frame"
+            className="relative w-20 h-20 flex items-center justify-center bg-tdf-charcoal border border-tdf-line hud-frame"
           >
             <div
               className="absolute -inset-5 -z-10"
@@ -438,7 +454,11 @@ export default function Navbar() {
               <img
                 src="/brand/logo-wordmark.webp"
                 alt="TDF"
-                className="w-16 h-auto"
+                className="w-14 h-auto"
+                style={{
+                  filter:
+                    "drop-shadow(0 0 6px rgba(196,20,122,0.9)) drop-shadow(0 0 16px rgba(196,20,122,0.5))",
+                }}
               />
             </NavLink>
           </motion.div>
@@ -460,12 +480,20 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3 shrink-0">
-          <NavDropdown label="SF6" links={SF6_LINKS} />
+          <NavDropdown label="SF6" links={SF6_LINKS} bordered />
 
           <motion.a
             href="https://www.twitch.tv/tdfedeportes"
             target="_blank"
             rel="noreferrer"
+            animate={{
+              boxShadow: [
+                "0 4px 20px -6px rgba(196,20,122,0.5)",
+                "0 4px 26px -4px rgba(196,20,122,0.85)",
+                "0 4px 20px -6px rgba(196,20,122,0.5)",
+              ],
+            }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             className="flex items-center gap-1.5 font-mono text-[11px] uppercase font-semibold text-white px-4 py-2.5"
@@ -473,7 +501,6 @@ export default function Navbar() {
               background: "linear-gradient(135deg, #C4147A, #5B2A86)",
               clipPath:
                 "polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
-              boxShadow: "0 4px 20px -6px rgba(196,20,122,0.6)",
             }}
           >
             <Radio size={13} />
