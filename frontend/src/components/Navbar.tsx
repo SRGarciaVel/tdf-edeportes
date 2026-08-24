@@ -1,3 +1,17 @@
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Calendar,
+  Gamepad2,
+  Home,
+  Info,
+  LayoutGrid,
+  Radio,
+  Search,
+  Star,
+  Target,
+  Trophy,
+  Users,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { listCfnPlayers, listEvents, listTierLists } from "../lib/api";
@@ -9,26 +23,72 @@ import LoginButton from "./LoginButton";
 // desplegables para no saturar la barra (conversación de diseño,
 // 21-08-2026: 9 ítems sueltos era demasiado)
 const DIRECT_LINKS = [
-  { to: "/", label: "Inicio" },
-  { to: "/calendario", label: "Calendario" },
-  { to: "/jugadores", label: "Jugadores" },
+  { to: "/", label: "Inicio", Icon: Home },
+  { to: "/calendario", label: "Calendario", Icon: Calendar },
+  { to: "/jugadores", label: "Jugadores", Icon: Users },
 ];
 
 const COMUNIDAD_LINKS = [
-  { to: "/torneos", label: "Torneos" },
-  { to: "/objetivos", label: "Objetivos" },
-  { to: "/nosotros", label: "Nosotros" },
-  { to: "/puntos", label: "Puntos" },
-  { to: "/tierlist", label: "Tier List" },
+  { to: "/torneos", label: "Torneos", Icon: Trophy },
+  { to: "/objetivos", label: "Objetivos", Icon: Target },
+  { to: "/nosotros", label: "Nosotros", Icon: Info },
+  { to: "/puntos", label: "Puntos", Icon: Star },
+  { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
 ];
 
-const SF6_LINKS = [{ to: "/sf6/meta", label: "Meta actual" }];
+const SF6_LINKS = [{ to: "/sf6/meta", label: "Meta actual", Icon: Gamepad2 }];
 
 // para el buscador de "Páginas" — destinos fijos del sitio, no datos
 // que haya que traer de ningún lado (ver SearchPanel más abajo)
 const SEARCHABLE_PAGES = [...DIRECT_LINKS, ...COMUNIDAD_LINKS, ...SF6_LINKS];
 
-type NavDropdownLink = { to: string; label: string };
+type NavDropdownLink = { to: string; label: string; Icon: typeof Home };
+
+// mismas curvas/tiempos en todos los paneles del navbar, para que se
+// sientan parte del mismo sistema en vez de animaciones sueltas cada
+// una a su manera
+const PANEL_TRANSITION = { duration: 0.18, ease: "easeOut" as const };
+
+/** Link con ícono y una línea animada abajo — Framer Motion en vez de
+ * CSS puro a pedido de Seba (21-08-2026): "le daría más vida a la
+ * página que tenga efectos mejores". */
+function AnimatedNavLink({
+  to,
+  label,
+  Icon,
+  onClick,
+}: {
+  to: string;
+  label: string;
+  Icon: typeof Home;
+  onClick?: () => void;
+}) {
+  return (
+    <NavLink to={to} onClick={onClick} className="relative group py-2">
+      {({ isActive }) => (
+        <>
+          <span
+            className={`font-mono text-xs uppercase tracking-wide transition-colors flex items-center gap-1.5 ${
+              isActive
+                ? "text-tdf-magenta"
+                : "text-tdf-muted group-hover:text-white"
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </span>
+          <motion.span
+            className="absolute left-0 -bottom-0.5 h-[2px] bg-tdf-magenta"
+            initial={false}
+            animate={{ width: isActive ? "100%" : "0%" }}
+            whileHover={{ width: "100%" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          />
+        </>
+      )}
+    </NavLink>
+  );
+}
 
 /** Desplegable por click, reutilizado para cualquier grupo del navbar
  * (Comunidad, SF6). El posicionamiento absoluto y el estilo hud-frame
@@ -65,28 +125,43 @@ function NavDropdown({
         }`}
       >
         {label}
-        <span className="text-[9px]">{open ? "▲" : "▼"}</span>
+        <motion.span
+          className="text-[9px]"
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          ▼
+        </motion.span>
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-2 w-44 z-50">
-          <div className="hud-frame bg-tdf-charcoal border border-tdf-line py-1">
-            {links.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  `block px-3 py-2 font-mono text-xs uppercase hover:text-tdf-magenta hover:bg-tdf-dark/60 transition-colors ${
-                    isActive ? "text-tdf-magenta" : "text-tdf-muted"
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={PANEL_TRANSITION}
+            className="absolute top-full left-0 mt-2 w-44 z-50"
+          >
+            <div className="hud-frame bg-tdf-charcoal border border-tdf-line py-1">
+              {links.map(({ to, label: linkLabel, Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase hover:text-tdf-magenta hover:bg-tdf-dark/60 transition-colors ${
+                      isActive ? "text-tdf-magenta" : "text-tdf-muted"
+                    }`
+                  }
+                >
+                  <Icon size={14} />
+                  {linkLabel}
+                </NavLink>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -105,9 +180,11 @@ function IconButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       aria-label={label}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
       className={`w-9 h-9 flex items-center justify-center border transition-colors duration-[250ms] ${
         active
           ? "border-tdf-magenta text-white bg-tdf-magenta/10"
@@ -115,7 +192,7 @@ function IconButton({
       }`}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }
 
@@ -198,7 +275,14 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div ref={ref} className="absolute top-full right-0 mt-2 w-80 z-50">
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={PANEL_TRANSITION}
+      className="absolute top-full right-0 mt-2 w-80 z-50"
+    >
       <div className="hud-frame bg-tdf-charcoal border border-tdf-line p-3">
         <input
           ref={inputRef}
@@ -292,7 +376,7 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -338,7 +422,11 @@ export default function Navbar() {
           esquina cortada de siempre en vez de un óvalo genérico */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         <div className="absolute left-1/2 -top-8 -translate-x-1/2 z-10 hidden md:flex">
-          <div className="relative w-24 h-24 flex items-center justify-center bg-tdf-charcoal border border-tdf-line hud-frame">
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.2 }}
+            className="relative w-24 h-24 flex items-center justify-center bg-tdf-charcoal border border-tdf-line hud-frame"
+          >
             <div
               className="absolute -inset-5 -z-10"
               style={{
@@ -353,7 +441,7 @@ export default function Navbar() {
                 className="w-16 h-auto"
               />
             </NavLink>
-          </div>
+          </motion.div>
         </div>
 
         <NavLink to="/" className="flex items-center gap-2 shrink-0 md:hidden">
@@ -364,35 +452,33 @@ export default function Navbar() {
           />
         </NavLink>
 
-        <nav className="hidden md:flex items-center gap-5">
+        <nav className="hidden md:flex items-center gap-6">
           {DIRECT_LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                `font-mono text-xs uppercase tracking-wide transition-colors ${
-                  isActive
-                    ? "text-tdf-magenta"
-                    : "text-tdf-muted hover:text-tdf-magenta"
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
+            <AnimatedNavLink key={link.to} {...link} />
           ))}
           <NavDropdown label="Comunidad" links={COMUNIDAD_LINKS} />
         </nav>
 
         <div className="hidden md:flex items-center gap-3 shrink-0">
           <NavDropdown label="SF6" links={SF6_LINKS} />
-          <a
+
+          <motion.a
             href="https://www.twitch.tv/tdfedeportes"
             target="_blank"
             rel="noreferrer"
-            className="font-mono text-[11px] uppercase border border-tdf-line hover:border-tdf-magenta hover:text-white text-tdf-muted transition-colors px-3 py-2"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center gap-1.5 font-mono text-[11px] uppercase font-semibold text-white px-4 py-2.5"
+            style={{
+              background: "linear-gradient(135deg, #C4147A, #5B2A86)",
+              clipPath:
+                "polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
+              boxShadow: "0 4px 20px -6px rgba(196,20,122,0.6)",
+            }}
           >
+            <Radio size={13} />
             Ver stream
-          </a>
+          </motion.a>
 
           <div className="relative">
             <IconButton
@@ -400,18 +486,13 @@ export default function Navbar() {
               active={searchOpen}
               label="Buscar"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="w-4 h-4"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="M21 21l-4.3-4.3" />
-              </svg>
+              <Search size={16} />
             </IconButton>
-            {searchOpen && <SearchPanel onClose={() => setSearchOpen(false)} />}
+            <AnimatePresence>
+              {searchOpen && (
+                <SearchPanel onClose={() => setSearchOpen(false)} />
+              )}
+            </AnimatePresence>
           </div>
 
           <LoginButton />
@@ -428,64 +509,78 @@ export default function Navbar() {
 
       {/* drawer mobile — logo centrado, menú completo, y las mismas
           acciones de la barra de escritorio abajo del todo */}
-      {mobileOpen && (
-        <nav className="md:hidden border-t border-tdf-line px-4 py-4 flex flex-col gap-4 font-mono text-sm uppercase">
-          {DIRECT_LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                isActive ? "text-tdf-magenta" : "text-tdf-muted"
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-          <div className="pt-2 border-t border-tdf-line">
-            <p className="text-tdf-muted mb-2">Comunidad</p>
-            {COMUNIDAD_LINKS.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `block pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-          <div className="pt-2 border-t border-tdf-line">
-            <p className="text-tdf-muted mb-2">SF6</p>
-            {SF6_LINKS.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  `block pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-          <a
-            href="https://www.twitch.tv/tdfedeportes"
-            target="_blank"
-            rel="noreferrer"
-            className="text-tdf-muted"
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.nav
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="md:hidden border-t border-tdf-line overflow-hidden"
           >
-            Ver stream ↗
-          </a>
-          <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
-            <CommunityLinks />
-            <LoginButton />
-          </div>
-        </nav>
-      )}
+            <div className="px-4 py-4 flex flex-col gap-4 font-mono text-sm uppercase">
+              {DIRECT_LINKS.map(({ to, label, Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
+                  }
+                >
+                  <Icon size={16} />
+                  {label}
+                </NavLink>
+              ))}
+              <div className="pt-2 border-t border-tdf-line">
+                <p className="text-tdf-muted mb-2">Comunidad</p>
+                {COMUNIDAD_LINKS.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
+                    }
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-tdf-line">
+                <p className="text-tdf-muted mb-2">SF6</p>
+                {SF6_LINKS.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
+                    }
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+              <a
+                href="https://www.twitch.tv/tdfedeportes"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-tdf-muted"
+              >
+                <Radio size={14} />
+                Ver stream ↗
+              </a>
+              <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
+                <CommunityLinks />
+                <LoginButton />
+              </div>
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
