@@ -28,8 +28,6 @@ const SF6_LINKS = [{ to: "/sf6/meta", label: "Meta actual" }];
 // que haya que traer de ningún lado (ver SearchPanel más abajo)
 const SEARCHABLE_PAGES = [...DIRECT_LINKS, ...COMUNIDAD_LINKS, ...SF6_LINKS];
 
-const ANNOUNCEMENT_STORAGE_KEY = "tdf_announcement_dismissed:tierlist-launch";
-
 type NavDropdownLink = { to: string; label: string };
 
 /** Desplegable por click, reutilizado para cualquier grupo del navbar
@@ -301,62 +299,48 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [announcementDismissed, setAnnouncementDismissed] = useState(
-    () => localStorage.getItem(ANNOUNCEMENT_STORAGE_KEY) === "1",
-  );
-
-  function dismissAnnouncement() {
-    localStorage.setItem(ANNOUNCEMENT_STORAGE_KEY, "1");
-    setAnnouncementDismissed(true);
-  }
 
   return (
     <header className="sticky top-0 z-40 bg-tdf-charcoal/85 backdrop-blur border-b border-tdf-line">
       {/* barra superior angosta — antes era el AnnouncementBar suelto
           solo en Home, ahora vive fusionado acá arriba y se ve en todo
-          el sitio (conversación de diseño, 21-08-2026) */}
-      {!announcementDismissed && (
-        <div className="h-8 border-b border-tdf-line flex items-center justify-between px-4 sm:px-6 font-mono text-[11px]">
-          <p className="text-tdf-muted truncate flex items-center gap-1.5 min-w-0">
-            <span
-              className="relative flex h-1.5 w-1.5 shrink-0"
-              aria-hidden="true"
-            >
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tdf-magenta opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-tdf-magenta" />
-            </span>
-            <span className="hidden sm:inline">NUEVO:</span>
-            <span className="truncate">
-              Ya puedes armar tu Tier List de personajes con la comunidad.
-            </span>
-            <NavLink
-              to="/tierlist"
-              className="text-tdf-magenta hover:text-white underline shrink-0"
-            >
-              Probarla →
-            </NavLink>
-          </p>
-          <div className="flex items-center gap-3 shrink-0 ml-3">
-            <CommunityLinks className="hidden sm:flex" />
-            <button
-              onClick={dismissAnnouncement}
-              className="text-tdf-muted hover:text-white"
-              aria-label="Cerrar aviso"
-            >
-              ✕
-            </button>
-          </div>
+          el sitio (conversación de diseño, 21-08-2026). Sin botón de
+          cerrar a propósito: un click sin querer lo perdía para
+          siempre en ese navegador sin forma de recuperarlo (bug real
+          encontrado por Seba el mismo día que se lanzó esto). */}
+      <div className="h-8 border-b border-tdf-line flex items-center justify-between px-4 sm:px-6 font-mono text-[11px]">
+        <p className="text-tdf-muted truncate flex items-center gap-1.5 min-w-0">
+          <span
+            className="relative flex h-1.5 w-1.5 shrink-0"
+            aria-hidden="true"
+          >
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tdf-magenta opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-tdf-magenta" />
+          </span>
+          <span className="hidden sm:inline">NUEVO:</span>
+          <span className="truncate">
+            Ya puedes armar tu Tier List de personajes con la comunidad.
+          </span>
+          <NavLink
+            to="/tierlist"
+            className="text-tdf-magenta hover:text-white underline shrink-0"
+          >
+            Probarla →
+          </NavLink>
+        </p>
+        <div className="flex items-center gap-3 shrink-0 ml-3">
+          <CommunityLinks className="hidden sm:flex" />
         </div>
-      )}
+      </div>
 
       {/* barra principal — el logo "atraviesa" el borde entre las dos
           barras, mismo truco visual que se probó en el teaser, con la
           esquina cortada de siempre en vez de un óvalo genérico */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <div className="absolute left-1/2 -top-5 -translate-x-1/2 z-10 hidden md:flex">
-          <div className="relative w-16 h-16 flex items-center justify-center bg-tdf-charcoal border border-tdf-line hud-frame">
+        <div className="absolute left-1/2 -top-8 -translate-x-1/2 z-10 hidden md:flex">
+          <div className="relative w-24 h-24 flex items-center justify-center bg-tdf-charcoal border border-tdf-line hud-frame">
             <div
-              className="absolute -inset-4 -z-10"
+              className="absolute -inset-5 -z-10"
               style={{
                 background:
                   "radial-gradient(circle, rgba(196,20,122,0.4) 0%, transparent 70%)",
@@ -366,7 +350,7 @@ export default function Navbar() {
               <img
                 src="/brand/logo-wordmark.webp"
                 alt="TDF"
-                className="w-11 h-auto"
+                className="w-16 h-auto"
               />
             </NavLink>
           </div>
