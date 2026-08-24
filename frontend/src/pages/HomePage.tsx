@@ -24,7 +24,7 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <section className="relative spray-bg py-16 overflow-hidden">
+      <section className="relative spray-bg py-16">
         <div className="relative z-10 flex flex-col gap-8">
           <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
 
