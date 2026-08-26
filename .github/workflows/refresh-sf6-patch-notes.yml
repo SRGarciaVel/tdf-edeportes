@@ -26,4 +26,5 @@ jobs:
       - name: Refrescar notas de parche de SF6
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DEEPL_API_KEY: ${{ secrets.DEEPL_API_KEY }}
         run: python scripts/refresh_sf6_patch_notes.py

@@ -30,7 +30,13 @@ function formatPatchDate(patchId: string): string {
   return `${parseInt(day, 10)} de ${monthName} de ${year}`;
 }
 
-function ChangesTable({ changes }: { changes: PatchChange[] }) {
+function ChangesTable({
+  changes,
+  lang,
+}: {
+  changes: PatchChange[];
+  lang: "en" | "es";
+}) {
   if (changes.length === 0) {
     return (
       <p className="font-body text-sm text-tdf-muted">Sin cambios listados.</p>
@@ -38,24 +44,29 @@ function ChangesTable({ changes }: { changes: PatchChange[] }) {
   }
   return (
     <div className="flex flex-col gap-2">
-      {changes.map((c, i) => (
-        <div
-          key={i}
-          className="border-b border-tdf-line/40 last:border-b-0 pb-2 last:pb-0"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            {c.move_name && (
-              <span className="font-mono text-xs text-white">
-                {c.move_name}
+      {changes.map((c, i) => {
+        const category =
+          lang === "es" ? (c.category_es ?? c.category) : c.category;
+        const details = lang === "es" ? (c.details_es ?? c.details) : c.details;
+        return (
+          <div
+            key={i}
+            className="border-b border-tdf-line/40 last:border-b-0 pb-2 last:pb-0"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              {c.move_name && (
+                <span className="font-mono text-xs text-white">
+                  {c.move_name}
+                </span>
+              )}
+              <span className="font-mono text-[10px] uppercase text-tdf-magenta">
+                {category}
               </span>
-            )}
-            <span className="font-mono text-[10px] uppercase text-tdf-magenta">
-              {c.category}
-            </span>
+            </div>
+            <p className="font-body text-sm text-tdf-muted">{details}</p>
           </div>
-          <p className="font-body text-sm text-tdf-muted">{c.details}</p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -68,6 +79,7 @@ export default function Sf6PatchNotesPage() {
   const [selectedCharacter, setSelectedCharacter] = useState<string | null>(
     null,
   );
+  const [lang, setLang] = useState<"en" | "es">("es");
 
   useEffect(() => {
     setLoading(true);
@@ -133,19 +145,36 @@ export default function Sf6PatchNotesPage() {
             <h2 className="text-xl font-display font-bold uppercase">
               {patch.title || formatPatchDate(patch.patch_id)}
             </h2>
-            {history.length > 1 && (
-              <select
-                value={patch.patch_id}
-                onChange={(e) => loadPatch(e.target.value)}
-                className="bg-tdf-dark border border-tdf-line px-3 py-1.5 text-xs font-mono uppercase"
-              >
-                {history.map((p) => (
-                  <option key={p.patch_id} value={p.patch_id}>
-                    {p.title || formatPatchDate(p.patch_id)}
-                  </option>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex gap-1 font-mono text-[11px]">
+                {(["es", "en"] as const).map((l) => (
+                  <button
+                    key={l}
+                    onClick={() => setLang(l)}
+                    className={`px-2.5 py-1.5 border uppercase transition-colors ${
+                      lang === l
+                        ? "border-tdf-magenta text-tdf-magenta"
+                        : "border-tdf-line text-tdf-muted hover:text-white"
+                    }`}
+                  >
+                    {l}
+                  </button>
                 ))}
-              </select>
-            )}
+              </div>
+              {history.length > 1 && (
+                <select
+                  value={patch.patch_id}
+                  onChange={(e) => loadPatch(e.target.value)}
+                  className="bg-tdf-dark border border-tdf-line px-3 py-1.5 text-xs font-mono uppercase"
+                >
+                  {history.map((p) => (
+                    <option key={p.patch_id} value={p.patch_id}>
+                      {p.title || formatPatchDate(p.patch_id)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           {patch.data.overall_concept && (
@@ -155,7 +184,10 @@ export default function Sf6PatchNotesPage() {
               </p>
               <div className="hud-frame bg-tdf-charcoal px-5 py-4">
                 <p className="font-body text-sm text-tdf-muted whitespace-pre-line leading-relaxed">
-                  {patch.data.overall_concept}
+                  {lang === "es"
+                    ? (patch.data.overall_concept_es ??
+                      patch.data.overall_concept)
+                    : patch.data.overall_concept}
                 </p>
               </div>
             </div>
@@ -167,7 +199,10 @@ export default function Sf6PatchNotesPage() {
                 // Cambios universales
               </p>
               <div className="hud-frame bg-tdf-charcoal px-5 py-4">
-                <ChangesTable changes={patch.data.universal_changes} />
+                <ChangesTable
+                  changes={patch.data.universal_changes}
+                  lang={lang}
+                />
               </div>
             </div>
           )}
@@ -198,10 +233,12 @@ export default function Sf6PatchNotesPage() {
                   </p>
                   {selected.summary && (
                     <p className="font-body text-sm text-tdf-muted whitespace-pre-line leading-relaxed mb-4">
-                      {selected.summary}
+                      {lang === "es"
+                        ? (selected.summary_es ?? selected.summary)
+                        : selected.summary}
                     </p>
                   )}
-                  <ChangesTable changes={selected.changes} />
+                  <ChangesTable changes={selected.changes} lang={lang} />
                 </div>
               )}
             </div>

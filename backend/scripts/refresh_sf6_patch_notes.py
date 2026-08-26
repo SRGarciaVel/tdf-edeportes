@@ -14,9 +14,40 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models import SF6PatchNote
 from app.services.sf6_patch_notes import fetch_full_patch, fetch_latest_patch_id
+from app.services.translation import translate_to_spanish
+
+
+def add_translations(data: dict) -> dict:
+    """Agrega campos "_es" al lado de cada texto en inglés — nunca
+    reemplaza el original, así el frontend puede elegir cuál mostrar
+    (o si la traducción falló/no hay clave configurada, los campos
+    "_es" simplemente van a valer lo mismo que el inglés, ver
+    translate_to_spanish). Los nombres de movimientos de cada
+    personaje se pasan como "términos a proteger" al traducir su
+    propio resumen y el detalle de sus cambios, para que no se
+    traduzcan por accidente si aparecen mencionados en la prosa."""
+    data["overall_concept_es"] = translate_to_spanish(data["overall_concept"])
+
+    for change in data["universal_changes"]:
+        change["category_es"] = translate_to_spanish(change["category"])
+        change["details_es"] = translate_to_spanish(change["details"])
+
+    for character in data["characters"]:
+        move_names = [c["move_name"] for c in character["changes"] if c["move_name"]]
+        character["summary_es"] = translate_to_spanish(
+            character["summary"], extra_terms=move_names
+        )
+        for change in character["changes"]:
+            change["category_es"] = translate_to_spanish(change["category"])
+            change["details_es"] = translate_to_spanish(
+                change["details"], extra_terms=move_names
+            )
+
+    return data
 
 
 def save_patch(db, patch_id: str, data: dict) -> None:
@@ -42,6 +73,14 @@ def main() -> None:
     if data is None:
         print(f"✗ No se pudo traer el resumen general de {patch_id}.")
         return
+
+    if settings.deepl_api_key:
+        print("Traduciendo al español (protegiendo terminología de FGC)...")
+        data = add_translations(data)
+    else:
+        print(
+            "⚠ Sin DEEPL_API_KEY configurada — se guarda solo en inglés, sin traducir."
+        )
 
     db = SessionLocal()
     save_patch(db, patch_id, data)

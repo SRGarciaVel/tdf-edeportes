@@ -21,6 +21,11 @@ class Settings(BaseSettings):
 
     discord_webhook_url: str = ""
 
+    # "" por default: si no está seteada, translation.py se apaga solo
+    # y guarda el texto en inglés sin traducir (no rompe nada, ver
+    # translate_to_spanish)
+    deepl_api_key: str = ""
+
     cors_origins: list[str] = ["http://localhost:5173"]
 
 

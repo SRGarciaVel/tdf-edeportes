@@ -260,19 +260,23 @@ export interface MetaSnapshot<T = unknown> {
 export interface PatchChange {
   move_name: string | null;
   category: string;
+  category_es?: string;
   details: string;
+  details_es?: string;
 }
 
 export interface PatchCharacter {
   tool_name: string;
   alpha: string;
   summary: string;
+  summary_es?: string;
   changes: PatchChange[];
 }
 
 export interface PatchNoteData {
   title: string;
   overall_concept: string;
+  overall_concept_es?: string;
   universal_changes: PatchChange[];
   characters: PatchCharacter[];
 }
