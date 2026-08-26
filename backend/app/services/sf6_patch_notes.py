@@ -4,18 +4,22 @@ API JSON pública para esto, confirmado 21-08-2026). Pero tampoco necesita
 Playwright: son páginas HTML normales del servidor, el contenido no se
 carga por JavaScript (confirmado con web_fetch simple).
 
-Selectores basados en texto (buscar el heading "Overall Concept", etc.),
-no en clases CSS — no tenemos el HTML real de Capcom para confirmar
-nombres de clase, mismo criterio que get_advanced_stats en
-cfn_scraper.py. Probablemente necesite una vuelta de ajuste con --debug
-la primera vez que corra contra el sitio real.
+Estructura real confirmada con HTML de verdad (Seba, 21-08-2026): la
+tabla de cambios NO usa <table>/<tr>/<td>, usa <dl>/<dt>/<dd> — cada fila
+es un <dl> separado con clase que contiene "content_table_body", y el
+encabezado un <dl> con clase que contiene "content_table_head". Los
+títulos de sección ("Overall Concept", "Adjustment Summary") tampoco son
+h1-h5, son texto suelto dentro de divs con clases generadas
+(content_*__hash, típico de CSS Modules) — por eso la búsqueda de
+headings acá NO se restringe a ningún tag en particular, busca el nodo
+de texto exacto y listo.
 """
 
 import logging
 import re
 
 import httpx
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -83,22 +87,36 @@ def _fetch_soup(url: str) -> BeautifulSoup | None:
 
 
 def _heading_by_text(soup: BeautifulSoup, text: str) -> Tag | None:
-    """Busca un heading (h1-h5) cuyo texto sea exactamente ese, sin
-    distinguir mayúsculas — no sabemos qué nivel de heading usa Capcom
-    para cada sección, así que se prueban todos."""
-    for tag in soup.find_all(re.compile(r"^h[1-5]$")):
-        if tag.get_text(strip=True).lower() == text.lower():
-            return tag
+    """Busca un elemento cuyo texto sea exactamente ese, sin distinguir
+    mayúsculas — NO se restringe a ningún tag en particular a
+    propósito: confirmado con HTML real (Seba, 21-08-2026) que estos
+    "títulos" son texto suelto en divs con clases generadas
+    (content_*__hash), no headings semánticos h1-h5 (esa suposición
+    causaba que la búsqueda fallara siempre, bug real encontrado el
+    mismo día). Busca el nodo de TEXTO exacto, no el tag que lo
+    contiene, para no agarrar por accidente un contenedor gigante que
+    también "tiene" ese texto en algún lado adentro."""
+    for string in soup.find_all(string=True):
+        if (
+            isinstance(string, NavigableString)
+            and string.strip().lower() == text.lower()
+        ):
+            return string.parent
     return None
 
 
 def _paragraphs_until_next_heading(start: Tag) -> str:
-    """Junta el texto de todos los <p> (u otro texto suelto) entre un
-    heading y el próximo heading — así se saca la prosa de una sección
-    sin tener que saber la estructura exacta del HTML alrededor."""
+    """Junta el texto de los hermanos siguientes a un heading hasta
+    toparse con el inicio de una tabla de cambios (clase que contiene
+    "content_table" — estructura real confirmada, ver
+    _changes_table_after). Antes solo paraba en h1-h5 (que no existen
+    en esta página), así que se tragaba la tabla entera y hasta la
+    navegación de "siguiente personaje" (bug real encontrado por Seba,
+    21-08-2026)."""
     parts = []
     for sibling in start.find_next_siblings():
-        if re.match(r"^h[1-5]$", sibling.name or ""):
+        classes = sibling.get("class") or []
+        if any("content_table" in c for c in classes):
             break
         text = sibling.get_text(separator=" ", strip=True)
         if text:
@@ -106,27 +124,48 @@ def _paragraphs_until_next_heading(start: Tag) -> str:
     return "\n\n".join(parts)
 
 
-def _changes_table_after(start: Tag) -> list[dict]:
-    """Busca la primera <table> después de un heading dado y la
-    convierte en una lista de {move_name, category, details} — NO
-    confirmado contra HTML real todavía si Capcom realmente usa <table>
-    para esto (podría ser divs con otra estructura), revisar con
-    --debug la primera corrida real."""
-    table = start.find_next("table")
-    if table is None:
+def _changes_table_after(soup: BeautifulSoup) -> list[dict]:
+    """Tabla de cambios armada con <dl>/<dt>/<dd>, no <table> — cada
+    fila es un <dl> separado con clase que contiene
+    "content_table_body" (no <tr> dentro de una sola tabla), con el
+    nombre del movimiento en <dt> y categoría/detalle en dos <div>
+    dentro de <dd>. El encabezado es un <dl> aparte con clase que
+    contiene "content_table_head" — se busca directo por esa clase
+    (la primera de toda la página), sin necesitar un punto de anclaje
+    por texto: "Changes" es el label de la primera columna del
+    encabezado, no un título de sección — buscar por ese texto y
+    después la "próxima" tabla se saltaba la que ya había encontrado
+    (bug real encontrado en la primera versión, 21-08-2026). Cada
+    página de este scraper solo tiene una tabla de este tipo, así que
+    "la primera de toda la página" alcanza."""
+    header = None
+    for dl in soup.find_all("dl"):
+        classes = dl.get("class") or []
+        if any("content_table_head" in c for c in classes):
+            header = dl
+            break
+    if header is None:
         return []
 
     rows = []
-    for tr in table.find_all("tr"):
-        cells = [td.get_text(separator=" ", strip=True) for td in tr.find_all("td")]
-        if len(cells) >= 3:
-            rows.append(
-                {"move_name": cells[0], "category": cells[1], "details": cells[2]}
-            )
-        elif len(cells) == 2:
-            # tabla "Universal" no tiene columna de nombre de movimiento,
-            # solo categoría + detalle
-            rows.append({"move_name": None, "category": cells[0], "details": cells[1]})
+    for sibling in header.find_next_siblings("dl"):
+        classes = sibling.get("class") or []
+        if not any("content_table_body" in c for c in classes):
+            break
+        dt = sibling.find("dt")
+        dd = sibling.find("dd")
+        if dt is None or dd is None:
+            continue
+        divs = dd.find_all("div")
+        category = divs[0].get_text(strip=True) if len(divs) > 0 else ""
+        details = divs[1].get_text(separator="\n", strip=True) if len(divs) > 1 else ""
+        rows.append(
+            {
+                "move_name": dt.get_text(strip=True) or None,
+                "category": category,
+                "details": details,
+            }
+        )
     return rows
 
 
@@ -139,17 +178,28 @@ def fetch_patch_overview(patch_id: str) -> dict | None:
         return None
 
     title_tag = soup.find("h1")
-    title = title_tag.get_text(strip=True) if title_tag else patch_id
+    title = title_tag.get_text(strip=True) if title_tag else ""
+    if not title:
+        # el h1 puede venir vacío si el título en realidad es una
+        # imagen con el texto como "alt" en vez de texto plano (visto
+        # en una captura real: "![08.03.2026 update]()..." — no
+        # confirmado al 100% con HTML real todavía, pero es un
+        # respaldo de bajo riesgo: si tampoco encuentra nada, el
+        # frontend ya sabe mostrar la fecha del patch_id en su lugar)
+        img = soup.find(
+            "img", alt=re.compile(r"\d{2}\.\d{2}\.\d{4}\s*update", re.IGNORECASE)
+        )
+        if img and img.get("alt"):
+            title = img["alt"].strip()
+    if not title:
+        title = patch_id
 
     overall_concept = ""
     concept_heading = _heading_by_text(soup, "Overall Concept")
     if concept_heading:
         overall_concept = _paragraphs_until_next_heading(concept_heading)
 
-    universal_changes: list[dict] = []
-    universal_heading = _heading_by_text(soup, "Universal")
-    if universal_heading:
-        universal_changes = _changes_table_after(universal_heading)
+    universal_changes = _changes_table_after(soup)
 
     return {
         "title": title,
@@ -172,10 +222,7 @@ def fetch_character_changes(patch_id: str, tool_name: str) -> dict | None:
     if summary_heading:
         summary = _paragraphs_until_next_heading(summary_heading)
 
-    changes: list[dict] = []
-    changes_heading = _heading_by_text(soup, "Changes")
-    if changes_heading:
-        changes = _changes_table_after(changes_heading)
+    changes = _changes_table_after(soup)
 
     if not summary and not changes:
         # la página existe pero no encontramos nada reconocible — o el

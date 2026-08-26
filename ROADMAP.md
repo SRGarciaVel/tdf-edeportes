@@ -128,10 +128,42 @@ se puede sacarle a Buckler's Boot Camp además de lo que ya trackeamos.
       sin rama "m"/Modern para matchups todavía confirmada) — Modern queda
       deshabilitado en Solo Master hasta confirmar esa rama. Verificado en
       producción con datos reales, 21-08-2026.
-- [ ] **Notas de parche** — análisis/resumen de los battle change list que
-      Capcom publica (`streetfighter.com/6/buckler/battle_change`). Todavía
-      sin definir el enfoque técnico (¿scraping y resumen automático?
-      ¿alguien de staff lo redacta a mano con la info oficial como fuente?).
+- [x] **Notas de parche** (`/sf6/patch-notes`) — resumen general + cambios
+      universales + detalle por personaje, sacado de
+      `streetfighter.com/6/buckler/en/battle_change/{patch_id}` y sus
+      sub-páginas por personaje (`.../{patch_id}/{tool_name}`). Sin API
+      JSON pública para esto (a diferencia de Meta Actual) — necesita
+      parsear HTML real con BeautifulSoup, pero sin Playwright (páginas
+      normales del servidor, no cargan por JS). Estructura real
+      confirmada con HTML de Seba, 21-08-2026: la tabla de cambios usa
+      `<dl>/<dt>/<dd>` con clases `content_table_head__`/
+      `content_table_body__`, NO `<table>`; los "títulos" de sección
+      ("Overall Concept", "Adjustment Summary") tampoco son headings
+      semánticos h1-h5, son texto suelto en divs con clases generadas
+      (CSS Modules) — la búsqueda de headings no se restringe a ningún
+      tag por eso. Sin cron automático (a diferencia de Meta Actual):
+      se dispara a mano vía `workflow_dispatch` cuando Seba se entera
+      de un parche nuevo, y hay que correr el script tanto local como
+      contra Supabase por separado (mismo criterio que las migraciones
+      — el primer intento solo se corrió local, el sitio real quedó
+      desactualizado hasta correrlo también contra producción).
+      Contenido en inglés únicamente por ahora — pendiente abajo.
+      Verificado en producción con datos reales, 21/22-08-2026.
+      - [ ] **Traducción mixta pendiente**: términos técnicos de FG
+            (nombres de movimientos, frames, ventaja/desventaja) se
+            quedan en inglés — así habla la comunidad en español
+            también. La prosa de lectura (Concepto general, resumen por
+            personaje) se traduciría/parafrasearía al español. Se
+            evaluó usar gamerfocus.co como fuente (tienen notas de
+            parche traducidas con exactamente este estilo mixto) pero
+            se descartó — es su redacción/traducción original, un
+            medio periodístico, no el dato técnico de Capcom;
+            reproducirla sería un problema de derechos de autor real,
+            además de una estructura de artículo de blog poco confiable
+            para automatizar (a diferencia de la estructura consistente
+            por componentes de Capcom). Queda pendiente decidir el
+            mecanismo real de traducción (¿API de traducción? ¿alguien
+            de staff revisa/ajusta a mano?).
 - [x] **Records por jugador de TDF** (Drive Impact, Perfect Parry, Punish
       Counters, Corner Pressure, throws) — vive en `/jugadores`, no en el
       hub de SF6 (es específico de la gente de TDF, no del juego en
