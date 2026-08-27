@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
+import Skeleton from "../components/Skeleton";
 import { deleteTierList, getTierList } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
 import { useAuth } from "../lib/auth";
@@ -125,7 +126,9 @@ export default function TierListSharedPage() {
   if (error) {
     return (
       <Layout>
-        <p className="text-tdf-muted font-body">No se encontró esta tier list.</p>
+        <p className="text-tdf-muted font-body">
+          No se encontró esta tier list.
+        </p>
         <Link
           to="/tierlist"
           className="text-tdf-purple hover:text-tdf-magenta underline"
@@ -139,7 +142,21 @@ export default function TierListSharedPage() {
   if (!data) {
     return (
       <Layout>
-        <p className="text-tdf-muted font-body">Cargando...</p>
+        <SectionLabel index="09">Tier list</SectionLabel>
+        <Skeleton className="h-8 w-64 mb-2" />
+        <Skeleton className="h-4 w-48 mb-8" />
+        <div className="bg-tdf-dark p-4 flex flex-col gap-1">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex gap-1">
+              <Skeleton className="w-16 h-16 shrink-0" />
+              <div className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex gap-2 p-2">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <Skeleton key={j} className="w-16 h-16 shrink-0" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </Layout>
     );
   }

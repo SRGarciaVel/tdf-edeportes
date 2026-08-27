@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
+import Skeleton from "../components/Skeleton";
 import {
   createTierList,
   createTierListTemplate,
@@ -880,61 +881,75 @@ export default function TierListPage() {
           )}
 
           {loadingTemplates && (
-            <p className="text-sm text-tdf-muted font-body">Cargando...</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="hud-frame bg-tdf-charcoal">
+                  <Skeleton className="h-16 w-full" />
+                  <div className="px-5 py-4 flex flex-col gap-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
           {!loadingTemplates && templates.length === 0 && (
             <p className="text-sm text-tdf-muted font-body">
               Todavía no hay ninguna plantilla, sé el primero en crear una.
             </p>
           )}
-          <div className="grid sm:grid-cols-2 gap-3">
-            {templates.map((t) => (
-              <div
-                key={t.id}
-                className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors relative overflow-hidden"
-              >
-                <button
-                  onClick={() => handleSelectTemplate(t)}
-                  className="w-full text-left"
+          {!loadingTemplates && templates.length > 0 && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {templates.map((t) => (
+                <div
+                  key={t.id}
+                  className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors relative overflow-hidden"
                 >
-                  {t.sample_images.length > 0 && (
-                    <div className="flex h-16">
-                      {t.sample_images.map((src, i) => (
-                        <img
-                          key={i}
-                          src={src}
-                          alt=""
-                          className="flex-1 h-full object-cover"
-                        />
-                      ))}
-                    </div>
-                  )}
-                  <div className={`px-5 py-4 ${user?.is_staff ? "pr-6" : ""}`}>
-                    <p className="font-semibold">{t.name}</p>
-                    <p className="font-mono text-xs text-tdf-muted mt-1">
-                      {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
-                      <span className="text-white">{t.creator_name}</span>
-                    </p>
-                  </div>
-                </button>
-                {/* solo staff ve esto — el backend también valida
-                    is_staff en el DELETE, ver deleteTierListTemplate */}
-                {user?.is_staff && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setConfirmDeleteTemplate(t);
-                    }}
-                    disabled={deletingTemplateId === t.id}
-                    className="absolute top-2 right-2 text-tdf-muted hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1 bg-tdf-dark/70"
-                    aria-label={`Borrar plantilla ${t.name}`}
+                    onClick={() => handleSelectTemplate(t)}
+                    className="w-full text-left"
                   >
-                    ✕
+                    {t.sample_images.length > 0 && (
+                      <div className="flex h-16">
+                        {t.sample_images.map((src, i) => (
+                          <img
+                            key={i}
+                            src={src}
+                            alt=""
+                            className="flex-1 h-full object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div
+                      className={`px-5 py-4 ${user?.is_staff ? "pr-6" : ""}`}
+                    >
+                      <p className="font-semibold">{t.name}</p>
+                      <p className="font-mono text-xs text-tdf-muted mt-1">
+                        {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
+                        <span className="text-white">{t.creator_name}</span>
+                      </p>
+                    </div>
                   </button>
-                )}
-              </div>
-            ))}
-          </div>
+                  {/* solo staff ve esto — el backend también valida
+                    is_staff en el DELETE, ver deleteTierListTemplate */}
+                  {user?.is_staff && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDeleteTemplate(t);
+                      }}
+                      disabled={deletingTemplateId === t.id}
+                      className="absolute top-2 right-2 text-tdf-muted hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1 bg-tdf-dark/70"
+                      aria-label={`Borrar plantilla ${t.name}`}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* popup propio de confirmación, en vez de window.confirm() del
               navegador — mismo patrón visual que el popup de configurar

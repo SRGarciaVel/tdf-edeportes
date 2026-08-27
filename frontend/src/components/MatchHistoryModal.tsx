@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getRecentMatches } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
+import Skeleton from "./Skeleton";
 import type { CFNMatchRead } from "../lib/types";
 
 function formatDate(iso: string): string {
@@ -102,7 +103,20 @@ export default function MatchHistoryModal({
             </p>
           )}
           {!error && matches === null && (
-            <p className="text-tdf-muted text-sm py-4 font-body">Cargando...</p>
+            <div className="flex flex-col gap-1 py-2">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between gap-3 py-2 border-b border-tdf-line/60 last:border-0"
+                >
+                  <div className="flex flex-col gap-1.5">
+                    <Skeleton className="h-2.5 w-20" />
+                    <Skeleton className="h-3.5 w-36" />
+                  </div>
+                  <Skeleton className="h-3 w-10" />
+                </div>
+              ))}
+            </div>
           )}
           {matches !== null && matches.length === 0 && (
             <p className="text-tdf-muted text-sm py-4 font-body">
