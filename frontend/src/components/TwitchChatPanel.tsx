@@ -34,7 +34,7 @@ export default function TwitchChatPanel() {
           sea uno que no cambia nada visible. Antes esto usaba
           framer-motion (transform: translateX). Ver lessons.md. */}
       <div
-        className="fixed top-0 h-full w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
+        className="fixed top-24 h-[calc(100%-6rem)] w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
         style={{ right: open ? 0 : "-100%" }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-tdf-line shrink-0">
