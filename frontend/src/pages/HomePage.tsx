@@ -1,3 +1,4 @@
+import { Radio } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
@@ -6,8 +7,10 @@ import Skeleton from "../components/Skeleton";
 import TwitchEmbed from "../components/TwitchEmbed";
 import { listEvents } from "../lib/api";
 import type { EventItem } from "../lib/types";
+import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 
 export default function HomePage() {
+  const liveStatus = useTwitchLiveStatus();
   const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
 
@@ -118,7 +121,28 @@ export default function HomePage() {
 
       <section className="mb-12">
         <SectionLabel index="02">En vivo</SectionLabel>
-        <TwitchEmbed />
+        {liveStatus === null ? (
+          <div className="hud-frame bg-tdf-charcoal aspect-video flex items-center justify-center">
+            <Skeleton className="h-6 w-40" />
+          </div>
+        ) : liveStatus.is_live ? (
+          <TwitchEmbed />
+        ) : (
+          // reemplaza la tarjeta blanca que mete el propio iframe de
+          // Twitch cuando el canal está offline — no se puede estilizar
+          // (es contenido de otro dominio), así que directamente no se
+          // muestra el embed hasta confirmar que está en vivo de
+          // verdad (bug real reportado por Seba, 21-08-2026)
+          <div className="hud-frame bg-tdf-charcoal aspect-video flex flex-col items-center justify-center gap-3 px-6 text-center">
+            <Radio size={28} className="text-tdf-muted" />
+            <p className="font-display font-bold uppercase text-lg">
+              Ahora no está en vivo
+            </p>
+            <p className="font-body text-sm text-tdf-muted max-w-sm">
+              Sigue el canal para enterarte apenas empecemos.
+            </p>
+          </div>
+        )}
         <p className="font-mono text-xs text-tdf-muted mt-2">
           También puedes verlo directo en{" "}
           <a

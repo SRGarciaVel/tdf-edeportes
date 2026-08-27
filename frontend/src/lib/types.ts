@@ -286,3 +286,9 @@ export interface PatchNote {
   title: string;
   data: PatchNoteData;
 }
+
+export interface TwitchLiveStatus {
+  is_live: boolean;
+  title: string | null;
+  viewer_count: number | null;
+}

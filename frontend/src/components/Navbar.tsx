@@ -16,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { listCfnPlayers, listEvents, listTierLists } from "../lib/api";
+import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 import type { CFNPlayer, EventItem, TierListSummaryData } from "../lib/types";
 import CommunityLinks from "./CommunityLinks";
 import LoginButton from "./LoginButton";
@@ -397,6 +398,7 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const liveStatus = useTwitchLiveStatus();
 
   return (
     <header
@@ -486,30 +488,46 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-3 shrink-0">
           <NavDropdown label="SF6" links={SF6_LINKS} bordered />
 
-          <motion.a
-            href="https://www.twitch.tv/tdfedeportes"
-            target="_blank"
-            rel="noreferrer"
-            animate={{
-              boxShadow: [
-                "0 4px 20px -6px rgba(196,20,122,0.5)",
-                "0 4px 26px -4px rgba(196,20,122,0.85)",
-                "0 4px 20px -6px rgba(196,20,122,0.5)",
-              ],
-            }}
-            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-1.5 font-mono text-[11px] uppercase font-semibold text-white px-4 py-2.5"
-            style={{
-              background: "linear-gradient(135deg, #C4147A, #5B2A86)",
-              clipPath:
-                "polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
-            }}
-          >
-            <Radio size={13} />
-            Ver stream
-          </motion.a>
+          {liveStatus?.is_live ? (
+            <motion.a
+              href="https://www.twitch.tv/tdfedeportes"
+              target="_blank"
+              rel="noreferrer"
+              animate={{
+                boxShadow: [
+                  "0 4px 20px -6px rgba(196,20,122,0.5)",
+                  "0 4px 26px -4px rgba(196,20,122,0.85)",
+                  "0 4px 20px -6px rgba(196,20,122,0.5)",
+                ],
+              }}
+              transition={{
+                duration: 2.2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-1.5 font-mono text-[11px] uppercase font-semibold text-white px-4 py-2.5"
+              style={{
+                background: "linear-gradient(135deg, #C4147A, #5B2A86)",
+                clipPath:
+                  "polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
+              }}
+            >
+              <Radio size={13} />
+              En vivo
+            </motion.a>
+          ) : (
+            <a
+              href="https://www.twitch.tv/tdfedeportes"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 font-mono text-[11px] uppercase text-tdf-muted border border-tdf-line hover:border-tdf-magenta hover:text-white transition-colors px-4 py-2.5"
+            >
+              <Radio size={13} />
+              Ver stream
+            </a>
+          )}
 
           <div className="relative">
             <IconButton
@@ -599,10 +617,10 @@ export default function Navbar() {
                 href="https://www.twitch.tv/tdfedeportes"
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 text-tdf-muted"
+                className={`flex items-center gap-2 ${liveStatus?.is_live ? "text-tdf-magenta" : "text-tdf-muted"}`}
               >
                 <Radio size={14} />
-                Ver stream ↗
+                {liveStatus?.is_live ? "En vivo ↗" : "Ver stream ↗"}
               </a>
               <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
                 <CommunityLinks />

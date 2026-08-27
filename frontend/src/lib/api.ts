@@ -19,6 +19,7 @@ import type {
   TierListTemplateSummaryData,
   MetaSnapshot,
   PatchNote,
+  TwitchLiveStatus,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -472,4 +473,11 @@ export async function getLatestPatchNote(): Promise<PatchNote> {
 export async function listPatchNotes(): Promise<PatchNote[]> {
   const res = await fetch(`${API_URL}/sf6/patch-notes`);
   return parseOrThrow<PatchNote[]>(res);
+}
+
+// estado real del canal de Twitch de TDF — público, sin auth, cacheado
+// del lado del backend (~45s), no hace falta cuidarse de pedirlo seguido
+export async function getTwitchLiveStatus(): Promise<TwitchLiveStatus> {
+  const res = await fetch(`${API_URL}/twitch/live-status`);
+  return parseOrThrow<TwitchLiveStatus>(res);
 }
