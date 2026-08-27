@@ -210,11 +210,11 @@ function ItemChip({
           <img
             src={item.image}
             alt={item.label}
-            className="w-16 h-16 object-cover border border-tdf-line"
+            className="w-24 h-24 object-cover border border-tdf-line"
           />
         ) : (
           <span
-            className={`inline-block px-2 py-1 text-xs font-mono border border-current/40 bg-tdf-dark ${characterColorClass(
+            className={`inline-block px-2 py-1 text-sm font-mono border border-current/40 bg-tdf-dark ${characterColorClass(
               item.label,
             )}`}
           >
@@ -250,13 +250,13 @@ function ItemPreview({ item }: { item: TierItemData }) {
       <img
         src={item.image}
         alt={item.label}
-        className="w-16 h-16 object-cover border-2 border-tdf-magenta shadow-[0_8px_24px_rgba(0,0,0,0.6)] rotate-3 cursor-grabbing"
+        className="w-24 h-24 object-cover border-2 border-tdf-magenta shadow-[0_8px_24px_rgba(0,0,0,0.6)] rotate-3 cursor-grabbing"
       />
     );
   }
   return (
     <div
-      className={`px-2 py-1 text-xs font-mono border-2 border-tdf-magenta bg-tdf-dark shadow-[0_8px_24px_rgba(0,0,0,0.6)] rotate-3 cursor-grabbing ${characterColorClass(
+      className={`px-2 py-1 text-sm font-mono border-2 border-tdf-magenta bg-tdf-dark shadow-[0_8px_24px_rgba(0,0,0,0.6)] rotate-3 cursor-grabbing ${characterColorClass(
         item.label,
       )}`}
     >
@@ -1089,7 +1089,7 @@ export default function TierListPage() {
                   <SortableZone
                     id={row.id}
                     items={tiers[row.id] ?? []}
-                    className="flex-1 min-h-16 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start"
+                    className="flex-1 min-h-24 border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-2 items-start content-start"
                   >
                     {tiers[row.id]?.map((item) => (
                       <ItemChip
@@ -1150,7 +1150,7 @@ export default function TierListPage() {
             <SortableZone
               id={UNPLACED_ID}
               items={unplaced}
-              className="border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-3 min-h-20"
+              className="border border-tdf-line bg-tdf-charcoal flex flex-wrap gap-2 p-3 min-h-28"
             >
               {unplaced.map((item) => (
                 <ItemChip
