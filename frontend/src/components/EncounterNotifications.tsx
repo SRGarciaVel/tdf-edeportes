@@ -81,9 +81,13 @@ export default function EncounterNotifications() {
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-gray-200 truncate">
-                    <span className="text-tdf-purple">{e.player_a_name}</span>{" "}
-                    vs{" "}
-                    <span className="text-tdf-purple">{e.player_b_name}</span>
+                    <span className="text-white font-semibold">
+                      {e.player_a_name}
+                    </span>{" "}
+                    <span className="text-tdf-muted">vs</span>{" "}
+                    <span className="text-white font-semibold">
+                      {e.player_b_name}
+                    </span>
                   </p>
                   <p className="font-mono text-[10px] text-tdf-muted">
                     {timeAgo(e.played_at)}

@@ -1,18 +1,26 @@
 import { Radio } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import TwitchEmbed from "../components/TwitchEmbed";
-import { listEvents } from "../lib/api";
-import type { EventItem } from "../lib/types";
+import { listCfnPlayers, listEvents } from "../lib/api";
+import { characterColorClass } from "../lib/characterColors";
+import type { CFNPlayer, EventItem } from "../lib/types";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
+
+// cuántas caras mostrar en el vistazo de comunidad — más que esto en
+// una fila empieza a sentirse apretado en mobile (2 columnas)
+const COMMUNITY_PREVIEW_COUNT = 6;
 
 export default function HomePage() {
   const liveStatus = useTwitchLiveStatus();
   const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
+  const [communityPreview, setCommunityPreview] = useState<CFNPlayer[]>([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(true);
 
   useEffect(() => {
     listEvents(null)
@@ -23,6 +31,24 @@ export default function HomePage() {
         setNextEvent(upcoming[0] ?? null);
       })
       .finally(() => setLoadingEvent(false));
+  }, []);
+
+  useEffect(() => {
+    listCfnPlayers()
+      .then((players) => {
+        // los mejores rankeados primero (MR más alto arriba) — sin MR
+        // (sin partidas registradas todavía) van al final, no antes
+        // que alguien con rango real
+        const sorted = [...players].sort((a, b) => {
+          if (a.master_rating == null && b.master_rating == null) return 0;
+          if (a.master_rating == null) return 1;
+          if (b.master_rating == null) return -1;
+          return b.master_rating - a.master_rating;
+        });
+        setCommunityPreview(sorted.slice(0, COMMUNITY_PREVIEW_COUNT));
+      })
+      .catch(() => setCommunityPreview([]))
+      .finally(() => setLoadingPlayers(false));
   }, []);
 
   return (
@@ -122,7 +148,7 @@ export default function HomePage() {
       <section className="mb-12">
         <SectionLabel index="02">En vivo</SectionLabel>
         {liveStatus === null ? (
-          <div className="hud-frame bg-tdf-charcoal aspect-video flex items-center justify-center">
+          <div className="hud-frame bg-tdf-charcoal py-10 flex items-center justify-center">
             <Skeleton className="h-6 w-40" />
           </div>
         ) : liveStatus.is_live ? (
@@ -132,10 +158,15 @@ export default function HomePage() {
           // Twitch cuando el canal está offline — no se puede estilizar
           // (es contenido de otro dominio), así que directamente no se
           // muestra el embed hasta confirmar que está en vivo de
-          // verdad (bug real reportado por Seba, 21-08-2026)
-          <div className="hud-frame bg-tdf-charcoal aspect-video flex flex-col items-center justify-center gap-3 px-6 text-center">
-            <Radio size={28} className="text-tdf-muted" />
-            <p className="font-display font-bold uppercase text-lg">
+          // verdad (bug real reportado por Seba, 21-08-2026). Sin
+          // aspect-video acá a propósito: ese alto (16:9 del ancho
+          // completo) tiene sentido para el reproductor real, pero
+          // deja una caja enorme y vacía para dos líneas de texto
+          // cuando está offline, que es el estado más común (otro
+          // hallazgo real de Seba, mismo día).
+          <div className="hud-frame bg-tdf-charcoal py-10 flex flex-col items-center justify-center gap-3 px-6 text-center">
+            <Radio size={24} className="text-tdf-muted" />
+            <p className="font-display font-bold uppercase text-base">
               Ahora no está en vivo
             </p>
             <p className="font-body text-sm text-tdf-muted max-w-sm">
@@ -186,6 +217,58 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      <section className="mb-12">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <SectionLabel index="04">La comunidad</SectionLabel>
+          <Link
+            to="/jugadores"
+            className="font-mono text-xs uppercase text-tdf-magenta hover:text-white underline"
+          >
+            Ver a todos →
+          </Link>
+        </div>
+        {loadingPlayers && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        )}
+        {!loadingPlayers && communityPreview.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {communityPreview.map((p) => (
+              <Link
+                key={p.cfn_id}
+                to="/jugadores"
+                className="hud-frame bg-tdf-charcoal px-3 py-3 flex flex-col items-center gap-2 text-center hover:border-tdf-magenta transition-colors"
+              >
+                {p.avatar_url ? (
+                  <img
+                    src={p.avatar_url}
+                    alt={p.display_name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <InitialsAvatar seed={p.display_name} size={10} />
+                )}
+                <div className="min-w-0">
+                  <p className="font-body text-xs font-semibold truncate">
+                    {p.display_name}
+                  </p>
+                  {p.character_name && (
+                    <p
+                      className={`font-mono text-[10px] truncate ${characterColorClass(p.character_name)}`}
+                    >
+                      {p.character_name}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
