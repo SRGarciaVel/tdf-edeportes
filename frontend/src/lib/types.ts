@@ -178,6 +178,7 @@ export interface TierListTemplateSummaryData {
   item_count: number;
   creator_name: string;
   created_at: string;
+  sample_images: string[];
 }
 
 // --- Meta actual de SF6 (dato global de Capcom, no de TDF) ---

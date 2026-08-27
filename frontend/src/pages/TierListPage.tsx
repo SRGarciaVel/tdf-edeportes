@@ -891,21 +891,31 @@ export default function TierListPage() {
             {templates.map((t) => (
               <div
                 key={t.id}
-                className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors relative"
+                className="hud-frame bg-tdf-charcoal hover:border-tdf-magenta transition-colors relative overflow-hidden"
               >
                 <button
                   onClick={() => handleSelectTemplate(t)}
-                  className="w-full text-left px-5 py-4"
+                  className="w-full text-left"
                 >
-                  <p
-                    className={`font-semibold ${user?.is_staff ? "pr-6" : ""}`}
-                  >
-                    {t.name}
-                  </p>
-                  <p className="font-mono text-xs text-tdf-muted mt-1">
-                    {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
-                    <span className="text-tdf-purple">{t.creator_name}</span>
-                  </p>
+                  {t.sample_images.length > 0 && (
+                    <div className="flex h-16">
+                      {t.sample_images.map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          className="flex-1 h-full object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div className={`px-5 py-4 ${user?.is_staff ? "pr-6" : ""}`}>
+                    <p className="font-semibold">{t.name}</p>
+                    <p className="font-mono text-xs text-tdf-muted mt-1">
+                      {t.item_count} ítem{t.item_count === 1 ? "" : "s"} · por{" "}
+                      <span className="text-white">{t.creator_name}</span>
+                    </p>
+                  </div>
                 </button>
                 {/* solo staff ve esto — el backend también valida
                     is_staff en el DELETE, ver deleteTierListTemplate */}
@@ -916,7 +926,7 @@ export default function TierListPage() {
                       setConfirmDeleteTemplate(t);
                     }}
                     disabled={deletingTemplateId === t.id}
-                    className="absolute top-2 right-2 text-tdf-muted hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1"
+                    className="absolute top-2 right-2 text-tdf-muted hover:text-red-400 disabled:opacity-30 text-xs px-1.5 py-1 bg-tdf-dark/70"
                     aria-label={`Borrar plantilla ${t.name}`}
                   >
                     ✕

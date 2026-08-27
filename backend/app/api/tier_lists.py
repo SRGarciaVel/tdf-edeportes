@@ -21,6 +21,11 @@ from app.schemas.tier_list import (
 
 router = APIRouter(tags=["tierlists"])
 
+# cuántas miniaturas de muestra manda /tierlist-templates por cada
+# plantilla — a propósito NO todas (algunas tienen 144 ítems), solo una
+# pista visual de qué hay adentro para la tarjeta de la galería
+TEMPLATE_SAMPLE_IMAGE_COUNT = 4
+
 MAX_TIERS = 12
 # eran una sola constante compartida (MAX_ITEMS = 60) — se separan porque
 # son límites de cosas distintas: una plantilla grande y legítima (ej. un
@@ -78,6 +83,11 @@ def list_templates(db: Annotated[Session, Depends(get_db)]) -> list[dict]:
             "item_count": len(t.items),
             "creator_name": t.creator.display_name,
             "created_at": t.created_at,
+            "sample_images": [
+                i["image"]
+                for i in t.items[:TEMPLATE_SAMPLE_IMAGE_COUNT]
+                if i.get("image")
+            ],
         }
         for t in templates
     ]

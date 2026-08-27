@@ -55,7 +55,9 @@ class TierListTemplateRead(BaseModel):
 class TierListTemplateSummary(BaseModel):
     """Versión liviana para el selector de "elegí una plantilla" — sin las
     imágenes completas de cada ítem, solo lo necesario para mostrar la
-    lista y elegir una."""
+    lista y elegir una. `sample_images` es la excepción a propósito: unas
+    pocas miniaturas (no todas) para que la tarjeta dé una pista visual
+    de qué hay adentro, sin mandar la plantilla entera de nuevo."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -63,6 +65,7 @@ class TierListTemplateSummary(BaseModel):
     name: str
     item_count: int
     creator_name: str
+    sample_images: list[str] = []
     created_at: datetime
 
 
