@@ -21,6 +21,7 @@ import {
   createTierList,
   createTierListTemplate,
   deleteTierListTemplate,
+  addTierListTemplateItems,
   deleteTierListTemplateItem,
   getTierListTemplate,
   listTierListTemplates,
@@ -314,6 +315,7 @@ export default function TierListPage() {
   const [newItems, setNewItems] = useState<TierItemData[]>([]);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const addItemsInputRef = useRef<HTMLInputElement>(null);
 
   const [rows, setRows] = useState<TierRow[]>(defaultRows());
   const [tiers, setTiers] = useState<Record<string, TierItemData[]>>(() =>
@@ -417,6 +419,62 @@ export default function TierListPage() {
     } finally {
       setDeletingItemId(null);
       setConfirmDeleteItem(null);
+    }
+  }
+
+  // agregar imágenes a una plantilla YA guardada — a diferencia de
+  // handleFilesSelected (que junta ítems en newItems mientras se arma
+  // una plantilla nueva), esto pega directo al backend y actualiza la
+  // plantilla activa apenas responde. Pedido real de Seba, 22-08-2026:
+  // "se le haya olvidado agregar una imagen" al crearla la primera vez.
+  const [addingItems, setAddingItems] = useState(false);
+
+  async function handleAddItemsToTemplate(
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const files = e.target.files;
+    if (!token || !activeTemplate || !files || files.length === 0) return;
+
+    const toAdd: TierItemData[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      try {
+        const image = await resizeImageFile(file, 120);
+        toAdd.push({
+          id: crypto.randomUUID(),
+          label: file.name.replace(/\.[^.]+$/, "").slice(0, 30),
+          image,
+        });
+      } catch {
+        setMessage(`No se pudo procesar "${file.name}".`);
+      }
+    }
+    e.target.value = "";
+    if (toAdd.length === 0) return;
+
+    setAddingItems(true);
+    try {
+      const updated = await addTierListTemplateItems(
+        token,
+        activeTemplate.id,
+        toAdd,
+      );
+      setActiveTemplate(updated);
+      // los nuevos ítems arrancan "sin ranquear", igual que cuando se
+      // arma una plantilla nueva
+      const newlyAdded = updated.items.filter((i) =>
+        toAdd.some((a) => a.id === i.id),
+      );
+      setUnplaced((prev) => [...prev, ...newlyAdded]);
+      setMessage(
+        toAdd.length === 1
+          ? "1 imagen agregada a la plantilla."
+          : `${toAdd.length} imágenes agregadas a la plantilla.`,
+      );
+    } catch {
+      setMessage("No se pudieron agregar las imágenes.");
+    } finally {
+      setAddingItems(false);
     }
   }
 
@@ -952,6 +1010,29 @@ export default function TierListPage() {
                 >
                   {editMode ? "Listo" : "Editar"}
                 </button>
+              )}
+              {/* subir imágenes nuevas a la plantilla ya guardada — solo
+                  visible en modo edición, mismo criterio que la "✕" de
+                  borrar cada ítem (evita cambios accidentales fuera de
+                  ese modo). Pedido real de Seba, 22-08-2026. */}
+              {canEditTemplateItems && editMode && (
+                <>
+                  <button
+                    onClick={() => addItemsInputRef.current?.click()}
+                    disabled={addingItems}
+                    className="font-mono text-xs uppercase px-3 py-1.5 border border-tdf-line text-tdf-muted hover:border-tdf-magenta hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {addingItems ? "Subiendo..." : "+ Agregar imágenes"}
+                  </button>
+                  <input
+                    ref={addItemsInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleAddItemsToTemplate}
+                    className="hidden"
+                  />
+                </>
               )}
               <button
                 onClick={() => setActiveTemplate(null)}

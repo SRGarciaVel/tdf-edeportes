@@ -33,6 +33,14 @@ class TierListTemplateCreate(BaseModel):
     items: list[TierItem]
 
 
+class TierListTemplateAddItems(BaseModel):
+    """Body para agregar ítems nuevos a una plantilla ya existente — solo
+    la lista, a diferencia de TierListTemplateCreate no lleva `name`
+    (no se puede renombrar la plantilla desde acá)."""
+
+    items: list[TierItem]
+
+
 class TierListTemplateRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

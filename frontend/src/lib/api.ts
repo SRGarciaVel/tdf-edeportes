@@ -381,6 +381,23 @@ export async function deleteTierListTemplateItem(
   if (!res.ok) throw new Error(`No se pudo borrar el ítem (${res.status})`);
 }
 
+// agrega ítems nuevos a una plantilla ya guardada — para cuando a
+// alguien se le olvidó subir algunas imágenes al armarla la primera
+// vez. Requiere ser quien la creó, o staff (mismo criterio que borrar
+// un ítem puntual).
+export async function addTierListTemplateItems(
+  token: string,
+  templateId: string,
+  items: TierItemData[],
+): Promise<TierListTemplateData> {
+  const res = await fetch(`${API_URL}/tierlist-templates/${templateId}/items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ items }),
+  });
+  return parseOrThrow<TierListTemplateData>(res);
+}
+
 export async function createTierList(
   templateId: string,
   tiers: Record<string, string[]>,

@@ -13,6 +13,7 @@ from app.schemas.tier_list import (
     TierListCreate,
     TierListRead,
     TierListSummary,
+    TierListTemplateAddItems,
     TierListTemplateCreate,
     TierListTemplateRead,
     TierListTemplateSummary,
@@ -219,6 +220,67 @@ def delete_template_item(
 
     template.items = remaining
     db.commit()
+
+
+@router.post(
+    "/tierlist-templates/{template_id}/items",
+    response_model=TierListTemplateRead,
+    status_code=201,
+)
+def add_template_items(
+    template_id: str,
+    payload: TierListTemplateAddItems,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_authenticated)],
+) -> dict:
+    """Agrega ítems nuevos a una plantilla ya guardada, sin tener que
+    recrearla — para cuando a alguien se le olvidó subir algunas
+    imágenes al armarla la primera vez (pedido real de Seba,
+    22-08-2026). Mismo criterio de permisos que borrar un ítem: quien
+    la creó, o cualquier staff.
+
+    El límite de MAX_TEMPLATE_ITEMS se chequea sobre el TOTAL final
+    (ítems que ya tenía + los nuevos), no solo sobre el lote que se
+    manda acá — si no, alguien podría esquivar el límite agregando de
+    a poquitos."""
+    try:
+        template_uuid = uuid.UUID(template_id)
+    except ValueError:
+        raise HTTPException(404, "Plantilla no encontrada") from None
+
+    template = db.get(TierListTemplate, template_uuid)
+    if template is None:
+        raise HTTPException(404, "Plantilla no encontrada")
+
+    if template.created_by != user.id and not user.is_staff:
+        raise HTTPException(403, "No tienes permiso para editar esta plantilla")
+
+    if not payload.items:
+        raise HTTPException(400, "No mandaste ningún ítem para agregar")
+
+    if len(template.items) + len(payload.items) > MAX_TEMPLATE_ITEMS:
+        raise HTTPException(400, "Demasiados ítems en la plantilla")
+
+    existing_ids = {i["id"] for i in template.items}
+    for item in payload.items:
+        if item.id in existing_ids:
+            raise HTTPException(400, f"El ítem '{item.id}' ya existe en esta plantilla")
+        if item.image is None or not IMAGE_DATA_URL_RE.match(item.image):
+            raise HTTPException(400, f"Imagen inválida en '{item.label}'")
+        if len(item.image) > MAX_IMAGE_DATA_URL_LEN:
+            raise HTTPException(400, f"La imagen de '{item.label}' es demasiado pesada")
+
+    template.items = [*template.items, *[i.model_dump() for i in payload.items]]
+    db.commit()
+    db.refresh(template)
+    return {
+        "id": template.id,
+        "name": template.name,
+        "items": template.items,
+        "creator_name": template.creator.display_name,
+        "created_by": template.created_by,
+        "created_at": template.created_at,
+    }
 
 
 @router.post("/tierlists", response_model=TierListRead, status_code=201)
