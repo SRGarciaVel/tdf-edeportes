@@ -19,12 +19,18 @@ function timeAgo(iso: string): string {
 /** Avisa cuando dos jugadores trackeados por TDF se cruzaron en una
  * partida — el backend ya filtra a las últimas 48 horas y dedupea el par
  * (GET /cfn/encounters/recent), así que todo lo que llega acá se
- * muestra tal cual. No se guarda "visto" en localStorage a propósito:
- * la idea es que quede de registro visible durante esas 48 horas, no que
- * se pueda cerrar para siempre y perderlo. */
+ * muestra tal cual.
+ *
+ * `dismissed` NO se guarda en localStorage a propósito — cerrarlo dura
+ * solo esta carga de página, vuelve a aparecer al recargar. Es un
+ * término medio real entre dos necesidades: Seba necesita poder
+ * sacarlo de encima durante stream (tapa la esquina al hacer zoom para
+ * armar una tier list en vivo), pero tampoco queremos que alguien lo
+ * cierre una vez y se pierda encuentros reales para siempre. */
 export default function EncounterNotifications() {
   const [encounters, setEncounters] = useState<EncounterData[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,29 +54,38 @@ export default function EncounterNotifications() {
     };
   }, []);
 
-  if (encounters.length === 0) return null;
+  if (encounters.length === 0 || dismissed) return null;
 
   return (
     <div className="fixed bottom-4 left-4 z-40 w-72 max-w-[calc(100vw-2rem)]">
       <div className="hud-frame bg-tdf-charcoal border border-tdf-magenta/50 overflow-hidden">
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          className="w-full flex items-center gap-2 px-3 py-2 text-left"
-        >
-          <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tdf-magenta opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-tdf-magenta" />
-          </span>
-          <span className="font-mono text-[11px] uppercase text-gray-300 flex-1">
-            Se encontraron
-          </span>
-          <span className="font-mono text-[11px] bg-tdf-magenta/20 text-tdf-magenta px-1.5 py-0.5 rounded-full">
-            {encounters.length}
-          </span>
-          <span className="text-tdf-muted text-xs">
-            {collapsed ? "▲" : "▼"}
-          </span>
-        </button>
+        <div className="w-full flex items-center gap-2 px-3 py-2">
+          <button
+            onClick={() => setCollapsed((v) => !v)}
+            className="flex-1 min-w-0 flex items-center gap-2 text-left"
+          >
+            <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tdf-magenta opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-tdf-magenta" />
+            </span>
+            <span className="font-mono text-[11px] uppercase text-gray-300 flex-1">
+              Se encontraron
+            </span>
+            <span className="font-mono text-[11px] bg-tdf-magenta/20 text-tdf-magenta px-1.5 py-0.5 rounded-full">
+              {encounters.length}
+            </span>
+            <span className="text-tdf-muted text-xs">
+              {collapsed ? "▲" : "▼"}
+            </span>
+          </button>
+          <button
+            onClick={() => setDismissed(true)}
+            className="shrink-0 text-tdf-muted hover:text-white transition-colors px-1"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
 
         {!collapsed && (
           <div className="border-t border-tdf-line max-h-64 overflow-y-auto">
