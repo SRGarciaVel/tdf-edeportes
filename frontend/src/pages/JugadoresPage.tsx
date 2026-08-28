@@ -609,7 +609,8 @@ function PlayerCard({
       onClick={() => setFlipped((v) => !v)}
     >
       <div
-        className={`player-card-flip-inner relative w-full min-h-[300px] transition-transform duration-700 [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`}
+        className={`player-card-flip-inner relative w-full min-h-[300px] transition-transform duration-[600ms] [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`}
+        style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
       >
         {/* cara de adelante: identidad, foto nítida */}
         <div className="absolute inset-0 [backface-visibility:hidden] px-5 pt-5 pb-4 flex flex-col bg-tdf-charcoal overflow-hidden">
