@@ -602,18 +602,31 @@ function PlayerCard({
   // ADEMÁS con hover en compus con mouse real (.player-card-flip-group,
   // ver la regla @media (hover: hover) en index.css) — probado primero
   // en un teaser HTML interactivo antes de meterlo acá, 22-08-2026.
+  //
+  // Cambiado de giro 3D a fundido/aparición en el mismo lugar, a
+  // pedido de Seba (22-08-2026, tras probar el giro y decidir que
+  // prefería este mecanismo — mismo tipo de transición que un ejemplo
+  // de referencia que mandó: opacity 0->1 + escala leve, no rotateY).
+  // Sigue funcionando igual con click/tap en cualquier dispositivo y
+  // hover en compus con mouse real (clases .player-card-front/.-back +
+  // regla en index.css), solo cambió CÓMO se ve la transición.
+  const cardFaceTransition =
+    "absolute inset-0 transition-[opacity,transform] duration-[600ms] px-5 pt-5 pb-4 flex flex-col bg-tdf-charcoal overflow-hidden";
+  const easeStyle = {
+    transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
+  };
+
   return (
     <div
-      className={`${cardOuterClassName} player-card-flip-group cursor-pointer`}
-      style={{ perspective: "1400px" }}
+      className={`${cardOuterClassName} player-card-flip-group cursor-pointer ${flipped ? "flipped" : ""}`}
       onClick={() => setFlipped((v) => !v)}
     >
-      <div
-        className={`player-card-flip-inner relative w-full min-h-[300px] transition-transform duration-[600ms] [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`}
-        style={{ transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)" }}
-      >
+      <div className="relative w-full min-h-[300px]">
         {/* cara de adelante: identidad, foto nítida */}
-        <div className="absolute inset-0 [backface-visibility:hidden] px-5 pt-5 pb-4 flex flex-col bg-tdf-charcoal overflow-hidden">
+        <div
+          className={`player-card-front ${cardFaceTransition}`}
+          style={easeStyle}
+        >
           <CardBackgroundPhoto
             url={player.card_background_url!}
             brightness={player.card_background_brightness}
@@ -659,7 +672,10 @@ function PlayerCard({
         </div>
 
         {/* cara de atrás: stats, foto borrosa */}
-        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] px-5 pt-5 pb-4 flex flex-col bg-tdf-charcoal overflow-hidden">
+        <div
+          className={`player-card-back ${cardFaceTransition} opacity-0 scale-[0.96] pointer-events-none`}
+          style={easeStyle}
+        >
           <CardBackgroundPhoto
             url={player.card_background_url!}
             brightness={player.card_background_brightness}

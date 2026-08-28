@@ -140,17 +140,37 @@
     animation: announcement-glow 2.4s ease-in-out infinite;
   }
 
-  /* card de jugador giratoria (flip 3D) — gira con click/tap en
-     cualquier dispositivo (ver onClick en PlayerCard), Y ADEMÁS con
-     hover en dispositivos que sí tienen mouse de verdad. Se hace acá
-     con @media (hover: hover) en vez de una variante de Tailwind
-     porque el hover táctil de algunos navegadores mobile es poco
-     confiable — esto asegura que en celular SOLO el click dispare el
-     giro, nunca un "hover" fantasma al tocar (conversación de diseño,
-     22-08-2026, probado primero en teaser HTML interactivo). */
+  /* card de jugador con foto: la cara de adelante se desvanece y la de
+     atrás aparece en el mismo lugar (no gira en 3D, se cambió a pedido
+     de Seba, 22-08-2026, tras probar el giro 3D y decidir que quería
+     este tipo de transición en su lugar — mismo mecanismo que el
+     código de referencia que mandó: opacity 0->1 + una escala leve,
+     curva cubic-bezier(0.23,1,0.32,1) puesta en PlayerCard vía style
+     inline). Dispara con click/tap en CUALQUIER dispositivo (clase
+     .flipped desde React, siempre activa) Y ADEMÁS con hover en
+     dispositivos con mouse real (acá abajo, dentro de @media
+     (hover: hover) para que el hover táctil poco confiable de algunos
+     navegadores mobile no dispare nada por accidente). */
+  .player-card-flip-group.flipped .player-card-front {
+    opacity: 0;
+    transform: scale(0.96);
+    pointer-events: none;
+  }
+  .player-card-flip-group.flipped .player-card-back {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
   @media (hover: hover) {
-    .player-card-flip-group:hover .player-card-flip-inner {
-      transform: rotateY(180deg);
+    .player-card-flip-group:hover .player-card-front {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+    }
+    .player-card-flip-group:hover .player-card-back {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
     }
   }
 }
