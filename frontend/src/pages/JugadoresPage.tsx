@@ -24,6 +24,14 @@ const DAY_OPTIONS = [1, 3, 7] as const;
 // "mejor win rate" — sin esto, alguien con 1 partida jugada y 1-0 le
 // gana a todo el grupo con un "100%" que no dice nada
 const MIN_MATCHES_FOR_BEST_WR = 3;
+// pedido real de Seba (22-08-2026): "Records" (Drive Impact, Perfect
+// Parry, etc.) no debería premiar a alguien que jugó poco comparado
+// con el resto — 20 partidas trackeadas por TDF como piso mínimo para
+// entrar en consideración, sin importar qué tan bueno sea el número en
+// sí. Es un umbral MÁS ALTO que MIN_MATCHES_FOR_BEST_WR a propósito:
+// ese es solo para no dividir por un puñado de partidas, este es para
+// filtrar jugadores genuinamente poco activos de un ranking.
+const MIN_MATCHES_FOR_RECORDS = 20;
 // la foto de fondo es más grande que un avatar (ocupa media card), así
 // que se redimensiona a más resolución que los 120px del avatar
 const CARD_BACKGROUND_SIZE = 480;
@@ -182,10 +190,10 @@ function PlayerListRow({
     <div className="flex items-center gap-3 px-3 py-2.5 border-b border-tdf-line/40 last:border-b-0 hover:bg-tdf-dark/40 transition-colors">
       <PlayerAvatarRing player={player} />
       <div className="min-w-0 flex-1">
-        <p className="font-display font-bold text-sm truncate flex items-center gap-1.5">
-          {player.display_name}
+        <p className="font-display font-bold text-sm flex items-center gap-1.5">
+          <span className="truncate">{player.display_name}</span>
           {player.is_tdf && (
-            <span className="font-mono text-[9px] uppercase text-tdf-purple shrink-0">
+            <span className="font-mono text-[9px] uppercase text-tdf-magenta shrink-0">
               TDF
             </span>
           )}
@@ -532,7 +540,7 @@ function PlayerCard({
   );
 
   const tdfBadge = player.is_tdf && (
-    <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-purple">
+    <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-magenta shrink-0">
       TDF
     </span>
   );
@@ -629,9 +637,6 @@ function PlayerCard({
         <EmberFallback />
         {cardActions}
         <div className="relative z-10">
-          <div className="absolute -top-1 right-0 flex gap-2 z-10">
-            {tdfBadge}
-          </div>
           <div className="flex items-center gap-2.5 mb-2.5">
             {profilesLoading ? (
               <Skeleton className="w-10 h-10 rounded-full shrink-0" />
@@ -639,8 +644,9 @@ function PlayerCard({
               <PlayerAvatarRing player={player} />
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-display font-bold text-base truncate leading-tight">
-                {player.display_name}
+              <p className="font-display font-bold text-base leading-tight flex items-center gap-1.5">
+                <span className="truncate">{player.display_name}</span>
+                {tdfBadge}
               </p>
               {profilesLoading ? (
                 <Skeleton className="h-3 w-16 mt-1" />
@@ -715,9 +721,6 @@ function PlayerCard({
               brightness={player.card_background_brightness}
             />
             <div className="relative z-10 flex flex-col h-full">
-              <div className="absolute -top-1 right-0 flex gap-2 z-10">
-                {tdfBadge}
-              </div>
               <div className="flex items-center gap-2.5">
                 {profilesLoading ? (
                   <Skeleton className="w-10 h-10 rounded-full shrink-0" />
@@ -725,8 +728,9 @@ function PlayerCard({
                   <PlayerAvatarRing player={player} />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="font-display font-bold text-base truncate leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
-                    {player.display_name}
+                  <p className="font-display font-bold text-base leading-tight flex items-center gap-1.5 [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
+                    <span className="truncate">{player.display_name}</span>
+                    {tdfBadge}
                   </p>
                   {profilesLoading ? (
                     <Skeleton className="h-3 w-16 mt-1" />
@@ -1031,6 +1035,9 @@ export default function JugadoresPage() {
       let winner: CFNPlayer | null = null;
       let bestValue: number | null = null;
       for (const p of players) {
+        const trackedMatches = matchStats.get(p.cfn_id)?.total_matches ?? 0;
+        if (trackedMatches < MIN_MATCHES_FOR_RECORDS) continue;
+
         const value = p[cat.key];
         if (value != null && (bestValue == null || value > bestValue)) {
           winner = p;
@@ -1039,7 +1046,7 @@ export default function JugadoresPage() {
       }
       return { ...cat, winner, value: bestValue };
     });
-  }, [players]);
+  }, [players, matchStats]);
 
   const groupStats = useMemo(() => {
     let totalMatches = 0;
@@ -1202,7 +1209,8 @@ export default function JugadoresPage() {
       {!playersLoading && records.some((r) => r.winner) && (
         <div className="mb-12">
           <p className="font-mono text-xs uppercase text-tdf-muted mb-3">
-            // Records — promedio de las últimas 100 partidas de cada uno
+            // Records: promedio de las últimas 100 partidas, mín.{" "}
+            {MIN_MATCHES_FOR_RECORDS} partidas trackeadas por TDF
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {records.map((r) => (
