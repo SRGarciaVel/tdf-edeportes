@@ -30,12 +30,6 @@ const CARD_BACKGROUND_SIZE = 480;
 
 /** Ordena de mayor a menor LP — los que todavía no tienen stats quedan
  * al final. */
-function sortByLp(players: CFNPlayer[]): CFNPlayer[] {
-  return [...players].sort(
-    (a, b) => (b.league_points ?? -1) - (a.league_points ?? -1),
-  );
-}
-
 /** "hace 12 min" / "hace 3 h" / "hace 2 d" — a partir de un ISO date. */
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -165,6 +159,83 @@ function RecordCard({
       ) : (
         <p className="font-body text-xs text-tdf-muted">Sin datos todavía</p>
       )}
+    </div>
+  );
+}
+
+/** Fila compacta para la vista "Lista" — todo el dato visible de
+ * entrada, sin hover ni click para revelar nada. Existe justo para lo
+ * contrario que la card de galería: comparar/escanear muchos jugadores
+ * rápido (conversación de diseño, 22-08-2026). */
+function PlayerListRow({
+  player,
+  isTopMr,
+  matchStats,
+  onOpenHistory,
+}: {
+  player: CFNPlayer;
+  isTopMr: boolean;
+  matchStats?: CFNMatchStats;
+  onOpenHistory: (player: CFNPlayer) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5 border-b border-tdf-line/40 last:border-b-0 hover:bg-tdf-dark/40 transition-colors">
+      <PlayerAvatarRing player={player} />
+      <div className="min-w-0 flex-1">
+        <p className="font-display font-bold text-sm truncate flex items-center gap-1.5">
+          {player.display_name}
+          {player.is_tdf && (
+            <span className="font-mono text-[9px] uppercase text-tdf-purple shrink-0">
+              TDF
+            </span>
+          )}
+        </p>
+        {player.character_name && (
+          <p
+            className={`font-mono text-[10px] uppercase truncate ${characterColorClass(player.character_name)}`}
+          >
+            {player.character_name}
+          </p>
+        )}
+      </div>
+
+      <div className="hidden sm:block text-right shrink-0 w-16">
+        {player.master_rating != null ? (
+          <>
+            <span
+              className={`font-display font-bold ${isTopMr ? "text-white" : "text-tdf-muted"}`}
+            >
+              {player.master_rating}
+            </span>
+            <span className="font-mono text-[9px] text-tdf-muted ml-1">MR</span>
+          </>
+        ) : (
+          <span className="font-mono text-[10px] text-tdf-muted">N/D</span>
+        )}
+      </div>
+
+      <div className="hidden sm:block text-right shrink-0 w-16 font-mono text-xs text-tdf-muted">
+        {player.league_points != null
+          ? `${player.league_points.toLocaleString("es-CL")} LP`
+          : "—"}
+      </div>
+
+      <div className="hidden md:block text-right shrink-0 w-20 font-mono text-xs">
+        {matchStats?.win_rate != null ? (
+          <span className="text-tdf-magenta font-semibold">
+            {Math.round(matchStats.win_rate * 100)}% WR
+          </span>
+        ) : (
+          <span className="text-tdf-muted">N/D</span>
+        )}
+      </div>
+
+      <button
+        onClick={() => onOpenHistory(player)}
+        className="font-mono text-[10px] border border-tdf-line hover:border-tdf-magenta hover:text-white transition-colors px-2 py-1 shrink-0"
+      >
+        Ver →
+      </button>
     </div>
   );
 }
@@ -822,6 +893,17 @@ export default function JugadoresPage() {
     null,
   );
 
+  // vista "Galería" (las cards con foto, la estética) es la que se ve
+  // por defecto — "Lista" es la alternativa práctica con buscador y
+  // filtros, para cuando alguien quiere comparar jugadores rápido en
+  // vez de disfrutar las fotos (conversación de diseño, 22-08-2026).
+  const [viewMode, setViewMode] = useState<"gallery" | "list">("gallery");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [rankFilter, setRankFilter] = useState<"all" | "master" | "no-master">(
+    "all",
+  );
+  const [sortBy, setSortBy] = useState<"lp" | "mr" | "name">("lp");
+
   function refreshPlayers() {
     listCfnPlayers()
       .then(setPlayers)
@@ -895,7 +977,36 @@ export default function JugadoresPage() {
     }
   }
 
-  const sortedPlayers = useMemo(() => sortByLp(players), [players]);
+  const displayedPlayers = useMemo(() => {
+    let result = players;
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.display_name.toLowerCase().includes(q) ||
+          p.character_name?.toLowerCase().includes(q),
+      );
+    }
+
+    if (rankFilter === "master") {
+      result = result.filter((p) => p.master_rating != null);
+    } else if (rankFilter === "no-master") {
+      result = result.filter((p) => p.master_rating == null);
+    }
+
+    result = [...result];
+    if (sortBy === "mr") {
+      // sin MR va al final, no antes que alguien con rango real
+      result.sort((a, b) => (b.master_rating ?? -1) - (a.master_rating ?? -1));
+    } else if (sortBy === "name") {
+      result.sort((a, b) => a.display_name.localeCompare(b.display_name));
+    } else {
+      result.sort((a, b) => (b.league_points ?? -1) - (a.league_points ?? -1));
+    }
+
+    return result;
+  }, [players, searchQuery, rankFilter, sortBy]);
 
   const topMrCfnId = useMemo(() => {
     let best: { cfnId: string; mr: number } | null = null;
@@ -1100,26 +1211,91 @@ export default function JugadoresPage() {
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-3">
-        {sortedPlayers.map((p) => (
-          <PlayerCard
-            key={p.cfn_id}
-            player={p}
-            profilesLoading={playersLoading}
-            isTopMr={p.cfn_id === topMrCfnId}
-            matchStats={matchStats.get(p.cfn_id)}
-            statsLoading={statsLoading}
-            isOwnCard={
-              myRegistration?.status === "approved" &&
-              myRegistration.cfn_id === p.cfn_id
-            }
-            isStaff={!!user?.is_staff}
-            onOpenHistory={setHistoryPlayer}
-            onUploadBackground={handleUploadBackground}
-            onRemoveBackground={handleRemoveBackground}
-          />
-        ))}
+      <div className="flex flex-wrap items-center gap-2 pt-3 mb-4">
+        <div className="flex gap-1 font-mono text-xs">
+          {(["gallery", "list"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`px-3 py-1.5 border uppercase transition-colors ${
+                viewMode === mode
+                  ? "border-tdf-magenta text-tdf-magenta"
+                  : "border-tdf-line text-tdf-muted hover:text-white"
+              }`}
+            >
+              {mode === "gallery" ? "Galería" : "Lista"}
+            </button>
+          ))}
+        </div>
+
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar jugador o personaje..."
+          className="bg-tdf-dark border border-tdf-line px-3 py-1.5 text-sm font-body flex-1 min-w-[160px]"
+        />
+
+        <select
+          value={rankFilter}
+          onChange={(e) => setRankFilter(e.target.value as typeof rankFilter)}
+          className="bg-tdf-dark border border-tdf-line px-2 py-1.5 text-xs font-mono uppercase"
+        >
+          <option value="all">Todos los rangos</option>
+          <option value="master">Solo Master</option>
+          <option value="no-master">Sin Master todavía</option>
+        </select>
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          className="bg-tdf-dark border border-tdf-line px-2 py-1.5 text-xs font-mono uppercase"
+        >
+          <option value="lp">Ordenar por LP</option>
+          <option value="mr">Ordenar por MR</option>
+          <option value="name">Alfabético</option>
+        </select>
       </div>
+
+      {!playersLoading && displayedPlayers.length === 0 && (
+        <p className="font-body text-sm text-tdf-muted py-8 text-center">
+          Ningún jugador coincide con esa búsqueda/filtro.
+        </p>
+      )}
+
+      {viewMode === "gallery" ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {displayedPlayers.map((p) => (
+            <PlayerCard
+              key={p.cfn_id}
+              player={p}
+              profilesLoading={playersLoading}
+              isTopMr={p.cfn_id === topMrCfnId}
+              matchStats={matchStats.get(p.cfn_id)}
+              statsLoading={statsLoading}
+              isOwnCard={
+                myRegistration?.status === "approved" &&
+                myRegistration.cfn_id === p.cfn_id
+              }
+              isStaff={!!user?.is_staff}
+              onOpenHistory={setHistoryPlayer}
+              onUploadBackground={handleUploadBackground}
+              onRemoveBackground={handleRemoveBackground}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="hud-frame bg-tdf-charcoal overflow-hidden">
+          {displayedPlayers.map((p) => (
+            <PlayerListRow
+              key={p.cfn_id}
+              player={p}
+              isTopMr={p.cfn_id === topMrCfnId}
+              matchStats={matchStats.get(p.cfn_id)}
+              onOpenHistory={setHistoryPlayer}
+            />
+          ))}
+        </div>
+      )}
 
       {historyPlayer && (
         <MatchHistoryModal
