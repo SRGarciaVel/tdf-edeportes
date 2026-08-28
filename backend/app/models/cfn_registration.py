@@ -53,6 +53,11 @@ class CFNRegistration(Base):
     # /jugadores cae al avatar de Twitch del usuario si tiene cuenta, o
     # al círculo de iniciales de siempre si no tiene ninguno de los dos
     avatar_override: Mapped[str | None] = mapped_column(String, nullable=True)
+    # bio corta, opcional — la propia persona la escribe/edita cuando
+    # quiere desde /jugadores (PATCH /cfn/register/me/profile), igual
+    # que avatar_override pero como texto en vez de imagen. Límite de
+    # largo vive en el schema (MyProfileUpdate), no acá.
+    bio: Mapped[str | None] = mapped_column(String, nullable=True)
     # foto de fondo de la card en /jugadores — a diferencia de
     # avatar_override (la foto de perfil chica), esto es la imagen grande
     # que le da identidad a la esquina de la card. La persona la puede

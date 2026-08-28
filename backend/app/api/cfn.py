@@ -21,6 +21,7 @@ from app.schemas.cfn import (
     CFNRegistrationRead,
     EncounterRead,
     LinkAccountRequest,
+    MyProfileUpdate,
     UnlinkedCandidate,
     UnlinkedRegistration,
 )
@@ -49,6 +50,7 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
             is_tdf=reg.is_tdf,
             liquipedia_url=reg.liquipedia_url,
             avatar_url=reg.avatar_override or (user.avatar_url if user else None),
+            bio=reg.bio,
             card_background_url=reg.card_background_url,
             card_background_brightness=reg.card_background_brightness,
             league_rank=profile.league_rank if profile else None,
@@ -368,6 +370,33 @@ def update_my_card_background(
         )
     registration.card_background_url = payload.card_background_url
     registration.card_background_brightness = payload.card_background_brightness
+    db.commit()
+    db.refresh(registration)
+    return registration
+
+
+@router.patch("/register/me/profile", response_model=CFNRegistrationRead)
+def update_my_profile(
+    payload: MyProfileUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[User, Depends(require_authenticated)],
+) -> CFNRegistration:
+    """La propia persona edita su bio y/o su avatar personalizado desde
+    su card en /jugadores, cuando quiera — mismo guard que
+    update_my_card_background (registro ya aprobado, si no no hay card
+    pública todavía que editar). Solo toca los campos que vinieron en
+    el body (exclude_unset) — así mandar solo bio no pisa el avatar con
+    None por accidente, y viceversa."""
+    registration = (
+        db.query(CFNRegistration).filter(CFNRegistration.user_id == user.id).first()
+    )
+    if registration is None or registration.status != "approved":
+        raise HTTPException(
+            403, "Necesitás tener tu registro aprobado para editar tu perfil"
+        )
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(registration, field, value)
     db.commit()
     db.refresh(registration)
     return registration

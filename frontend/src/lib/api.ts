@@ -179,6 +179,26 @@ export async function updateMyCardBackground(
   return parseOrThrow<CFNRegistration>(res);
 }
 
+// la propia persona edita su bio y/o su avatar cuando quiere — mismo
+// guard que updateMyCardBackground (403 si el registro no está
+// aprobado). Ambos parámetros opcionales de verdad: si no se pasan,
+// ese campo ni siquiera se manda en el body, así el backend no lo toca
+// (exclude_unset) — permite editar uno sin pisar el otro.
+export async function updateMyProfile(
+  token: string,
+  changes: { bio?: string | null; avatarOverride?: string | null },
+): Promise<CFNRegistration> {
+  const body: Record<string, string | null> = {};
+  if ("bio" in changes) body.bio = changes.bio ?? null;
+  if ("avatarOverride" in changes) body.avatar_override = changes.avatarOverride ?? null;
+  const res = await fetch(`${API_URL}/cfn/register/me/profile`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(body),
+  });
+  return parseOrThrow<CFNRegistration>(res);
+}
+
 // staff sube o reemplaza la foto de CUALQUIER jugador (moderación)
 export async function setPlayerCardBackground(
   token: string,

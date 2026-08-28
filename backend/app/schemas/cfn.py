@@ -39,6 +39,9 @@ class CFNPlayerRead(BaseModel):
     # la cuenta que lo registró, si no None — el frontend cae al
     # círculo de iniciales de siempre cuando esto es None
     avatar_url: str | None
+    # bio corta, opcional — la propia persona la escribe desde su card
+    # (PATCH /cfn/register/me/profile). None si nunca escribió una.
+    bio: str | None
     # foto de fondo de la card — la propia persona la puede subir/cambiar
     # cuando quiera (no solo al registrarse), y staff la puede
     # reemplazar o sacar en cualquier momento. None: el frontend cae al
@@ -121,6 +124,19 @@ class CFNRegistrationDecision(BaseModel):
     display_name: str | None = None
     is_tdf: bool = False
     liquipedia_url: str | None = None
+
+
+class MyProfileUpdate(BaseModel):
+    """Body de PATCH /cfn/register/me/profile — bio y avatar juntos en
+    un solo endpoint porque el frontend los edita en el mismo panel
+    ("Editar perfil"). Ambos opcionales de verdad (a diferencia de
+    CardBackgroundUpdate, que siempre manda los dos campos juntos):
+    mandar bio=None borra la bio, mandar avatar_override=None vuelve al
+    avatar de Twitch — pero si un campo no viene en el body, ese campo
+    no se toca (ver exclude_unset en el endpoint)."""
+
+    bio: str | None = Field(default=None, max_length=280)
+    avatar_override: str | None = Field(default=None, max_length=200_000)
 
 
 class CardBackgroundUpdate(BaseModel):

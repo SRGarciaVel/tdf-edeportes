@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import MatchHistoryModal from "../components/MatchHistoryModal";
+import EditProfileModal from "../components/EditProfileModal";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import {
@@ -491,6 +492,7 @@ function PlayerCard({
   onOpenHistory,
   onUploadBackground,
   onRemoveBackground,
+  onEditProfile,
 }: {
   player: CFNPlayer;
   profilesLoading: boolean;
@@ -502,6 +504,7 @@ function PlayerCard({
   onOpenHistory: (player: CFNPlayer) => void;
   onUploadBackground: (cfnId: string, file: File, isOwn: boolean) => void;
   onRemoveBackground: (cfnId: string) => void;
+  onEditProfile: (player: CFNPlayer) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [flipped, setFlipped] = useState(false);
@@ -525,6 +528,14 @@ function PlayerCard({
         onUploadClick={stopAnd(() => fileInputRef.current?.click())}
         onRemove={stopAnd(() => onRemoveBackground(player.cfn_id))}
       />
+      {isOwnCard && (
+        <button
+          onClick={stopAnd(() => onEditProfile(player))}
+          className="absolute top-2 left-2 z-20 font-body text-[10px] font-medium text-tdf-muted hover:text-white bg-tdf-dark/75 border border-tdf-line hover:border-tdf-magenta px-2 py-1 rounded"
+        >
+          ✎ Editar perfil
+        </button>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -586,6 +597,16 @@ function PlayerCard({
         {player.league_points.toLocaleString("es-CL")}
       </span>{" "}
       LP
+    </p>
+  );
+
+  // solo se muestra en la cara/estado que ya trae stats a la vista
+  // (nunca en la cara de identidad de la card giratoria) — es
+  // contenido de "conocé más a la persona", va junto al resto de datos
+  // de stats, no junto al nombre.
+  const bioLine = player.bio && (
+    <p className="font-body text-xs text-tdf-muted italic leading-snug [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
+      "{player.bio}"
     </p>
   );
 
@@ -664,6 +685,7 @@ function PlayerCard({
           </div>
           <div className="mb-1">{rankBlock}</div>
           {lpLine}
+          {bioLine && <div className="mt-1.5">{bioLine}</div>}
           <div className="mt-2.5">
             <MatchStatsRow stats={matchStats} loading={statsLoading} />
           </div>
@@ -762,6 +784,7 @@ function PlayerCard({
             <div className="relative z-10 flex flex-col h-full justify-center gap-2.5 [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
               <div>{rankBlock}</div>
               {lpLine}
+              {bioLine}
               <MatchStatsRow stats={matchStats} loading={statsLoading} />
               {footerRow}
             </div>
@@ -901,6 +924,7 @@ export default function JugadoresPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(7);
   const [historyPlayer, setHistoryPlayer] = useState<CFNPlayer | null>(null);
+  const [editingProfile, setEditingProfile] = useState<CFNPlayer | null>(null);
   const [myRegistration, setMyRegistration] = useState<CFNRegistration | null>(
     null,
   );
@@ -1296,6 +1320,7 @@ export default function JugadoresPage() {
               onOpenHistory={setHistoryPlayer}
               onUploadBackground={handleUploadBackground}
               onRemoveBackground={handleRemoveBackground}
+              onEditProfile={setEditingProfile}
             />
           ))}
         </div>
@@ -1319,6 +1344,15 @@ export default function JugadoresPage() {
           cfnId={historyPlayer.cfn_id}
           days={days}
           onClose={() => setHistoryPlayer(null)}
+        />
+      )}
+
+      {editingProfile && token && (
+        <EditProfileModal
+          player={editingProfile}
+          token={token}
+          onClose={() => setEditingProfile(null)}
+          onSaved={refreshPlayers}
         />
       )}
     </Layout>
