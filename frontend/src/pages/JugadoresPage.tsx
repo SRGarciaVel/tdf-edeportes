@@ -478,7 +478,7 @@ function PlayerCard({
             es necesario para que el blur "se note" — sin nada de
             opacidad propia no hay vidrio que esmerilar. */}
         <div
-          className="bg-tdf-dark/45 backdrop-blur-md px-3 py-3 mb-3"
+          className="bg-tdf-dark/45 backdrop-blur-md px-2 py-1.5 mb-6"
           style={{
             clipPath: "polygon(0 8px, 8px 0, 100% 0, 100% 100%, 0 100%)",
           }}
@@ -511,7 +511,7 @@ function PlayerCard({
           {profilesLoading ? (
             <Skeleton className="h-6 w-32 mt-3" />
           ) : hasStats ? (
-            <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-2 mt-2">
               <FlameIcon dim={!isTopMr} gradientId={`flame-${player.cfn_id}`} />
               {player.master_rating != null ? (
                 <>
@@ -538,13 +538,13 @@ function PlayerCard({
               )}
             </div>
           ) : (
-            <span className="font-body text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-1 inline-block mt-3">
+            <span className="font-body text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-1 inline-block mt-2">
               Próximamente
             </span>
           )}
 
           {hasStats && player.league_points != null && (
-            <p className="font-body text-xs text-tdf-muted mt-2">
+            <p className="font-body text-xs text-tdf-muted mt-1">
               <span className="font-semibold">
                 {player.league_points.toLocaleString("es-CL")}
               </span>{" "}
@@ -557,7 +557,7 @@ function PlayerCard({
             — el hueco entre los dos deja ver la foto nítida sin nada
             encima, que es justo el efecto que se buscaba */}
         <div
-          className="bg-tdf-dark/45 backdrop-blur-md px-3 py-2"
+          className="bg-tdf-dark/45 backdrop-blur-md px-2 py-1"
           style={{
             clipPath:
               "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
@@ -569,7 +569,7 @@ function PlayerCard({
             onOpenHistory={stopAnd(() => onOpenHistory(player))}
           />
 
-          <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/10 font-body text-[11px] text-tdf-muted">
+          <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/10 font-body text-[11px] text-tdf-muted">
             <span className="opacity-55">CFN {player.cfn_id}</span>
             {player.liquipedia_url && (
               <span className="text-tdf-purple font-medium">Liquipedia ↗</span>
