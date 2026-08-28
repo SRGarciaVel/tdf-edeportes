@@ -7,14 +7,18 @@ import Skeleton from "../components/Skeleton";
 import {
   getMyCfnRegistration,
   listCfnPlayers,
+  updateMyCardBackground,
   updateMyProfile,
 } from "../lib/api";
-import { resizeImageFile } from "../lib/imageResize";
+import { getImageBrightness, resizeImageFile } from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
 import type { CFNPlayer, CFNRegistration } from "../lib/types";
 
 const BIO_MAX_LENGTH = 280;
 const AVATAR_SIZE = 160;
+// mismo tamaño que usa /jugadores para la foto de fondo — si cambia
+// ahí, cambiar acá también (ver JugadoresPage.tsx)
+const CARD_BACKGROUND_SIZE = 480;
 
 /** Auto-edición de perfil (bio + avatar) — antes vivía como botón
  * directo en la propia card de /jugadores, movida acá a pedido de Seba
@@ -39,6 +43,12 @@ export default function PerfilPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [bgPreview, setBgPreview] = useState<string | null>(null);
+  const [bgSaving, setBgSaving] = useState(false);
+  const [bgSaved, setBgSaved] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!token) {
       setLoading(false);
@@ -53,6 +63,7 @@ export default function PerfilPage() {
           setPlayer(own);
           setBio(own?.bio ?? "");
           setAvatarPreview(own?.avatar_url ?? null);
+          setBgPreview(own?.card_background_url ?? null);
         }
       })
       .finally(() => setLoading(false));
@@ -85,6 +96,27 @@ export default function PerfilPage() {
       setError("No se pudo guardar. Probá de nuevo en un momento.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  // foto de fondo — endpoint propio (PATCH /cfn/register/me/background,
+  // ya existía desde /jugadores), self-contained: sube y guarda en el
+  // mismo paso, no queda pendiente de "Guardar" como bio/avatar
+  async function handleBackgroundFile(file: File) {
+    if (!token) return;
+    setBgSaving(true);
+    setBgError(null);
+    setBgSaved(false);
+    try {
+      const resized = await resizeImageFile(file, CARD_BACKGROUND_SIZE, 0.82);
+      const brightness = await getImageBrightness(resized);
+      await updateMyCardBackground(token, resized, brightness);
+      setBgPreview(resized);
+      setBgSaved(true);
+    } catch {
+      setBgError("No se pudo subir esa imagen. Probá con otra.");
+    } finally {
+      setBgSaving(false);
     }
   }
 
@@ -230,12 +262,78 @@ export default function PerfilPage() {
             </Link>
           </div>
 
-          <p className="font-mono text-[10px] text-tdf-muted border-t border-tdf-line pt-3">
-            La foto de fondo de tu card se edita directo desde tu card en{" "}
-            <Link to="/jugadores" className="text-tdf-magenta hover:underline">
-              Jugadores
-            </Link>
-            , no acá.
+          {user.is_staff && (
+            <p className="font-mono text-[10px] text-tdf-muted border-t border-tdf-line pt-3">
+              Como staff, la foto de fondo de cualquier card (incluida la tuya)
+              se administra desde /jugadores.
+            </p>
+          )}
+        </div>
+      )}
+
+      {!loading && registration?.status === "approved" && !user.is_staff && (
+        <div className="hud-frame bg-tdf-charcoal px-6 py-5 max-w-md flex flex-col gap-4 mt-4">
+          <div>
+            <h2 className="font-mono text-xs uppercase text-tdf-muted mb-1">
+              Foto de fondo de tu card
+            </h2>
+            <p className="font-mono text-[10px] text-tdf-muted">
+              Es la imagen grande de fondo que se ve en tu card pública en{" "}
+              <Link
+                to="/jugadores"
+                className="text-tdf-magenta hover:underline"
+              >
+                Jugadores
+              </Link>
+              .
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="w-24 h-16 rounded overflow-hidden bg-tdf-dark border border-tdf-line shrink-0">
+              {bgPreview && (
+                <img
+                  src={bgPreview}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              )}
+            </div>
+            <button
+              onClick={() => bgFileInputRef.current?.click()}
+              disabled={bgSaving}
+              className="font-body text-xs font-medium text-tdf-muted hover:text-white bg-tdf-dark border border-tdf-line hover:border-tdf-magenta px-3 py-1.5 rounded disabled:opacity-50"
+            >
+              {bgSaving
+                ? "Subiendo..."
+                : bgPreview
+                  ? "Reemplazar foto"
+                  : "Subir foto"}
+            </button>
+            <input
+              ref={bgFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleBackgroundFile(file);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          {bgError && (
+            <p className="text-red-400 text-xs font-body">{bgError}</p>
+          )}
+          {bgSaved && !bgError && (
+            <p className="text-emerald-400 text-xs font-body">
+              Foto de fondo guardada.
+            </p>
+          )}
+          <p className="font-mono text-[10px] text-tdf-muted">
+            Si necesitás sacarla (no reemplazarla), pedíselo a staff — es lo
+            único que queda del lado de moderación.
           </p>
         </div>
       )}
