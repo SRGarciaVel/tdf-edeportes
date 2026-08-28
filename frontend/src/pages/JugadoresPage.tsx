@@ -622,6 +622,18 @@ function PlayerCard({
       onClick={() => setFlipped((v) => !v)}
     >
       <div className="relative w-full min-h-[300px]">
+        {/* botones de subir/sacar foto — a propósito FUERA de las dos
+            caras (no adentro de player-card-front), como hermano con
+            su propio z-index. Si vivían adentro de la cara de
+            adelante, pasar el mouse para llegar a ellos disparaba la
+            misma transición que los desvanecía junto con el resto de
+            esa cara — quedaban imposibles de clickear (bug real
+            reportado por Seba, 22-08-2026). Así quedan fijos siempre
+            arriba, sin importar qué cara se esté mostrando. */}
+        <div className="absolute inset-0 z-30 pointer-events-none">
+          <div className="pointer-events-auto">{cardActions}</div>
+        </div>
+
         {/* cara de adelante: identidad, foto nítida */}
         <div
           className={`player-card-front ${cardFaceTransition}`}
@@ -631,7 +643,6 @@ function PlayerCard({
             url={player.card_background_url!}
             brightness={player.card_background_brightness}
           />
-          {cardActions}
           <div className="relative z-10 flex flex-col h-full">
             <div className="absolute -top-1 right-0 flex gap-2 z-10">
               {tdfBadge}
