@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import JugadoresPage from "./pages/JugadoresPage";
 import NosotrosPage from "./pages/NosotrosPage";
 import ObjetivosPage from "./pages/ObjetivosPage";
+import PerfilPage from "./pages/PerfilPage";
 import PuntosPage from "./pages/PuntosPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sf6MetaPage from "./pages/Sf6MetaPage";
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/calendario" element={<CalendarioPage />} />
           <Route path="/torneos" element={<TorneosPage />} />
           <Route path="/jugadores" element={<JugadoresPage />} />
+          <Route path="/perfil" element={<PerfilPage />} />
           <Route path="/sf6/meta" element={<Sf6MetaPage />} />
           <Route path="/sf6/patch-notes" element={<Sf6PatchNotesPage />} />
           <Route

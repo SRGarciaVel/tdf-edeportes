@@ -624,7 +624,7 @@ export default function Navbar() {
               </a>
               <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
                 <CommunityLinks />
-                <LoginButton />
+                <LoginButton variant="inline" />
               </div>
             </div>
           </motion.nav>
