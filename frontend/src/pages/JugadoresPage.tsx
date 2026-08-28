@@ -241,10 +241,10 @@ function PlayerAvatarRing({ player }: { player: CFNPlayer }) {
   const ringColor = characterColorHex(player.character_name);
   return (
     <div
-      className="w-14 h-14 rounded-full p-[3px] shrink-0"
+      className="w-10 h-10 rounded-full p-[2px] shrink-0"
       style={{
         background: `conic-gradient(${ringColor}, #14101a, ${ringColor})`,
-        boxShadow: `0 0 14px -2px ${ringColor}73`,
+        boxShadow: `0 0 10px -2px ${ringColor}73`,
       }}
     >
       {player.avatar_url ? (
@@ -255,7 +255,7 @@ function PlayerAvatarRing({ player }: { player: CFNPlayer }) {
         />
       ) : (
         <div className="w-full h-full rounded-full border-2 border-tdf-charcoal overflow-hidden flex items-center justify-center bg-tdf-dark">
-          <InitialsAvatar seed={player.display_name} size={10} />
+          <InitialsAvatar seed={player.display_name} size={7} />
         </div>
       )}
     </div>
@@ -553,7 +553,7 @@ function PlayerCard({
   if (!hasPhoto) {
     return (
       <div
-        className={`${cardOuterClassName} bg-tdf-charcoal px-5 pt-5 pb-4 flex flex-col`}
+        className={`${cardOuterClassName} bg-tdf-charcoal px-3.5 pt-3.5 pb-3 flex flex-col`}
       >
         <EmberFallback />
         {cardActions}
@@ -561,14 +561,14 @@ function PlayerCard({
           <div className="absolute -top-1 right-0 flex gap-2 z-10">
             {tdfBadge}
           </div>
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-2.5 mb-2.5">
             {profilesLoading ? (
-              <Skeleton className="w-14 h-14 rounded-full shrink-0" />
+              <Skeleton className="w-10 h-10 rounded-full shrink-0" />
             ) : (
               <PlayerAvatarRing player={player} />
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-display font-bold text-lg truncate leading-tight">
+              <p className="font-display font-bold text-base truncate leading-tight">
                 {player.display_name}
               </p>
               {profilesLoading ? (
@@ -577,7 +577,7 @@ function PlayerCard({
                 hasStats &&
                 player.character_name && (
                   <p
-                    className={`font-body text-sm font-medium mt-0.5 ${characterColorClass(player.character_name)}`}
+                    className={`font-body text-xs font-medium mt-0.5 ${characterColorClass(player.character_name)}`}
                   >
                     {player.character_name}
                   </p>
@@ -587,10 +587,10 @@ function PlayerCard({
           </div>
           <div className="mb-1">{rankBlock}</div>
           {lpLine}
-          <div className="mt-3">
+          <div className="mt-2.5">
             <MatchStatsRow stats={matchStats} loading={statsLoading} />
           </div>
-          <div className="mt-3">{footerRow}</div>
+          <div className="mt-2.5">{footerRow}</div>
         </div>
       </div>
     );
@@ -611,7 +611,7 @@ function PlayerCard({
   // hover en compus con mouse real (clases .player-card-front/.-back +
   // regla en index.css), solo cambió CÓMO se ve la transición.
   const cardFaceTransition =
-    "absolute inset-0 transition-[opacity,transform] duration-[600ms] px-5 pt-5 pb-4 flex flex-col bg-tdf-charcoal overflow-hidden";
+    "absolute inset-0 transition-[opacity,transform] duration-[600ms] px-3.5 pt-3.5 pb-3 flex flex-col bg-tdf-charcoal overflow-hidden";
   const easeStyle = {
     transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
   };
@@ -621,7 +621,7 @@ function PlayerCard({
       className={`${cardOuterClassName} player-card-flip-group cursor-pointer ${flipped ? "flipped" : ""}`}
       onClick={() => setFlipped((v) => !v)}
     >
-      <div className="relative w-full min-h-[300px]">
+      <div className="relative w-full min-h-[210px]">
         {/* botones de subir/sacar foto — a propósito FUERA de las dos
             caras (no adentro de player-card-front), como hermano con
             su propio z-index. Si vivían adentro de la cara de
@@ -634,7 +634,9 @@ function PlayerCard({
           <div className="pointer-events-auto">{cardActions}</div>
         </div>
 
-        {/* cara de adelante: identidad, foto nítida */}
+        {/* cara de adelante: identidad, foto nítida. Sin el indicio
+            "Ver stats" que había antes — Seba lo sacó, se veía mal
+            (22-08-2026) */}
         <div
           className={`player-card-front ${cardFaceTransition}`}
           style={easeStyle}
@@ -647,14 +649,14 @@ function PlayerCard({
             <div className="absolute -top-1 right-0 flex gap-2 z-10">
               {tdfBadge}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {profilesLoading ? (
-                <Skeleton className="w-14 h-14 rounded-full shrink-0" />
+                <Skeleton className="w-10 h-10 rounded-full shrink-0" />
               ) : (
                 <PlayerAvatarRing player={player} />
               )}
               <div className="min-w-0 flex-1">
-                <p className="font-display font-bold text-lg truncate leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
+                <p className="font-display font-bold text-base truncate leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
                   {player.display_name}
                 </p>
                 {profilesLoading ? (
@@ -663,7 +665,7 @@ function PlayerCard({
                   hasStats &&
                   player.character_name && (
                     <p
-                      className={`font-body text-sm font-medium mt-0.5 uppercase tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)] ${characterColorClass(player.character_name)}`}
+                      className={`font-body text-xs font-medium mt-0.5 uppercase tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)] ${characterColorClass(player.character_name)}`}
                     >
                       {player.character_name}
                     </p>
@@ -671,14 +673,6 @@ function PlayerCard({
                 )}
               </div>
             </div>
-            <span
-              className="mt-auto self-end flex items-center gap-1.5 font-mono text-[10px] text-white/90 bg-black/40 px-2.5 py-1.5"
-              style={{
-                clipPath: "polygon(0 6px, 6px 0, 100% 0, 100% 100%, 0 100%)",
-              }}
-            >
-              👆 Ver stats
-            </span>
           </div>
         </div>
 
@@ -692,7 +686,7 @@ function PlayerCard({
             brightness={player.card_background_brightness}
             blurred
           />
-          <div className="relative z-10 flex flex-col h-full justify-center gap-3 [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
+          <div className="relative z-10 flex flex-col h-full justify-center gap-2.5 [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
             <div>{rankBlock}</div>
             {lpLine}
             <MatchStatsRow stats={matchStats} loading={statsLoading} />
@@ -1106,7 +1100,7 @@ export default function JugadoresPage() {
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 gap-3 pt-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-3">
         {sortedPlayers.map((p) => (
           <PlayerCard
             key={p.cfn_id}
