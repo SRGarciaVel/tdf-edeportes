@@ -307,7 +307,12 @@ function CardBackgroundPhoto({
   // se ve la foto. brightness null (fotos subidas antes de que
   // existiera este campo) cae a un valor medio, ni muy fuerte ni muy
   // suave.
-  const overlayAlpha = 0.15 + (brightness ?? 0.45) * 0.55;
+  //
+  // × 0.5 agregado a pedido de Seba (22-08-2026): el rango original
+  // (15%-70%) dejaba la foto muy apagada — quería colores más vivos,
+  // aunque sea a costa de un poco menos de contraste de legibilidad.
+  // Nuevo rango: ~7.5%-35%.
+  const overlayAlpha = (0.15 + (brightness ?? 0.45) * 0.55) * 0.5;
 
   return (
     // altura FIJA a propósito, no inset-0 con una diagonal — la card
@@ -333,8 +338,10 @@ function CardBackgroundPhoto({
       <div
         className="absolute inset-0"
         style={{
+          // tinte de marca también a la mitad (era 0.35/0.45), mismo
+          // pedido de Seba: menos tinte, que se note más la foto real
           background:
-            "linear-gradient(135deg, rgba(196,20,122,0.35), rgba(91,42,134,0.45))",
+            "linear-gradient(135deg, rgba(196,20,122,0.175), rgba(91,42,134,0.225))",
           mixBlendMode: "color",
         }}
       />
