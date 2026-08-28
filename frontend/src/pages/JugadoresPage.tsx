@@ -688,82 +688,90 @@ function PlayerCard({
   };
 
   return (
-    <div
-      className={`${cardOuterClassName} player-card-flip-group cursor-pointer ${flipped ? "flipped" : ""}`}
-      onClick={() => setFlipped((v) => !v)}
-    >
-      <div className="relative w-full min-h-[210px]">
-        {/* botones de subir/sacar foto — a propósito FUERA de las dos
-            caras (no adentro de player-card-front), como hermano con
-            su propio z-index. Si vivían adentro de la cara de
-            adelante, pasar el mouse para llegar a ellos disparaba la
-            misma transición que los desvanecía junto con el resto de
-            esa cara — quedaban imposibles de clickear (bug real
-            reportado por Seba, 22-08-2026). Así quedan fijos siempre
-            arriba, sin importar qué cara se esté mostrando. */}
-        <div className="absolute inset-0 z-30 pointer-events-none">
-          <div className="pointer-events-auto">{cardActions}</div>
-        </div>
-
-        {/* cara de adelante: identidad, foto nítida. Sin el indicio
-            "Ver stats" que había antes — Seba lo sacó, se veía mal
-            (22-08-2026) */}
-        <div
-          className={`player-card-front ${cardFaceTransition}`}
-          style={easeStyle}
-        >
-          <CardBackgroundPhoto
-            url={player.card_background_url!}
-            brightness={player.card_background_brightness}
-          />
-          <div className="relative z-10 flex flex-col h-full">
-            <div className="absolute -top-1 right-0 flex gap-2 z-10">
-              {tdfBadge}
-            </div>
-            <div className="flex items-center gap-2.5">
-              {profilesLoading ? (
-                <Skeleton className="w-10 h-10 rounded-full shrink-0" />
-              ) : (
-                <PlayerAvatarRing player={player} />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-display font-bold text-base truncate leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
-                  {player.display_name}
-                </p>
+    // wrapper nuevo, sin la clase que detecta el hover — los botones de
+    // subir/sacar foto viven acá afuera, como hermanos verdaderos de
+    // .player-card-flip-group (no adentro de él). Antes vivían adentro
+    // (aunque ya no adentro de player-card-front específicamente), así
+    // que pasar el mouse por "Reemplazar"/"Quitar" SEGUÍA contando como
+    // "estar sobre la card" para el hover — disparaba el giro igual, y
+    // la card se quedaba trabada mostrando la cara de atrás después de
+    // usarlos (bug real reportado por Seba, 22-08-2026, segunda vuelta
+    // del mismo problema).
+    <div className="relative">
+      <div
+        className={`${cardOuterClassName} player-card-flip-group cursor-pointer ${flipped ? "flipped" : ""}`}
+        onClick={() => setFlipped((v) => !v)}
+      >
+        <div className="relative w-full min-h-[210px]">
+          {/* cara de adelante: identidad, foto nítida. Sin el indicio
+              "Ver stats" que había antes — Seba lo sacó, se veía mal
+              (22-08-2026) */}
+          <div
+            className={`player-card-front ${cardFaceTransition}`}
+            style={easeStyle}
+          >
+            <CardBackgroundPhoto
+              url={player.card_background_url!}
+              brightness={player.card_background_brightness}
+            />
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="absolute -top-1 right-0 flex gap-2 z-10">
+                {tdfBadge}
+              </div>
+              <div className="flex items-center gap-2.5">
                 {profilesLoading ? (
-                  <Skeleton className="h-3 w-16 mt-1" />
+                  <Skeleton className="w-10 h-10 rounded-full shrink-0" />
                 ) : (
-                  hasStats &&
-                  player.character_name && (
-                    <p
-                      className={`font-body text-xs font-medium mt-0.5 uppercase tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)] ${characterColorClass(player.character_name)}`}
-                    >
-                      {player.character_name}
-                    </p>
-                  )
+                  <PlayerAvatarRing player={player} />
                 )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-display font-bold text-base truncate leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
+                    {player.display_name}
+                  </p>
+                  {profilesLoading ? (
+                    <Skeleton className="h-3 w-16 mt-1" />
+                  ) : (
+                    hasStats &&
+                    player.character_name && (
+                      <p
+                        className={`font-body text-xs font-medium mt-0.5 uppercase tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)] ${characterColorClass(player.character_name)}`}
+                      >
+                        {player.character_name}
+                      </p>
+                    )
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* cara de atrás: stats, foto borrosa */}
-        <div
-          className={`player-card-back ${cardFaceTransition} opacity-0 scale-[0.96] pointer-events-none`}
-          style={easeStyle}
-        >
-          <CardBackgroundPhoto
-            url={player.card_background_url!}
-            brightness={player.card_background_brightness}
-            blurred
-          />
-          <div className="relative z-10 flex flex-col h-full justify-center gap-2.5 [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
-            <div>{rankBlock}</div>
-            {lpLine}
-            <MatchStatsRow stats={matchStats} loading={statsLoading} />
-            {footerRow}
+          {/* cara de atrás: stats, foto borrosa */}
+          <div
+            className={`player-card-back ${cardFaceTransition} opacity-0 scale-[0.96] pointer-events-none`}
+            style={easeStyle}
+          >
+            <CardBackgroundPhoto
+              url={player.card_background_url!}
+              brightness={player.card_background_brightness}
+              blurred
+            />
+            <div className="relative z-10 flex flex-col h-full justify-center gap-2.5 [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
+              <div>{rankBlock}</div>
+              {lpLine}
+              <MatchStatsRow stats={matchStats} loading={statsLoading} />
+              {footerRow}
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* botones de subir/sacar foto — HERMANOS de .player-card-flip-group,
+          no adentro de él (ver comentario grande más arriba, dónde
+          empieza este return). Así pasar el mouse por
+          "Reemplazar"/"Quitar" nunca cuenta como "estar sobre la card"
+          para la regla de hover del giro. */}
+      <div className="absolute inset-0 z-30 pointer-events-none">
+        <div className="pointer-events-auto">{cardActions}</div>
       </div>
     </div>
   );
