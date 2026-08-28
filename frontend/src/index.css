@@ -139,4 +139,18 @@
   .announcement-pulse {
     animation: announcement-glow 2.4s ease-in-out infinite;
   }
+
+  /* card de jugador giratoria (flip 3D) — gira con click/tap en
+     cualquier dispositivo (ver onClick en PlayerCard), Y ADEMÁS con
+     hover en dispositivos que sí tienen mouse de verdad. Se hace acá
+     con @media (hover: hover) en vez de una variante de Tailwind
+     porque el hover táctil de algunos navegadores mobile es poco
+     confiable — esto asegura que en celular SOLO el click dispare el
+     giro, nunca un "hover" fantasma al tocar (conversación de diseño,
+     22-08-2026, probado primero en teaser HTML interactivo). */
+  @media (hover: hover) {
+    .player-card-flip-group:hover .player-card-flip-inner {
+      transform: rotateY(180deg);
+    }
+  }
 }

@@ -172,23 +172,17 @@ function RecordCard({
 function MatchStatsRow({
   stats,
   loading,
-  onOpenHistory,
 }: {
   stats?: CFNMatchStats;
   loading: boolean;
-  onOpenHistory: (e: React.MouseEvent) => void;
 }) {
   if (loading) {
-    return (
-      <div className="border-t border-tdf-line/60 mt-3 pt-2">
-        <Skeleton className="h-3 w-40" />
-      </div>
-    );
+    return <Skeleton className="h-3 w-40" />;
   }
 
   if (!stats || stats.total_matches === 0) {
     return (
-      <p className="font-mono text-[11px] text-tdf-muted border-t border-tdf-line/60 mt-3 pt-2">
+      <p className="font-mono text-[11px] text-tdf-muted">
         Sin partidas en este período
       </p>
     );
@@ -199,36 +193,46 @@ function MatchStatsRow({
   const rest = entries.length - topThree.length;
 
   return (
-    <div className="font-mono text-[11px] text-tdf-muted border-t border-tdf-line/60 mt-3 pt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-      <div className="flex flex-wrap items-center gap-x-2">
-        <span className="text-white">
-          {stats.wins}W-{stats.losses}L
-        </span>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         {stats.win_rate != null && (
-          <span className="text-tdf-magenta">
-            {Math.round(stats.win_rate * 100)}% WR
+          <span
+            className="inline-flex items-center gap-1.5 bg-tdf-magenta/25 border border-tdf-magenta px-2.5 py-1 font-mono font-bold text-xs"
+            style={{
+              clipPath: "polygon(0 6px, 6px 0, 100% 0, 100% 100%, 0 100%)",
+            }}
+          >
+            {Math.round(stats.win_rate * 100)}% WR 🔥
           </span>
         )}
-        <span className="text-tdf-muted">·</span>
-        <span className="flex flex-wrap items-center gap-x-1.5">
-          {topThree.map(([name, count], i) => (
-            <span key={name}>
-              <span className={characterColorClass(name)}>{name}</span>
-              <span className="text-tdf-muted"> x{count}</span>
-              {i < topThree.length - 1 && (
-                <span className="text-tdf-muted">,</span>
-              )}
-            </span>
-          ))}
-          {rest > 0 && <span className="text-tdf-muted">+{rest} más</span>}
+        <span className="font-mono text-xs text-white">
+          {stats.wins}W • {stats.losses}L
         </span>
       </div>
-      <button
-        onClick={onOpenHistory}
-        className="text-tdf-purple hover:text-tdf-magenta transition-colors shrink-0"
-      >
-        Ver partidas →
-      </button>
+      <div className="flex flex-wrap gap-1.5">
+        {topThree.map(([name, count]) => (
+          <span
+            key={name}
+            className="font-mono text-[10px] bg-black/35 border border-white/15 px-2 py-0.5"
+            style={{
+              clipPath: "polygon(0 4px, 4px 0, 100% 0, 100% 100%, 0 100%)",
+            }}
+          >
+            <span className={characterColorClass(name)}>{name}</span>{" "}
+            <span className="text-tdf-muted">×{count}</span>
+          </span>
+        ))}
+        {rest > 0 && (
+          <span
+            className="font-mono text-[10px] bg-black/35 border border-white/15 px-2 py-0.5 text-tdf-muted"
+            style={{
+              clipPath: "polygon(0 4px, 4px 0, 100% 0, 100% 100%, 0 100%)",
+            }}
+          >
+            +{rest}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -240,6 +244,7 @@ function PlayerAvatarRing({ player }: { player: CFNPlayer }) {
       className="w-14 h-14 rounded-full p-[3px] shrink-0"
       style={{
         background: `conic-gradient(${ringColor}, #14101a, ${ringColor})`,
+        boxShadow: `0 0 14px -2px ${ringColor}73`,
       }}
     >
       {player.avatar_url ? (
@@ -297,9 +302,18 @@ function EmberFallback() {
 function CardBackgroundPhoto({
   url,
   brightness,
+  blurred = false,
 }: {
   url: string;
   brightness: number | null;
+  /** true en la cara de atrás de la card giratoria — cada cara tiene su
+   * propia copia de la foto (ver PlayerCard), así el blur nunca se
+   * "escapa" hacia la cara de adelante. filter directo sobre la imagen
+   * en vez de backdrop-filter en el panel de texto: más simple, mejor
+   * soporte de navegadores, y ya no hace falta que el panel tenga su
+   * propia opacidad para que el blur "se note" (conversación de
+   * diseño, 22-08-2026, probado primero en teaser HTML interactivo). */
+  blurred?: boolean;
 }) {
   // mismo mapeo probado en el teaser HTML: foto clara -> overlay más
   // fuerte (se atenúa más), foto oscura -> overlay más suave (se deja
@@ -311,22 +325,13 @@ function CardBackgroundPhoto({
   // × 0.5 agregado a pedido de Seba (22-08-2026): el rango original
   // (15%-70%) dejaba la foto muy apagada — quería colores más vivos,
   // aunque sea a costa de un poco menos de contraste de legibilidad.
-  // Nuevo rango: ~7.5%-35%.
-  const overlayAlpha = (0.15 + (brightness ?? 0.45) * 0.55) * 0.5;
+  // Nuevo rango: ~7.5%-35%. En la cara de atrás (blurred=true) se
+  // reduce un poco más — el blur ya aporta su propia protección de
+  // legibilidad, no hace falta tanto oscurecimiento encima.
+  const overlayAlpha =
+    (0.15 + (brightness ?? 0.45) * 0.55) * (blurred ? 0.35 : 0.5);
 
   return (
-    // rediseño completo, 22-08-2026: antes la foto vivía en una caja de
-    // altura FIJA (128px arriba) con una máscara diagonal y un fade a
-    // charcoal sólido abajo — eso garantizaba legibilidad, pero
-    // "cortaba" la foto y dejaba color plano detrás del avatar/nombre
-    // (la máscara los hacía transparentes ahí) y en toda la zona de
-    // stats de abajo. Ahora la foto cubre TODA la card, nítida, sin
-    // máscara — la legibilidad ya no depende de esconder la foto, sino
-    // de paneles de vidrio esmerilado (backdrop-blur) puestos
-    // puntualmente detrás de cada bloque de texto (ver más abajo en
-    // PlayerCard). Así la foto se ve nítida donde no hay texto encima,
-    // y desenfocada solo donde hace falta — probado primero en un
-    // teaser HTML con capturas reales antes de meterlo acá.
     <div
       className="absolute inset-0 overflow-hidden pointer-events-none"
       style={{
@@ -334,6 +339,8 @@ function CardBackgroundPhoto({
         backgroundSize: "cover",
         backgroundPosition: "center",
         opacity: 0.85,
+        filter: blurred ? "blur(10px) saturate(1.1)" : undefined,
+        transform: blurred ? "scale(1.15)" : undefined,
       }}
     >
       <div
@@ -349,9 +356,7 @@ function CardBackgroundPhoto({
       {/* atenuación adaptativa según el brillo real de la foto —
           probado primero con un análisis real (canvas) en un teaser
           HTML antes de meterlo acá (conversación de diseño,
-          20-08-2026). Ahora aplica pareja a toda la card (antes solo a
-          la franja de arriba) como base general de legibilidad; los
-          paneles de vidrio de abajo hacen el resto puntualmente. */}
+          20-08-2026). */}
       <div
         className="absolute inset-0"
         style={{ background: "#0D0710", opacity: overlayAlpha }}
@@ -375,7 +380,7 @@ function CardBackgroundActions({
 }) {
   if (!canUpload && !canRemove) return null;
   return (
-    <div className="absolute top-2 right-2 z-20 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div className="absolute top-2 right-2 z-20 flex gap-1.5">
       {canUpload && (
         <button
           onClick={onUploadClick}
@@ -420,6 +425,8 @@ function PlayerCard({
   onRemoveBackground: (cfnId: string) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [flipped, setFlipped] = useState(false);
+  const hasPhoto = !!player.card_background_url;
   const hasStats =
     !player.last_error &&
     (player.league_points != null || player.character_name);
@@ -430,21 +437,12 @@ function PlayerCard({
     fn();
   };
 
-  const content = (
+  const cardActions = (
     <>
-      {player.card_background_url ? (
-        <CardBackgroundPhoto
-          url={player.card_background_url}
-          brightness={player.card_background_brightness}
-        />
-      ) : (
-        <EmberFallback />
-      )}
-
       <CardBackgroundActions
         canUpload={isOwnCard || isStaff}
         canRemove={isStaff}
-        hasPhoto={!!player.card_background_url}
+        hasPhoto={hasPhoto}
         onUploadClick={stopAnd(() => fileInputRef.current?.click())}
         onRemove={stopAnd(() => onRemoveBackground(player.cfn_id))}
       />
@@ -459,38 +457,118 @@ function PlayerCard({
           e.target.value = "";
         }}
       />
+    </>
+  );
 
-      <div className="relative z-10">
-        <div className="absolute -top-1 right-0 flex gap-2 z-10">
-          {player.is_tdf && (
-            <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-purple">
-              TDF
-            </span>
-          )}
-        </div>
+  const tdfBadge = player.is_tdf && (
+    <span className="bg-tdf-charcoal px-2 font-mono text-[10px] uppercase text-tdf-purple">
+      TDF
+    </span>
+  );
 
-        {/* panel de vidrio esmerilado (backdrop-blur) detrás de
-            avatar/nombre/personaje/rango/LP — reemplaza la máscara +
-            fade a charcoal que tenía la foto antes (conversación de
-            diseño, 22-08-2026: Seba quería la foto nítida donde no
-            hay texto, y desenfocada solo detrás de cada bloque de
-            texto, no la card entera pareja). El fondo semi-transparente
-            es necesario para que el blur "se note" — sin nada de
-            opacidad propia no hay vidrio que esmerilar. */}
-        <div
-          className="bg-tdf-dark/45 backdrop-blur-md px-2 py-1.5 mb-6"
-          style={{
-            clipPath: "polygon(0 8px, 8px 0, 100% 0, 100% 100%, 0 100%)",
-          }}
+  const rankBlock = profilesLoading ? (
+    <Skeleton className="h-6 w-32" />
+  ) : hasStats ? (
+    <div className="flex items-center gap-2">
+      <FlameIcon dim={!isTopMr} gradientId={`flame-${player.cfn_id}`} />
+      {player.master_rating != null ? (
+        <>
+          <span
+            className={`font-display font-bold leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-white text-[26px]" : "text-tdf-muted text-xl"}`}
+          >
+            {player.master_rating}
+          </span>
+          <span
+            className={`font-body text-[11px] font-semibold [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-[#ff6b35]" : "text-tdf-muted"}`}
+          >
+            MR
+          </span>
+        </>
+      ) : (
+        <span className="font-body text-xs text-tdf-muted [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
+          Sin rango de Master todavía
+        </span>
+      )}
+      {isTopMr && (
+        <span className="ml-auto font-body text-[11px] font-semibold text-tdf-dark bg-gradient-to-r from-[#ff6b35] to-tdf-magenta px-2.5 py-1 rounded">
+          #1 comunidad
+        </span>
+      )}
+    </div>
+  ) : (
+    <span className="font-body text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-1 inline-block">
+      Próximamente
+    </span>
+  );
+
+  const lpLine = hasStats && player.league_points != null && (
+    <p className="font-body text-xs text-tdf-muted [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
+      <span className="font-semibold">
+        {player.league_points.toLocaleString("es-CL")}
+      </span>{" "}
+      LP
+    </p>
+  );
+
+  const footerRow = (
+    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/10 font-body text-[11px] text-tdf-muted">
+      <span className="opacity-55 truncate">
+        CFN {player.cfn_id}
+        {player.updated_at && (
+          <span className="opacity-70">
+            {" "}
+            · {relativeTime(player.updated_at)}
+          </span>
+        )}
+      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        {player.liquipedia_url && (
+          <a
+            href={player.liquipedia_url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-tdf-purple hover:text-white font-medium transition-colors"
+          >
+            Liquipedia ↗
+          </a>
+        )}
+        <button
+          onClick={stopAnd(() => onOpenHistory(player))}
+          className="font-mono text-[10px] border border-white/25 hover:bg-tdf-purple hover:border-tdf-purple transition-colors px-2 py-1"
         >
-          <div className="flex items-center gap-3">
+          Ver partidas →
+        </button>
+      </div>
+    </div>
+  );
+
+  const cardOuterClassName =
+    "hud-frame relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-10px_rgba(196,20,122,0.55)]" +
+    (isTopMr ? " ring-1 ring-tdf-magenta" : "");
+
+  // sin foto propia: card simple, sin giro — no hay nada que "revelar",
+  // el ember de fondo es solo textura, no una foto que valga la pena
+  // esconder/mostrar (conversación de diseño, 22-08-2026)
+  if (!hasPhoto) {
+    return (
+      <div
+        className={`${cardOuterClassName} bg-tdf-charcoal px-5 pt-5 pb-4 flex flex-col`}
+      >
+        <EmberFallback />
+        {cardActions}
+        <div className="relative z-10">
+          <div className="absolute -top-1 right-0 flex gap-2 z-10">
+            {tdfBadge}
+          </div>
+          <div className="flex items-center gap-3 mb-3">
             {profilesLoading ? (
               <Skeleton className="w-14 h-14 rounded-full shrink-0" />
             ) : (
               <PlayerAvatarRing player={player} />
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-display font-bold text-lg truncate leading-tight [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
+              <p className="font-display font-bold text-lg truncate leading-tight">
                 {player.display_name}
               </p>
               {profilesLoading ? (
@@ -499,7 +577,7 @@ function PlayerCard({
                 hasStats &&
                 player.character_name && (
                   <p
-                    className={`font-body text-sm font-medium mt-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${characterColorClass(player.character_name)}`}
+                    className={`font-body text-sm font-medium mt-0.5 ${characterColorClass(player.character_name)}`}
                   >
                     {player.character_name}
                   </p>
@@ -507,102 +585,95 @@ function PlayerCard({
               )}
             </div>
           </div>
-
-          {profilesLoading ? (
-            <Skeleton className="h-6 w-32 mt-3" />
-          ) : hasStats ? (
-            <div className="flex items-center gap-2 mt-2">
-              <FlameIcon dim={!isTopMr} gradientId={`flame-${player.cfn_id}`} />
-              {player.master_rating != null ? (
-                <>
-                  <span
-                    className={`font-display font-bold leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-white text-[26px]" : "text-tdf-muted text-xl"}`}
-                  >
-                    {player.master_rating}
-                  </span>
-                  <span
-                    className={`font-body text-[11px] font-semibold [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-[#ff6b35]" : "text-tdf-muted"}`}
-                  >
-                    MR
-                  </span>
-                </>
-              ) : (
-                <span className="font-body text-xs text-tdf-muted">
-                  Sin rango de Master todavía
-                </span>
-              )}
-              {isTopMr && (
-                <span className="ml-auto font-body text-[11px] font-semibold text-tdf-dark bg-gradient-to-r from-[#ff6b35] to-tdf-magenta px-2.5 py-1 rounded">
-                  #1 comunidad
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="font-body text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-1 inline-block mt-2">
-              Próximamente
-            </span>
-          )}
-
-          {hasStats && player.league_points != null && (
-            <p className="font-body text-xs text-tdf-muted mt-1">
-              <span className="font-semibold">
-                {player.league_points.toLocaleString("es-CL")}
-              </span>{" "}
-              LP
-            </p>
-          )}
-        </div>
-
-        {/* segundo panel de vidrio, separado del de arriba a propósito
-            — el hueco entre los dos deja ver la foto nítida sin nada
-            encima, que es justo el efecto que se buscaba */}
-        <div
-          className="bg-tdf-dark/45 backdrop-blur-md px-2 py-1"
-          style={{
-            clipPath:
-              "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
-          }}
-        >
-          <MatchStatsRow
-            stats={matchStats}
-            loading={statsLoading}
-            onOpenHistory={stopAnd(() => onOpenHistory(player))}
-          />
-
-          <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/10 font-body text-[11px] text-tdf-muted">
-            <span className="opacity-55">CFN {player.cfn_id}</span>
-            {player.liquipedia_url && (
-              <span className="text-tdf-purple font-medium">Liquipedia ↗</span>
-            )}
-            {player.updated_at && (
-              <span className="opacity-70">
-                {relativeTime(player.updated_at)}
-              </span>
-            )}
+          <div className="mb-1">{rankBlock}</div>
+          {lpLine}
+          <div className="mt-3">
+            <MatchStatsRow stats={matchStats} loading={statsLoading} />
           </div>
+          <div className="mt-3">{footerRow}</div>
         </div>
       </div>
-    </>
-  );
-
-  const className =
-    "hud-frame bg-tdf-charcoal px-5 pt-5 pb-4 flex flex-col transition-all duration-200 relative overflow-hidden group hover:-translate-y-0.5 hover:border-tdf-magenta hover:shadow-[0_12px_32px_-10px_rgba(196,20,122,0.55)]" +
-    (isTopMr ? " border-tdf-magenta" : "");
-
-  if (player.liquipedia_url) {
-    return (
-      <a
-        href={player.liquipedia_url}
-        target="_blank"
-        rel="noreferrer"
-        className={className}
-      >
-        {content}
-      </a>
     );
   }
 
-  return <div className={className}>{content}</div>;
+  // con foto propia: card giratoria — cara de adelante con la foto
+  // nítida (identidad), cara de atrás con la foto borrosa (stats). Gira
+  // con click/tap en CUALQUIER dispositivo (el onClick de acá abajo), Y
+  // ADEMÁS con hover en compus con mouse real (.player-card-flip-group,
+  // ver la regla @media (hover: hover) en index.css) — probado primero
+  // en un teaser HTML interactivo antes de meterlo acá, 22-08-2026.
+  return (
+    <div
+      className={`${cardOuterClassName} player-card-flip-group cursor-pointer`}
+      style={{ perspective: "1400px" }}
+      onClick={() => setFlipped((v) => !v)}
+    >
+      <div
+        className={`player-card-flip-inner relative w-full min-h-[300px] transition-transform duration-700 [transform-style:preserve-3d] ${flipped ? "[transform:rotateY(180deg)]" : ""}`}
+      >
+        {/* cara de adelante: identidad, foto nítida */}
+        <div className="absolute inset-0 [backface-visibility:hidden] px-5 pt-5 pb-4 flex flex-col bg-tdf-charcoal overflow-hidden">
+          <CardBackgroundPhoto
+            url={player.card_background_url!}
+            brightness={player.card_background_brightness}
+          />
+          {cardActions}
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="absolute -top-1 right-0 flex gap-2 z-10">
+              {tdfBadge}
+            </div>
+            <div className="flex items-center gap-3">
+              {profilesLoading ? (
+                <Skeleton className="w-14 h-14 rounded-full shrink-0" />
+              ) : (
+                <PlayerAvatarRing player={player} />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-display font-bold text-lg truncate leading-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
+                  {player.display_name}
+                </p>
+                {profilesLoading ? (
+                  <Skeleton className="h-3 w-16 mt-1" />
+                ) : (
+                  hasStats &&
+                  player.character_name && (
+                    <p
+                      className={`font-body text-sm font-medium mt-0.5 uppercase tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)] ${characterColorClass(player.character_name)}`}
+                    >
+                      {player.character_name}
+                    </p>
+                  )
+                )}
+              </div>
+            </div>
+            <span
+              className="mt-auto self-end flex items-center gap-1.5 font-mono text-[10px] text-white/90 bg-black/40 px-2.5 py-1.5"
+              style={{
+                clipPath: "polygon(0 6px, 6px 0, 100% 0, 100% 100%, 0 100%)",
+              }}
+            >
+              👆 Ver stats
+            </span>
+          </div>
+        </div>
+
+        {/* cara de atrás: stats, foto borrosa */}
+        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] px-5 pt-5 pb-4 flex flex-col bg-tdf-charcoal overflow-hidden">
+          <CardBackgroundPhoto
+            url={player.card_background_url!}
+            brightness={player.card_background_brightness}
+            blurred
+          />
+          <div className="relative z-10 flex flex-col h-full justify-center gap-3 [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_10px_rgba(0,0,0,0.7)]">
+            <div>{rankBlock}</div>
+            {lpLine}
+            <MatchStatsRow stats={matchStats} loading={statsLoading} />
+            {footerRow}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function RegistrationForm({
