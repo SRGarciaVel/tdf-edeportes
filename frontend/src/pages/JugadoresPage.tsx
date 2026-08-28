@@ -315,24 +315,25 @@ function CardBackgroundPhoto({
   const overlayAlpha = (0.15 + (brightness ?? 0.45) * 0.55) * 0.5;
 
   return (
-    // altura FIJA a propósito, no inset-0 con una diagonal — la card
-    // varía de altura según cuánto contenido tenga cada jugador
-    // (stats, badge de TDF, etc.), así que una diagonal de esquina a
-    // esquina "filtraba" la foto por todo el ancho en la zona de abajo
-    // (W-L, CFN, Liquipedia) en las cards más altas, tapando texto de
-    // verdad (encontrado por Seba, 20-08-2026). Con altura fija, la
-    // foto SIEMPRE queda arriba (zona de identidad: avatar/nombre/MR)
-    // y la zona de datos de abajo siempre está sobre charcoal sólido,
-    // sin excepción, sin importar la altura total de la card.
+    // rediseño completo, 22-08-2026: antes la foto vivía en una caja de
+    // altura FIJA (128px arriba) con una máscara diagonal y un fade a
+    // charcoal sólido abajo — eso garantizaba legibilidad, pero
+    // "cortaba" la foto y dejaba color plano detrás del avatar/nombre
+    // (la máscara los hacía transparentes ahí) y en toda la zona de
+    // stats de abajo. Ahora la foto cubre TODA la card, nítida, sin
+    // máscara — la legibilidad ya no depende de esconder la foto, sino
+    // de paneles de vidrio esmerilado (backdrop-blur) puestos
+    // puntualmente detrás de cada bloque de texto (ver más abajo en
+    // PlayerCard). Así la foto se ve nítida donde no hay texto encima,
+    // y desenfocada solo donde hace falta — probado primero en un
+    // teaser HTML con capturas reales antes de meterlo acá.
     <div
-      className="absolute top-0 left-0 right-0 h-32 overflow-hidden pointer-events-none"
+      className="absolute inset-0 overflow-hidden pointer-events-none"
       style={{
         backgroundImage: `url(${url})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        opacity: 0.8,
-        WebkitMaskImage: "linear-gradient(100deg, transparent 32%, black 80%)",
-        maskImage: "linear-gradient(100deg, transparent 32%, black 80%)",
+        opacity: 0.85,
       }}
     >
       <div
@@ -348,20 +349,12 @@ function CardBackgroundPhoto({
       {/* atenuación adaptativa según el brillo real de la foto —
           probado primero con un análisis real (canvas) en un teaser
           HTML antes de meterlo acá (conversación de diseño,
-          20-08-2026) */}
+          20-08-2026). Ahora aplica pareja a toda la card (antes solo a
+          la franja de arriba) como base general de legibilidad; los
+          paneles de vidrio de abajo hacen el resto puntualmente. */}
       <div
         className="absolute inset-0"
         style={{ background: "#0D0710", opacity: overlayAlpha }}
-      />
-      {/* refuerzo extra: se apaga hacia abajo aunque esté dentro de la
-          caja, para que el borde inferior nunca corte la foto de forma
-          brusca contra el charcoal sólido de la zona de datos */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(to bottom, transparent 40%, #14101a 100%)",
-        }}
       />
     </div>
   );
@@ -476,91 +469,117 @@ function PlayerCard({
           )}
         </div>
 
-        <div className="flex items-center gap-3 mb-3">
-          {profilesLoading ? (
-            <Skeleton className="w-14 h-14 rounded-full shrink-0" />
-          ) : (
-            <PlayerAvatarRing player={player} />
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="font-display font-bold text-lg truncate leading-tight [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
-              {player.display_name}
-            </p>
+        {/* panel de vidrio esmerilado (backdrop-blur) detrás de
+            avatar/nombre/personaje/rango/LP — reemplaza la máscara +
+            fade a charcoal que tenía la foto antes (conversación de
+            diseño, 22-08-2026: Seba quería la foto nítida donde no
+            hay texto, y desenfocada solo detrás de cada bloque de
+            texto, no la card entera pareja). El fondo semi-transparente
+            es necesario para que el blur "se note" — sin nada de
+            opacidad propia no hay vidrio que esmerilar. */}
+        <div
+          className="bg-tdf-dark/45 backdrop-blur-md px-3 py-3 mb-3"
+          style={{
+            clipPath: "polygon(0 8px, 8px 0, 100% 0, 100% 100%, 0 100%)",
+          }}
+        >
+          <div className="flex items-center gap-3">
             {profilesLoading ? (
-              <Skeleton className="h-3 w-16 mt-1" />
+              <Skeleton className="w-14 h-14 rounded-full shrink-0" />
             ) : (
-              hasStats &&
-              player.character_name && (
-                <p
-                  className={`font-body text-sm font-medium mt-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${characterColorClass(player.character_name)}`}
-                >
-                  {player.character_name}
-                </p>
-              )
+              <PlayerAvatarRing player={player} />
             )}
+            <div className="min-w-0 flex-1">
+              <p className="font-display font-bold text-lg truncate leading-tight [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">
+                {player.display_name}
+              </p>
+              {profilesLoading ? (
+                <Skeleton className="h-3 w-16 mt-1" />
+              ) : (
+                hasStats &&
+                player.character_name && (
+                  <p
+                    className={`font-body text-sm font-medium mt-0.5 [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${characterColorClass(player.character_name)}`}
+                  >
+                    {player.character_name}
+                  </p>
+                )
+              )}
+            </div>
           </div>
-        </div>
 
-        {profilesLoading ? (
-          <Skeleton className="h-6 w-32 mb-3" />
-        ) : hasStats ? (
-          <div className="flex items-center gap-2 mb-1">
-            <FlameIcon dim={!isTopMr} gradientId={`flame-${player.cfn_id}`} />
-            {player.master_rating != null ? (
-              <>
-                <span
-                  className={`font-display font-bold leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-white text-[26px]" : "text-tdf-muted text-xl"}`}
-                >
-                  {player.master_rating}
+          {profilesLoading ? (
+            <Skeleton className="h-6 w-32 mt-3" />
+          ) : hasStats ? (
+            <div className="flex items-center gap-2 mt-3">
+              <FlameIcon dim={!isTopMr} gradientId={`flame-${player.cfn_id}`} />
+              {player.master_rating != null ? (
+                <>
+                  <span
+                    className={`font-display font-bold leading-none [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-white text-[26px]" : "text-tdf-muted text-xl"}`}
+                  >
+                    {player.master_rating}
+                  </span>
+                  <span
+                    className={`font-body text-[11px] font-semibold [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-[#ff6b35]" : "text-tdf-muted"}`}
+                  >
+                    MR
+                  </span>
+                </>
+              ) : (
+                <span className="font-body text-xs text-tdf-muted">
+                  Sin rango de Master todavía
                 </span>
-                <span
-                  className={`font-body text-[11px] font-semibold [text-shadow:0_1px_4px_rgba(0,0,0,0.5)] ${isTopMr ? "text-[#ff6b35]" : "text-tdf-muted"}`}
-                >
-                  MR
+              )}
+              {isTopMr && (
+                <span className="ml-auto font-body text-[11px] font-semibold text-tdf-dark bg-gradient-to-r from-[#ff6b35] to-tdf-magenta px-2.5 py-1 rounded">
+                  #1 comunidad
                 </span>
-              </>
-            ) : (
-              <span className="font-body text-xs text-tdf-muted">
-                Sin rango de Master todavía
-              </span>
-            )}
-            {isTopMr && (
-              <span className="ml-auto font-body text-[11px] font-semibold text-tdf-dark bg-gradient-to-r from-[#ff6b35] to-tdf-magenta px-2.5 py-1 rounded">
-                #1 comunidad
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="font-body text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-1 inline-block mb-2">
-            Próximamente
-          </span>
-        )}
-
-        {hasStats && player.league_points != null && (
-          <p className="font-body text-xs text-tdf-muted mb-3">
-            <span className="font-semibold">
-              {player.league_points.toLocaleString("es-CL")}
-            </span>{" "}
-            LP
-          </p>
-        )}
-
-        <MatchStatsRow
-          stats={matchStats}
-          loading={statsLoading}
-          onOpenHistory={stopAnd(() => onOpenHistory(player))}
-        />
-
-        <div className="flex items-center justify-between mt-3 pt-2 border-t border-tdf-line/60 font-body text-[11px] text-tdf-muted">
-          <span className="opacity-55">CFN {player.cfn_id}</span>
-          {player.liquipedia_url && (
-            <span className="text-tdf-purple font-medium">Liquipedia ↗</span>
-          )}
-          {player.updated_at && (
-            <span className="opacity-70">
-              {relativeTime(player.updated_at)}
+              )}
+            </div>
+          ) : (
+            <span className="font-body text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-1 inline-block mt-3">
+              Próximamente
             </span>
           )}
+
+          {hasStats && player.league_points != null && (
+            <p className="font-body text-xs text-tdf-muted mt-2">
+              <span className="font-semibold">
+                {player.league_points.toLocaleString("es-CL")}
+              </span>{" "}
+              LP
+            </p>
+          )}
+        </div>
+
+        {/* segundo panel de vidrio, separado del de arriba a propósito
+            — el hueco entre los dos deja ver la foto nítida sin nada
+            encima, que es justo el efecto que se buscaba */}
+        <div
+          className="bg-tdf-dark/45 backdrop-blur-md px-3 py-2"
+          style={{
+            clipPath:
+              "polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
+          }}
+        >
+          <MatchStatsRow
+            stats={matchStats}
+            loading={statsLoading}
+            onOpenHistory={stopAnd(() => onOpenHistory(player))}
+          />
+
+          <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/10 font-body text-[11px] text-tdf-muted">
+            <span className="opacity-55">CFN {player.cfn_id}</span>
+            {player.liquipedia_url && (
+              <span className="text-tdf-purple font-medium">Liquipedia ↗</span>
+            )}
+            {player.updated_at && (
+              <span className="opacity-70">
+                {relativeTime(player.updated_at)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </>
