@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { getTwitchLoginUrl } from "../lib/api";
@@ -105,6 +105,10 @@ export default function LoginButton({
         className="flex items-center gap-2"
       >
         {identityRow}
+        <ChevronDown
+          size={14}
+          className={`text-tdf-muted transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
       <AnimatePresence>
         {open && (

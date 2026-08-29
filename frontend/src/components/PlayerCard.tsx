@@ -272,13 +272,14 @@ export default function PlayerCard({
   onOpenHistory?: (player: CFNPlayer) => void;
   onUploadBackground?: (cfnId: string, file: File, isOwn: boolean) => void;
   onRemoveBackground?: (cfnId: string) => void;
-  /** true en la vista previa en vivo de /perfil (ver PerfilPage.tsx) —
-   * misma card real, mismos flip/fade y colores, pero sin los botones
-   * de subir/sacar foto superpuestos (esos ya viven en el formulario
-   * de al lado en esa página, no tiene sentido duplicarlos encima de
-   * la preview). El resto del comportamiento (click para dar vuelta,
-   * hover en compus con mouse) queda igual, así la vista previa es de
-   * verdad la misma experiencia que ve cualquier visitante. */
+  /** true en /perfil (propio, en vista previa en vivo) y en el perfil
+   * público de otra persona (/jugadores/:cfnId) — en ambos casos el
+   * link "Perfil →" del pie sería circular (ya estás en esa página).
+   * Ya NO apaga los botones de subir/sacar foto — desde 29-08-2026 la
+   * propia card en /perfil es justamente el lugar de editarla (pedido
+   * de Seba: "aprovechemos la vista previa para editar de una vez"),
+   * así que canUpload/canRemove siguen su lógica normal de
+   * isOwnCard/isStaff sin importar este flag. */
   preview?: boolean;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -297,8 +298,8 @@ export default function PlayerCard({
   const cardActions = (
     <>
       <CardBackgroundActions
-        canUpload={!preview && (isOwnCard || isStaff)}
-        canRemove={!preview && isStaff}
+        canUpload={isOwnCard || isStaff}
+        canRemove={isStaff}
         hasPhoto={hasPhoto}
         onUploadClick={stopAnd(() => fileInputRef.current?.click())}
         onRemove={stopAnd(() => onRemoveBackground(player.cfn_id))}
