@@ -322,7 +322,7 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
             {matchedPlayers.map((p) => (
               <button
                 key={p.cfn_id}
-                onClick={() => go("/jugadores")}
+                onClick={() => go(`/jugadores/${p.cfn_id}`)}
                 className="block w-full text-left px-2 py-1.5 font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
               >
                 {p.display_name}

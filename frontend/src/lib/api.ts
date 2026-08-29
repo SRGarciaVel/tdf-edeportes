@@ -20,6 +20,7 @@ import type {
   MetaSnapshot,
   PatchNote,
   TwitchLiveStatus,
+  ChannelLiveStatus,
   SkillAxis,
   SocialLink,
   ProfileComment,
@@ -592,4 +593,11 @@ export async function listPatchNotes(): Promise<PatchNote[]> {
 export async function getTwitchLiveStatus(): Promise<TwitchLiveStatus> {
   const res = await fetch(`${API_URL}/twitch/live-status`);
   return parseOrThrow<TwitchLiveStatus>(res);
+}
+
+// estado de Younghou y Pochoclo23 — mismo criterio de cacheo que
+// getTwitchLiveStatus
+export async function getFriendsLiveStatus(): Promise<ChannelLiveStatus[]> {
+  const res = await fetch(`${API_URL}/twitch/friends-live-status`);
+  return parseOrThrow<ChannelLiveStatus[]>(res);
 }

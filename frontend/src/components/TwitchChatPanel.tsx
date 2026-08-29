@@ -1,9 +1,28 @@
 import { useState } from "react";
+import { useFriendsLiveStatus } from "../lib/useFriendsLiveStatus";
 
-const TWITCH_CHANNEL = "tdfedeportes";
+const TDF_CHANNEL = "tdfedeportes";
 
+/** Panel de chat de Twitch — con pestañas cuando Younghou y/o
+ * Pochoclo23 están en vivo (pedido de Seba, 29-08-2026: "que se pueda
+ * seleccionar en pestañas ya establecidas en qué chat entrar"). La
+ * pestaña de TDF siempre está; las de los amigos solo aparecen
+ * mientras están transmitiendo — no tiene sentido dejar la pestaña de
+ * un chat de un stream que ya terminó. */
 export default function TwitchChatPanel() {
   const [open, setOpen] = useState(false);
+  const [activeChannel, setActiveChannel] = useState(TDF_CHANNEL);
+  const friendsLive = useFriendsLiveStatus();
+  const liveFriendChannels = friendsLive
+    .filter((f) => f.is_live)
+    .map((f) => f.channel);
+  const tabs = [TDF_CHANNEL, ...liveFriendChannels];
+  // si la pestaña activa era la de un amigo que dejó de estar en vivo
+  // mientras el panel seguía abierto, vuelve sola al chat de TDF en
+  // vez de quedar mostrando una pestaña que ya no existe
+  const currentChannel = tabs.includes(activeChannel)
+    ? activeChannel
+    : TDF_CHANNEL;
   // mismo motivo que en TwitchEmbed: el parent tiene que matchear el
   // dominio real que sirve la página, sin importar el entorno
   const parent = window.location.hostname;
@@ -38,12 +57,24 @@ export default function TwitchChatPanel() {
         style={{ right: open ? 0 : "-100%" }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-tdf-line shrink-0">
-          <span className="font-mono text-xs uppercase text-tdf-muted">
-            Chat de Twitch
-          </span>
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {tabs.map((channel) => (
+              <button
+                key={channel}
+                onClick={() => setActiveChannel(channel)}
+                className={`font-mono text-[10px] uppercase px-2 py-1 whitespace-nowrap transition-colors ${
+                  currentChannel === channel
+                    ? "bg-tdf-magenta text-white"
+                    : "text-tdf-muted hover:text-white"
+                }`}
+              >
+                {channel === TDF_CHANNEL ? "TDF" : channel}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => setOpen(false)}
-            className="font-mono text-xs uppercase text-tdf-magenta hover:text-white transition-colors"
+            className="font-mono text-xs uppercase text-tdf-magenta hover:text-white transition-colors shrink-0"
             aria-label="Cerrar chat de Twitch"
           >
             Cerrar ✕
@@ -51,9 +82,10 @@ export default function TwitchChatPanel() {
         </div>
         {open && (
           <iframe
-            src={`https://www.twitch.tv/embed/${TWITCH_CHANNEL}/chat?parent=${parent}&darkpopout`}
+            key={currentChannel}
+            src={`https://www.twitch.tv/embed/${currentChannel}/chat?parent=${parent}&darkpopout`}
             className="w-full flex-1"
-            title="Chat de TDF e-deportes en Twitch"
+            title={`Chat de ${currentChannel} en Twitch`}
           />
         )}
       </div>

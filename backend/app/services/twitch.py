@@ -119,6 +119,14 @@ STREAMS_URL = "https://api.twitch.tv/helix/streams"
 # en el frontend — un solo lugar para no repetirlo por triplicado acá
 TDF_TWITCH_LOGIN = "tdfedeportes"
 
+# Younghou y Pochoclo23 — el mayor apoyo de la escena chilena para el
+# club (pedido de Seba, 29-08-2026: destacarlos en Home cuando estén
+# en vivo, como devolución de mano). Fija a propósito (no
+# configurable desde ningún lado todavía) — si el día de mañana se
+# quiere que esto sea editable por staff, se convierte en una tabla
+# recién ahí, no antes (ver CODESTYLE.md "no sobre-ingenierizar").
+FRIEND_TWITCH_LOGINS = ["younghou", "pochoclo23"]
+
 # cache en memoria, simple — no hace falta nada más elaborado para
 # datos que cambian constantemente y no se guardan en ningún lado.
 # Dos cachés separados a propósito: el token de app dura horas (no
@@ -129,6 +137,7 @@ TDF_TWITCH_LOGIN = "tdfedeportes"
 # alcanza).
 _app_token_cache: dict = {"token": None, "expires_at": 0.0}
 _live_status_cache: dict = {"data": None, "expires_at": 0.0}
+_friends_live_status_cache: dict = {"data": None, "expires_at": 0.0}
 
 
 def _get_cached_app_token() -> str:
@@ -181,6 +190,55 @@ def get_live_status(channel_login: str = TDF_TWITCH_LOGIN) -> dict:
     _live_status_cache["expires_at"] = (
         now + 45
     )  # ~45s compartidos entre todos los visitantes
+    return result
+
+
+def get_friends_live_status() -> list[dict]:
+    """Estado de Younghou y Pochoclo23 en UN solo request a Twitch (la
+    API de Helix acepta varios `user_login` a la vez, mismo patrón que
+    ya usa fetch_users_by_login más abajo) — evita pedir uno por canal
+    por separado. Mismo criterio de "Twitch caído = asumir offline"
+    que get_live_status."""
+    now = time.time()
+    if (
+        _friends_live_status_cache["data"] is not None
+        and _friends_live_status_cache["expires_at"] > now
+    ):
+        return _friends_live_status_cache["data"]
+
+    try:
+        token = _get_cached_app_token()
+        response = httpx.get(
+            STREAMS_URL,
+            params=[("user_login", login) for login in FRIEND_TWITCH_LOGINS],
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Client-Id": settings.twitch_client_id,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        streams_by_login = {
+            s["user_login"].lower(): s for s in response.json().get("data", [])
+        }
+    except Exception:  # noqa: BLE001 — mismo criterio que get_live_status
+        streams_by_login = {}
+
+    result = [
+        {
+            "channel": login,
+            "is_live": login in streams_by_login,
+            "title": streams_by_login[login]["title"]
+            if login in streams_by_login
+            else None,
+            "viewer_count": streams_by_login[login]["viewer_count"]
+            if login in streams_by_login
+            else None,
+        }
+        for login in FRIEND_TWITCH_LOGINS
+    ]
+    _friends_live_status_cache["data"] = result
+    _friends_live_status_cache["expires_at"] = now + 45
     return result
 
 

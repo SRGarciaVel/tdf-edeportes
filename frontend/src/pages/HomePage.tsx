@@ -9,6 +9,7 @@ import TwitchEmbed from "../components/TwitchEmbed";
 import { getRecentComments, listCfnPlayers, listEvents } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
 import type { CFNPlayer, EventItem, RecentCommentEntry } from "../lib/types";
+import { useFriendsLiveStatus } from "../lib/useFriendsLiveStatus";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 
 // cuántas caras mostrar en el vistazo de comunidad — más que esto en
@@ -28,6 +29,7 @@ function relativeTime(iso: string): string {
 
 export default function HomePage() {
   const liveStatus = useTwitchLiveStatus();
+  const friendsLive = useFriendsLiveStatus();
   const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [communityPreview, setCommunityPreview] = useState<CFNPlayer[]>([]);
@@ -209,6 +211,43 @@ export default function HomePage() {
         </p>
       </section>
 
+      {/* Younghou y Pochoclo23 — el mayor apoyo de la escena chilena
+          para el club, destacados acá cuando están en vivo (pedido de
+          Seba, 29-08-2026). Si los dos están en vivo a la vez, se
+          muestran los DOS lado a lado en vez de forzar elegir uno —
+          es justamente una devolución de mano, no tendría sentido
+          bajarle el perfil a cualquiera de los dos. */}
+      {friendsLive.some((f) => f.is_live) && (
+        <section className="mb-12">
+          <SectionLabel index="03">Amigos en vivo</SectionLabel>
+          <div
+            className={`grid gap-4 ${friendsLive.filter((f) => f.is_live).length > 1 ? "sm:grid-cols-2" : ""}`}
+          >
+            {friendsLive
+              .filter((f) => f.is_live)
+              .map((f) => (
+                <div key={f.channel} className="flex flex-col gap-2">
+                  <TwitchEmbed
+                    channel={f.channel}
+                    title={`${f.channel} en vivo`}
+                  />
+                  <p className="font-mono text-xs text-tdf-muted">
+                    <a
+                      href={`https://www.twitch.tv/${f.channel}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-tdf-magenta hover:text-white underline"
+                    >
+                      twitch.tv/{f.channel}
+                    </a>
+                    {f.title && <span>. {f.title}</span>}
+                  </p>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
       {loadingEvent && (
         <section className="hud-frame bg-tdf-charcoal px-6 py-5 mb-12 flex flex-col gap-3">
           <Skeleton className="h-2.5 w-32" />
@@ -219,7 +258,7 @@ export default function HomePage() {
 
       {!loadingEvent && nextEvent && (
         <section className="hud-frame bg-tdf-charcoal px-6 py-5 mb-12">
-          <SectionLabel index="03">Próximo evento</SectionLabel>
+          <SectionLabel index="04">Próximo evento</SectionLabel>
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-xl font-semibold">{nextEvent.title}</p>
@@ -242,7 +281,7 @@ export default function HomePage() {
 
       <section className="mb-12">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <SectionLabel index="04">La comunidad</SectionLabel>
+          <SectionLabel index="05">La comunidad</SectionLabel>
           <Link
             to="/jugadores"
             className="font-mono text-xs uppercase text-tdf-magenta hover:text-white underline"
@@ -298,7 +337,7 @@ export default function HomePage() {
       </section>
 
       <section className="mb-12">
-        <SectionLabel index="05">Actividad reciente</SectionLabel>
+        <SectionLabel index="06">Actividad reciente</SectionLabel>
         {loadingComments && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 3 }).map((_, i) => (

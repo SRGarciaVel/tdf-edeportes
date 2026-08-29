@@ -347,3 +347,7 @@ export interface TwitchLiveStatus {
   title: string | null;
   viewer_count: number | null;
 }
+
+export interface ChannelLiveStatus extends TwitchLiveStatus {
+  channel: string;
+}
