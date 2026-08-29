@@ -64,20 +64,32 @@ export default function BannerCropModal({
     const w = img.naturalWidth * scale;
     const h = img.naturalHeight * scale;
     return {
+      // horizontal: la franja recortada ocupa el ancho completo del
+      // stage, así que sigue exigiendo cubrir STAGE_W entero
       x: Math.min(0, Math.max(STAGE_W - w, o.x)),
-      y: Math.min(0, Math.max(STAGE_H - h, o.y)),
+      // vertical: el INVARIANTE real es "la franja recortada
+      // (CROP_H, no el stage entero con sus franjas atenuadas) debe
+      // quedar siempre cubierta". Antes exigía cubrir STAGE_H
+      // completo — para fotos panorámicas eso dejaba el alto exacto
+      // igual al del stage, cero margen para mover verticalmente
+      // hasta hacer zoom (bug reportado 29-08-2026). Con este límite
+      // más relajado, casi cualquier foto (aspecto menor a 3:1) ya
+      // trae margen vertical de entrada, sin necesitar zoom.
+      y: Math.min(DIM_HEIGHT, Math.max(DIM_HEIGHT + CROP_H - h, o.y)),
     };
   }
 
   function handleImageLoad() {
     const img = imgRef.current;
     if (!img) return;
-    // "cover": el lado más chico llena el stage entero (no solo la
-    // franja recortada) — así hay contexto atenuado arriba/abajo para
-    // ubicarse, igual que en la referencia de Discord
+    // "cover" de la FRANJA RECORTADA (CROP_H), no del stage entero —
+    // ver el comentario en clamp() sobre por qué. El resto del stage
+    // (las franjas atenuadas de contexto) puede quedar sin cubrir del
+    // todo en los bordes, que es un costo cosmético menor comparado
+    // con no poder mover la imagen en vertical.
     const scale = Math.max(
       STAGE_W / img.naturalWidth,
-      STAGE_H / img.naturalHeight,
+      CROP_H / img.naturalHeight,
     );
     setBaseScale(scale);
     setZoomMult(1);
