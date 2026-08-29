@@ -296,7 +296,7 @@ def register_cfn(
     )
     if existing_own is not None and existing_own.status in ("pending", "approved"):
         estado = "pendiente" if existing_own.status == "pending" else "aprobada"
-        raise HTTPException(400, f"Ya tenés una solicitud {estado}")
+        raise HTTPException(400, f"Ya tienes una solicitud {estado}")
 
     # ¿el CFN ID pedido ya pertenece a otra fila, de otra persona? — evita
     # que dos cuentas terminen "dueñas" del mismo CFN ID
@@ -449,7 +449,7 @@ def update_my_card_background(
     )
     if registration is None or registration.status != "approved":
         raise HTTPException(
-            403, "Necesitás tener tu registro aprobado para personalizar tu card"
+            403, "Necesitas tener tu registro aprobado para personalizar tu card"
         )
     registration.card_background_url = payload.card_background_url
     registration.card_background_brightness = payload.card_background_brightness
@@ -464,20 +464,32 @@ def update_my_profile(
     db: Annotated[Session, Depends(get_db)],
     user: Annotated[User, Depends(require_authenticated)],
 ) -> CFNRegistration:
-    """La propia persona edita su bio y/o su avatar personalizado desde
-    su card en /jugadores, cuando quiera — mismo guard que
+    """La propia persona edita su bio, avatar, banner y/o su
+    display_name desde /perfil, cuando quiera — mismo guard que
     update_my_card_background (registro ya aprobado, si no no hay card
     pública todavía que editar). Solo toca los campos que vinieron en
     el body (exclude_unset) — así mandar solo bio no pisa el avatar con
-    None por accidente, y viceversa."""
+    None por accidente, y viceversa.
+
+    display_name es el único campo acá que NUNCA puede quedar vacío
+    (columna NOT NULL, se usa como identificador en toda la UI) — sin
+    aprobación de staff de por medio a propósito (decisión de Seba,
+    29-08-2026: mismo criterio libre que bio/avatar, sin duplicados ni
+    filtro de contenido — si en algún momento se pide más control, se
+    agrega ahí, no antes)."""
     registration = (
         db.query(CFNRegistration).filter(CFNRegistration.user_id == user.id).first()
     )
     if registration is None or registration.status != "approved":
         raise HTTPException(
-            403, "Necesitás tener tu registro aprobado para editar tu perfil"
+            403, "Necesitas tener tu registro aprobado para editar tu perfil"
         )
     updates = payload.model_dump(exclude_unset=True)
+    if "display_name" in updates:
+        name = (updates["display_name"] or "").strip()
+        if not name:
+            raise HTTPException(422, "El nombre no puede quedar vacío")
+        updates["display_name"] = name
     for field, value in updates.items():
         setattr(registration, field, value)
     db.commit()

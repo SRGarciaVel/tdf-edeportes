@@ -206,6 +206,10 @@ export async function updateMyProfile(
     bio?: string | null;
     avatarOverride?: string | null;
     bannerUrl?: string | null;
+    // a diferencia del resto, no acepta null — display_name nunca
+    // puede quedar vacío (el backend lo rechaza con 422 si se manda
+    // vacío/solo espacios)
+    displayName?: string;
   },
 ): Promise<CFNRegistration> {
   const body: Record<string, string | null> = {};
@@ -213,6 +217,7 @@ export async function updateMyProfile(
   if ("avatarOverride" in changes)
     body.avatar_override = changes.avatarOverride ?? null;
   if ("bannerUrl" in changes) body.banner_url = changes.bannerUrl ?? null;
+  if ("displayName" in changes) body.display_name = changes.displayName ?? null;
   const res = await fetch(`${API_URL}/cfn/register/me/profile`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },

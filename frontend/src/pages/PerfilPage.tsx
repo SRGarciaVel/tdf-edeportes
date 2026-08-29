@@ -93,6 +93,8 @@ export default function PerfilPage() {
   const [skillsLoading, setSkillsLoading] = useState(false);
 
   const [bio, setBio] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [newAvatar, setNewAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -132,6 +134,7 @@ export default function PerfilPage() {
           const own = players.find((p) => p.cfn_id === reg.cfn_id) ?? null;
           setPlayer(own);
           setBio(own?.bio ?? "");
+          setDisplayName(own?.display_name ?? "");
           setAvatarPreview(own?.avatar_url ?? null);
           setBannerPreview(own?.banner_url ?? null);
           setBgPreview(own?.card_background_url ?? null);
@@ -157,24 +160,32 @@ export default function PerfilPage() {
       setAvatarPreview(resized);
       setSaved(false);
     } catch {
-      setError("No se pudo procesar esa imagen. Probá con otra.");
+      setError("No se pudo procesar esa imagen. Prueba con otra.");
     }
   }
 
   async function handleSave() {
     if (!token) return;
+    const trimmedName = displayName.trim();
+    if (trimmedName.length === 0) {
+      setNameError("El nombre no puede quedar vacío.");
+      return;
+    }
+    setNameError(null);
     setSaving(true);
     setError(null);
     setSaved(false);
     try {
       await updateMyProfile(token, {
         bio: bio.trim().length > 0 ? bio.trim() : null,
+        displayName: trimmedName,
         ...(newAvatar !== null ? { avatarOverride: newAvatar } : {}),
       });
+      setDisplayName(trimmedName);
       setNewAvatar(null);
       setSaved(true);
     } catch {
-      setError("No se pudo guardar. Probá de nuevo en un momento.");
+      setError("No se pudo guardar. Prueba de nuevo en un momento.");
     } finally {
       setSaving(false);
     }
@@ -192,7 +203,7 @@ export default function PerfilPage() {
       await updateMyProfile(token, { bannerUrl: dataUrl });
       setBannerSaved(true);
     } catch {
-      setBannerError("No se pudo guardar el banner. Probá de nuevo.");
+      setBannerError("No se pudo guardar el banner. Prueba de nuevo.");
     }
   }
 
@@ -241,6 +252,8 @@ export default function PerfilPage() {
   // el botón "Guardar" ni recargar nada
   const previewPlayer: CFNPlayer | null = player && {
     ...player,
+    display_name:
+      displayName.trim().length > 0 ? displayName.trim() : player.display_name,
     bio: bio.trim().length > 0 ? bio.trim() : null,
     avatar_url: avatarPreview,
     card_background_url: bgPreview,
@@ -365,7 +378,9 @@ export default function PerfilPage() {
               <div className="flex-1 pt-3 sm:pt-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="font-display font-bold text-xl">
-                    {player.display_name}
+                    {displayName.trim().length > 0
+                      ? displayName.trim()
+                      : player.display_name}
                   </h1>
                   {user.is_staff && (
                     <span className="text-xs bg-tdf-magenta/20 text-tdf-magenta px-2 py-0.5 rounded">
@@ -410,6 +425,32 @@ export default function PerfilPage() {
           <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
             <div className="flex flex-col gap-6">
               <div className="hud-frame bg-tdf-charcoal px-6 py-5 flex flex-col gap-4">
+                <div>
+                  <label className="font-mono text-[10px] uppercase text-tdf-muted mb-1.5 block">
+                    Nombre
+                  </label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => {
+                      setDisplayName(e.target.value.slice(0, 40));
+                      setNameError(null);
+                      setSaved(false);
+                    }}
+                    maxLength={40}
+                    className="w-full bg-tdf-dark border border-tdf-line focus:border-tdf-magenta outline-none px-3 py-2 text-sm font-body"
+                  />
+                  {nameError && (
+                    <p className="text-red-400 text-xs font-body mt-1">
+                      {nameError}
+                    </p>
+                  )}
+                  <p className="font-mono text-[10px] text-tdf-muted mt-1">
+                    Así te van a ver en tu card, en Jugadores y en todo el
+                    sitio.
+                  </p>
+                </div>
+
                 <div>
                   <label className="font-mono text-[10px] uppercase text-tdf-muted mb-1.5 block">
                     Bio

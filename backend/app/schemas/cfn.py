@@ -154,6 +154,12 @@ class MyProfileUpdate(BaseModel):
     no se toca (ver exclude_unset en el endpoint)."""
 
     bio: str | None = Field(default=None, max_length=280)
+    # a diferencia de bio/avatar/banner, display_name NUNCA puede ser
+    # null (columna NOT NULL, se usa como identificador en toda la
+    # UI) — Field no alcanza para bloquear un null explícito en el
+    # body cuando el tipo es str | None, así que ese caso puntual se
+    # valida a mano en el endpoint (ver update_my_profile)
+    display_name: str | None = Field(default=None, max_length=40)
     avatar_override: str | None = Field(default=None, max_length=200_000)
     banner_url: str | None = Field(default=None, max_length=200_000)
 
