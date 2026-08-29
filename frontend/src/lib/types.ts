@@ -85,6 +85,15 @@ export interface ProfileComment {
   can_delete: boolean;
 }
 
+export interface RecentCommentEntry {
+  id: string;
+  body: string;
+  created_at: string;
+  author: CommentAuthor;
+  profile_cfn_id: string;
+  profile_display_name: string;
+}
+
 export interface CFNPlayer {
   cfn_id: string;
   display_name: string;
@@ -94,6 +103,7 @@ export interface CFNPlayer {
   bio: string | null;
   banner_url: string | null;
   social_links: SocialLink[];
+  comment_count: number;
   card_background_url: string | null;
   card_background_brightness: number | null;
   league_rank: string | null;

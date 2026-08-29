@@ -102,6 +102,10 @@ class CFNPlayerRead(BaseModel):
     # hasta 5 links a redes sociales, en el orden en que la persona los
     # cargó — el frontend dibuja el ícono según platform, ver SocialLink
     social_links: list[SocialLink]
+    # cuántos comentarios tiene el perfil — para el Home ("La
+    # comunidad") y en el futuro donde haga falta sin traer los
+    # comentarios completos solo para contarlos
+    comment_count: int = 0
     # foto de fondo de la card — la propia persona la puede subir/cambiar
     # cuando quiera (no solo al registrarse), y staff la puede
     # reemplazar o sacar en cualquier momento. None: el frontend cae al

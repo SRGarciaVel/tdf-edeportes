@@ -12,9 +12,54 @@ from app.schemas.profile_comment import (
     CommentAuthor,
     ProfileCommentCreate,
     ProfileCommentRead,
+    RecentCommentEntry,
 )
 
 router = APIRouter(prefix="/profiles", tags=["profile_comments"])
+
+# cuántos entran en la sección de actividad reciente del Home — mismo
+# tamaño que ya usa esa sección para "La comunidad" (6, en
+# HomePage.tsx), así los dos grids del Home se sienten parejos
+RECENT_COMMENTS_LIMIT = 6
+
+
+@router.get("/recent-comments", response_model=list[RecentCommentEntry])
+def list_recent_comments(
+    db: Annotated[Session, Depends(get_db)],
+) -> list[RecentCommentEntry]:
+    """Últimos comentarios de TODO el sitio (no de un perfil puntual,
+    a diferencia de list_profile_comments) — para la sección de
+    actividad reciente en Home (pedido de Seba, 29-08-2026). Público,
+    sin auth: no expone nada que no sea ya público en el perfil de
+    origen, esto solo los junta en un solo lugar.
+
+    Ruta fija "/recent-comments" bajo el mismo prefix "/profiles" que
+    "/{cfn_id}/comments" — sin choque de rutas porque tienen distinta
+    cantidad de segmentos (FastAPI las distingue por forma, no
+    importa el orden de declaración acá)."""
+    rows = (
+        db.query(ProfileComment, User, CFNRegistration)
+        .join(User, User.id == ProfileComment.author_user_id)
+        .join(CFNRegistration, CFNRegistration.cfn_id == ProfileComment.cfn_id)
+        .order_by(ProfileComment.created_at.desc())
+        .limit(RECENT_COMMENTS_LIMIT)
+        .all()
+    )
+    return [
+        RecentCommentEntry(
+            id=comment.id,
+            body=comment.body,
+            created_at=comment.created_at,
+            author=CommentAuthor(
+                user_id=author.id,
+                display_name=author.display_name,
+                avatar_url=author.avatar_url,
+            ),
+            profile_cfn_id=reg.cfn_id,
+            profile_display_name=reg.display_name,
+        )
+        for comment, author, reg in rows
+    ]
 
 
 def _get_approved_cfn_id(db: Session, cfn_id: str) -> CFNRegistration:

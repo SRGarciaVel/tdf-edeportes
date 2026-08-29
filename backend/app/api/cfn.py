@@ -4,12 +4,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_authenticated, require_staff
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.models import CFNMatch, CFNProfile, CFNRegistration, User
+from app.models import CFNMatch, CFNProfile, CFNRegistration, ProfileComment, User
 from app.schemas.cfn import (
     CardBackgroundUpdate,
     CFNMatchRead,
@@ -44,7 +45,10 @@ SKILL_CATEGORIES: list[tuple[str, str]] = [
 
 
 def _build_player_read(
-    reg: CFNRegistration, profile: CFNProfile | None, user: User | None
+    reg: CFNRegistration,
+    profile: CFNProfile | None,
+    user: User | None,
+    comment_count: int = 0,
 ) -> CFNPlayerRead:
     """Arma un CFNPlayerRead a partir de las filas relacionadas — usado
     por list_cfn_players (roster completo) y get_cfn_player (un
@@ -59,6 +63,7 @@ def _build_player_read(
         bio=reg.bio,
         banner_url=reg.banner_url,
         social_links=reg.social_links or [],
+        comment_count=comment_count,
         card_background_url=reg.card_background_url,
         card_background_brightness=reg.card_background_brightness,
         league_rank=profile.league_rank if profile else None,
@@ -91,7 +96,19 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
         .outerjoin(User, User.id == CFNRegistration.user_id)
         .all()
     )
-    return [_build_player_read(reg, profile, user) for reg, profile, user in rows]
+    # un solo query para los conteos de TODO el roster, en vez de uno
+    # por jugador (N+1) — se arma un dict cfn_id -> cantidad y se
+    # busca ahí abajo, mismo criterio que ya usa este archivo en otros
+    # lugares para evitar consultas repetidas en un loop
+    comment_counts = dict(
+        db.query(ProfileComment.cfn_id, func.count(ProfileComment.id))
+        .group_by(ProfileComment.cfn_id)
+        .all()
+    )
+    return [
+        _build_player_read(reg, profile, user, comment_counts.get(reg.cfn_id, 0))
+        for reg, profile, user in rows
+    ]
 
 
 @router.get("/players/{cfn_id}", response_model=CFNPlayerRead)
@@ -114,7 +131,13 @@ def get_cfn_player(
     if row is None:
         raise HTTPException(404, "Jugador no encontrado")
     reg, profile, user = row
-    return _build_player_read(reg, profile, user)
+    comment_count = (
+        db.query(func.count(ProfileComment.id))
+        .filter(ProfileComment.cfn_id == cfn_id)
+        .scalar()
+        or 0
+    )
+    return _build_player_read(reg, profile, user, comment_count)
 
 
 @router.get("/players/{cfn_id}/matches", response_model=CFNMatchStats)

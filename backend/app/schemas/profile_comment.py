@@ -31,3 +31,19 @@ class ProfileCommentRead(BaseModel):
     # (autor, dueño del perfil, o staff) — resuelto en el backend para
     # no duplicar esa lógica de permisos en el frontend
     can_delete: bool
+
+
+class RecentCommentEntry(BaseModel):
+    """Un comentario para la sección de "Actividad reciente" del Home
+    (pedido de Seba, 29-08-2026) — a diferencia de ProfileCommentRead,
+    trae DE QUIÉN es el perfil comentado (no solo el cfn_id crudo, hace
+    falta el nombre para el texto "X comentó en el perfil de Y"), y
+    nunca can_delete: nadie borra un comentario ajeno desde el Home,
+    para eso hay que entrar al perfil real."""
+
+    id: uuid.UUID
+    body: str
+    created_at: datetime
+    author: CommentAuthor
+    profile_cfn_id: str
+    profile_display_name: str

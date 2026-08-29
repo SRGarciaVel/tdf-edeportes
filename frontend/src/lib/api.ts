@@ -23,6 +23,7 @@ import type {
   SkillAxis,
   SocialLink,
   ProfileComment,
+  RecentCommentEntry,
   NotificationListResponse,
 } from "./types";
 
@@ -167,6 +168,13 @@ export async function listProfileComments(
     headers: authHeaders(token ?? null),
   });
   return parseOrThrow<ProfileComment[]>(res);
+}
+
+// últimos comentarios de TODO el sitio, para "Actividad reciente" en
+// Home — público, sin auth
+export async function getRecentComments(): Promise<RecentCommentEntry[]> {
+  const res = await fetch(`${API_URL}/profiles/recent-comments`);
+  return parseOrThrow<RecentCommentEntry[]>(res);
 }
 
 export async function createProfileComment(

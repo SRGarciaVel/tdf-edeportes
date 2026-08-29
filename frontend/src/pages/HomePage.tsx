@@ -6,14 +6,25 @@ import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import TwitchEmbed from "../components/TwitchEmbed";
-import { listCfnPlayers, listEvents } from "../lib/api";
+import { getRecentComments, listCfnPlayers, listEvents } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import type { CFNPlayer, EventItem } from "../lib/types";
+import type { CFNPlayer, EventItem, RecentCommentEntry } from "../lib/types";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 
 // cuántas caras mostrar en el vistazo de comunidad — más que esto en
 // una fila empieza a sentirse apretado en mobile (2 columnas)
 const COMMUNITY_PREVIEW_COUNT = 6;
+
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "recién";
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days} d`;
+}
 
 export default function HomePage() {
   const liveStatus = useTwitchLiveStatus();
@@ -21,6 +32,10 @@ export default function HomePage() {
   const [loadingEvent, setLoadingEvent] = useState(true);
   const [communityPreview, setCommunityPreview] = useState<CFNPlayer[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
+  const [recentComments, setRecentComments] = useState<RecentCommentEntry[]>(
+    [],
+  );
+  const [loadingComments, setLoadingComments] = useState(true);
 
   useEffect(() => {
     listEvents(null)
@@ -49,6 +64,13 @@ export default function HomePage() {
       })
       .catch(() => setCommunityPreview([]))
       .finally(() => setLoadingPlayers(false));
+  }, []);
+
+  useEffect(() => {
+    getRecentComments()
+      .then(setRecentComments)
+      .catch(() => setRecentComments([]))
+      .finally(() => setLoadingComments(false));
   }, []);
 
   return (
@@ -240,9 +262,14 @@ export default function HomePage() {
             {communityPreview.map((p) => (
               <Link
                 key={p.cfn_id}
-                to="/jugadores"
-                className="hud-frame bg-tdf-charcoal px-3 py-3 flex flex-col items-center gap-2 text-center hover:border-tdf-magenta transition-colors"
+                to={`/jugadores/${p.cfn_id}`}
+                className="relative hud-frame bg-tdf-charcoal px-3 py-3 flex flex-col items-center gap-2 text-center hover:border-tdf-magenta transition-colors"
               >
+                {p.comment_count > 0 && (
+                  <span className="absolute top-1.5 right-1.5 font-mono text-[9px] bg-tdf-dark border border-tdf-line text-tdf-muted px-1.5 py-0.5 rounded-full">
+                    💬 {p.comment_count}
+                  </span>
+                )}
                 {p.avatar_url ? (
                   <img
                     src={p.avatar_url}
@@ -264,6 +291,65 @@ export default function HomePage() {
                     </p>
                   )}
                 </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-12">
+        <SectionLabel index="05">Actividad reciente</SectionLabel>
+        {loadingComments && (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        )}
+        {!loadingComments && recentComments.length === 0 && (
+          <p className="font-mono text-xs text-tdf-muted">
+            Todavía no hay comentarios en ningún perfil. Sé el primero en dejar
+            uno.
+          </p>
+        )}
+        {!loadingComments && recentComments.length > 0 && (
+          <div className="hud-frame bg-tdf-charcoal divide-y divide-tdf-line">
+            {recentComments.map((c) => (
+              <Link
+                key={c.id}
+                to={`/jugadores/${c.profile_cfn_id}`}
+                className="flex items-start gap-3 px-4 py-3 hover:bg-tdf-dark/40 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-tdf-dark">
+                  {c.author.avatar_url ? (
+                    <img
+                      src={c.author.avatar_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <InitialsAvatar seed={c.author.display_name} size={8} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm">
+                    <span className="font-semibold">
+                      {c.author.display_name}
+                    </span>{" "}
+                    <span className="text-tdf-muted">
+                      comentó en el perfil de
+                    </span>{" "}
+                    <span className="font-semibold text-tdf-magenta">
+                      {c.profile_display_name}
+                    </span>
+                  </p>
+                  <p className="font-body text-xs text-tdf-muted truncate">
+                    "{c.body}"
+                  </p>
+                </div>
+                <p className="font-mono text-[10px] text-tdf-muted shrink-0 mt-1">
+                  {relativeTime(c.created_at)}
+                </p>
               </Link>
             ))}
           </div>
