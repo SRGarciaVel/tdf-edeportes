@@ -277,9 +277,44 @@ export default function PerfilPage() {
                   brightness={bgBrightness}
                 />
               )}
+              {/* editor del banner encima de la propia foto — antes
+                  solo vivía como sección aparte más abajo y encima
+                  escondida para staff (se asumía que Staff ya podía
+                  editar cualquier card desde /jugadores, pero eso es
+                  para la card de OTROS: la propia banner/foto de fondo
+                  la puede cambiar cualquiera, sea staff o no). Pedido
+                  de Seba (29-08-2026). */}
+              <button
+                onClick={() => bgFileInputRef.current?.click()}
+                disabled={bgSaving}
+                className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 font-body text-[11px] font-medium text-white bg-black/50 hover:bg-black/70 border border-white/20 hover:border-tdf-magenta px-2.5 py-1.5 rounded backdrop-blur-sm transition-colors disabled:opacity-50"
+              >
+                <ImagePlus size={13} />
+                {bgSaving
+                  ? "Subiendo..."
+                  : bgPreview
+                    ? "Cambiar banner"
+                    : "Subir banner"}
+              </button>
+              <input
+                ref={bgFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleBackgroundFile(file);
+                  e.target.value = "";
+                }}
+              />
             </div>
-            <div className="px-6 pb-5 -mt-12 relative z-10 flex flex-col sm:flex-row sm:items-end gap-4">
-              <div className="relative shrink-0">
+            {/* items-start (no items-end) + el -mt-12 vive en el propio
+                avatar, no en toda la fila — así el nombre no queda
+                pegado al borde del banner (bug reportado 29-08-2026):
+                antes, al alinear todo por abajo contra el avatar, el
+                texto terminaba a centímetros del corte del banner */}
+            <div className="px-6 pb-5 pt-3 relative z-10 flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="relative shrink-0 -mt-12">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-tdf-charcoal bg-tdf-dark">
                   {avatarPreview ? (
                     <img
@@ -311,7 +346,7 @@ export default function PerfilPage() {
                 />
               </div>
 
-              <div className="flex-1 pt-1 sm:pb-1">
+              <div className="flex-1 pt-3 sm:pt-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="font-display font-bold text-xl">
                     {player.display_name}
@@ -394,62 +429,17 @@ export default function PerfilPage() {
                 </div>
               </div>
 
-              {!user.is_staff && (
-                <div className="hud-frame bg-tdf-charcoal px-6 py-5 flex flex-col gap-4">
-                  <div>
-                    <h2 className="font-mono text-xs uppercase text-tdf-muted mb-1">
-                      Foto de fondo de tu card
-                    </h2>
-                    <p className="font-mono text-[10px] text-tdf-muted">
-                      Se ve reflejada al instante acá al lado y en el banner de
-                      arriba — no hace falta guardar ni ir a /jugadores para
-                      revisarla.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => bgFileInputRef.current?.click()}
-                    disabled={bgSaving}
-                    className="self-start inline-flex items-center gap-1.5 font-body text-xs font-medium text-tdf-muted hover:text-white bg-tdf-dark border border-tdf-line hover:border-tdf-magenta px-3 py-1.5 rounded disabled:opacity-50"
-                  >
-                    <ImagePlus size={13} />
-                    {bgSaving
-                      ? "Subiendo..."
-                      : bgPreview
-                        ? "Reemplazar foto"
-                        : "Subir foto"}
-                  </button>
-                  <input
-                    ref={bgFileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleBackgroundFile(file);
-                      e.target.value = "";
-                    }}
-                  />
-                  {bgError && (
-                    <p className="text-red-400 text-xs font-body">{bgError}</p>
-                  )}
-                  {bgSaved && !bgError && (
-                    <p className="text-emerald-400 text-xs font-body">
-                      Foto de fondo guardada.
-                    </p>
-                  )}
-                  <p className="font-mono text-[10px] text-tdf-muted">
-                    Si necesitas sacarla (no reemplazarla), pídeselo a staff —
-                    es lo único que queda del lado de moderación.
-                  </p>
-                </div>
-              )}
-
-              {user.is_staff && (
-                <p className="font-mono text-[10px] text-tdf-muted">
-                  Como staff, la foto de fondo de cualquier card (incluida la
-                  tuya) se administra desde /jugadores.
-                </p>
-              )}
+              <p className="font-mono text-[10px] text-tdf-muted flex flex-wrap items-center gap-x-1.5">
+                {bgError && <span className="text-red-400">{bgError}</span>}
+                {bgSaved && !bgError && (
+                  <span className="text-emerald-400">Banner guardado.</span>
+                )}
+                <span>
+                  El botón de "Cambiar banner" arriba en la foto de fondo edita
+                  esa misma imagen. Si necesitas sacarla del todo (no
+                  reemplazarla), pídeselo a staff.
+                </span>
+              </p>
 
               <AchievementsPlaceholder />
             </div>
@@ -457,7 +447,7 @@ export default function PerfilPage() {
             <div className="flex flex-col gap-6 lg:sticky lg:top-24">
               <div>
                 <p className="font-mono text-[10px] uppercase text-tdf-muted mb-2">
-                  Vista previa — así se ve tu card pública
+                  Vista previa. Así se ve tu card pública
                 </p>
                 <PlayerCard
                   player={previewPlayer}
@@ -470,7 +460,7 @@ export default function PerfilPage() {
                   preview
                 />
                 <p className="font-mono text-[10px] text-tdf-muted mt-2 text-center">
-                  Tocá la card para ver la cara de atrás
+                  Toca la card para ver la cara de atrás
                 </p>
               </div>
 
@@ -480,7 +470,7 @@ export default function PerfilPage() {
                 </p>
                 <SkillRadarChart axes={skills} loading={skillsLoading} />
                 <p className="font-mono text-[9px] text-tdf-muted mt-2 text-center opacity-70">
-                  Escala relativa al roster de TDF — el mejor en cada categoría
+                  Escala relativa al roster de TDF. El mejor en cada categoría
                   llega a 100.
                 </p>
               </div>
