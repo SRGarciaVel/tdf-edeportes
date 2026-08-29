@@ -27,8 +27,10 @@ import type {
 
 const BIO_MAX_LENGTH = 280;
 const AVATAR_SIZE = 160;
-// mismo tamaño que usa /jugadores para la foto de fondo — si cambia
-// ahí, cambiar acá también (ver JugadoresPage.tsx)
+// mismo tamaño que usa /jugadores para la foto de fondo de la card —
+// el banner reusa el mismo tamaño cuadrado (recorte "cover" al
+// mostrarlo en un contenedor ancho, igual que ya hace la card con su
+// propia foto de fondo en un contenedor no-cuadrado)
 const CARD_BACKGROUND_SIZE = 480;
 // días fijos para la muestra de W-L en la preview — /jugadores deja
 // elegir 1D/3D/7D, acá no hace falta ese control: es solo para que la
@@ -71,15 +73,16 @@ function AchievementsPlaceholder() {
   );
 }
 
-/** Perfil propio — bio, avatar, foto de fondo de la card y radar de
- * habilidades, todo con vista previa en vivo (misma card real que se
- * ve en /jugadores, con su flip/fade incluido) para no tener que ir y
- * volver de esa página a cada cambio (pedido de Seba, 28-08-2026). La
- * edición sigue pegando a los mismos endpoints de siempre — lo que
- * cambió acá es la presentación, fusionando dos referencias de diseño
- * que mandó (banner con cover + avatar superpuesto, y panel de
- * radar/achievements al lado) adaptadas a la estética oscura/HUD del
- * sitio, no a los colores claros de esas referencias. */
+/** Perfil propio — bio, avatar, banner de portada, foto de fondo de la
+ * card y radar de habilidades, todo con vista previa en vivo (misma
+ * card real que se ve en /jugadores, con su flip/fade incluido) para
+ * no tener que ir y volver de esa página a cada cambio (pedido de
+ * Seba, 28-08-2026). Banner y foto de fondo de la card son campos
+ * DISTINTOS a propósito (corregido 29-08-2026, antes reusaban el mismo
+ * campo por conveniencia): el banner es solo la portada de esta
+ * página, la foto de fondo es la que se ve en la card pública de
+ * /jugadores. La edición sigue pegando a los mismos endpoints de
+ * siempre — lo que cambió acá es la presentación. */
 export default function PerfilPage() {
   const { user, token } = useAuth();
   const [registration, setRegistration] = useState<CFNRegistration | null>(
@@ -101,6 +104,17 @@ export default function PerfilPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // banner de portada de /perfil — self-contained: sube y guarda solo,
+  // no espera al botón "Guardar" de bio/avatar (mismo criterio que la
+  // foto de fondo de la card, más abajo)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [bannerSaving, setBannerSaving] = useState(false);
+  const [bannerSaved, setBannerSaved] = useState(false);
+  const [bannerError, setBannerError] = useState<string | null>(null);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
+
+  // foto de fondo de la card pública en /jugadores — self-contained
+  // también, endpoint propio (PATCH /cfn/register/me/background)
   const [bgPreview, setBgPreview] = useState<string | null>(null);
   const [bgBrightness, setBgBrightness] = useState<number | null>(null);
   const [bgSaving, setBgSaving] = useState(false);
@@ -122,6 +136,7 @@ export default function PerfilPage() {
           setPlayer(own);
           setBio(own?.bio ?? "");
           setAvatarPreview(own?.avatar_url ?? null);
+          setBannerPreview(own?.banner_url ?? null);
           setBgPreview(own?.card_background_url ?? null);
           setBgBrightness(own?.card_background_brightness ?? null);
 
@@ -168,11 +183,26 @@ export default function PerfilPage() {
     }
   }
 
-  // foto de fondo — endpoint propio (PATCH /cfn/register/me/background,
-  // ya existía desde /jugadores), self-contained: sube y guarda en el
-  // mismo paso, no queda pendiente de "Guardar" como bio/avatar. El
-  // preview (banner + card de la derecha) se actualiza apenas se
-  // resuelve el resize, sin esperar la respuesta del servidor.
+  async function handleBannerFile(file: File) {
+    if (!token) return;
+    setBannerSaving(true);
+    setBannerError(null);
+    setBannerSaved(false);
+    try {
+      const resized = await resizeImageFile(file, CARD_BACKGROUND_SIZE, 0.82);
+      setBannerPreview(resized);
+      await updateMyProfile(token, { bannerUrl: resized });
+      setBannerSaved(true);
+    } catch {
+      setBannerError("No se pudo subir esa imagen. Probá con otra.");
+    } finally {
+      setBannerSaving(false);
+    }
+  }
+
+  // foto de fondo de la CARD (no el banner) — el preview de la card de
+  // la derecha se actualiza apenas se resuelve el resize, sin esperar
+  // la respuesta del servidor
   async function handleBackgroundFile(file: File) {
     if (!token) return;
     setBgSaving(true);
@@ -206,8 +236,9 @@ export default function PerfilPage() {
   const approved = !loading && registration?.status === "approved" && player;
 
   // player + los cambios todavía no guardados — es lo que ve la card
-  // de vista previa y el banner, así que se actualiza en cada tecla /
-  // cada imagen elegida, no solo después de "Guardar"
+  // de vista previa (banner y radar leen directo de bannerPreview /
+  // skills, no de este objeto), así se actualiza en cada tecla / cada
+  // imagen elegida, no solo después de "Guardar"
   const previewPlayer: CFNPlayer | null = player && {
     ...player,
     bio: bio.trim().length > 0 ? bio.trim() : null,
@@ -267,52 +298,40 @@ export default function PerfilPage() {
 
       {approved && previewPlayer && (
         <div className="flex flex-col gap-6">
-          {/* banner — la propia foto de fondo de la card como cover,
-              avatar grande superpuesto (referencia: portfolia) */}
+          {/* banner de portada — imagen propia, DISTINTA de la foto de
+              fondo de la card (referencia: portfolia) */}
           <div className="hud-frame bg-tdf-charcoal overflow-hidden">
             <div className="relative h-32 sm:h-44 bg-gradient-to-br from-tdf-purple/30 to-tdf-magenta/20">
-              {bgPreview && (
-                <CardBackgroundPhoto
-                  url={bgPreview}
-                  brightness={bgBrightness}
-                />
+              {bannerPreview && (
+                <CardBackgroundPhoto url={bannerPreview} brightness={null} />
               )}
-              {/* editor del banner encima de la propia foto — antes
-                  solo vivía como sección aparte más abajo y encima
-                  escondida para staff (se asumía que Staff ya podía
-                  editar cualquier card desde /jugadores, pero eso es
-                  para la card de OTROS: la propia banner/foto de fondo
-                  la puede cambiar cualquiera, sea staff o no). Pedido
-                  de Seba (29-08-2026). */}
               <button
-                onClick={() => bgFileInputRef.current?.click()}
-                disabled={bgSaving}
+                onClick={() => bannerFileInputRef.current?.click()}
+                disabled={bannerSaving}
                 className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 font-body text-[11px] font-medium text-white bg-black/50 hover:bg-black/70 border border-white/20 hover:border-tdf-magenta px-2.5 py-1.5 rounded backdrop-blur-sm transition-colors disabled:opacity-50"
               >
                 <ImagePlus size={13} />
-                {bgSaving
+                {bannerSaving
                   ? "Subiendo..."
-                  : bgPreview
+                  : bannerPreview
                     ? "Cambiar banner"
                     : "Subir banner"}
               </button>
               <input
-                ref={bgFileInputRef}
+                ref={bannerFileInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) handleBackgroundFile(file);
+                  if (file) handleBannerFile(file);
                   e.target.value = "";
                 }}
               />
             </div>
             {/* items-start (no items-end) + el -mt-12 vive en el propio
                 avatar, no en toda la fila — así el nombre no queda
-                pegado al borde del banner (bug reportado 29-08-2026):
-                antes, al alinear todo por abajo contra el avatar, el
-                texto terminaba a centímetros del corte del banner */}
+                pegado al borde del banner (bug reportado 29-08-2026) */}
             <div className="px-6 pb-5 pt-3 relative z-10 flex flex-col sm:flex-row sm:items-start gap-4">
               <div className="relative shrink-0 -mt-12">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-tdf-charcoal bg-tdf-dark">
@@ -376,6 +395,16 @@ export default function PerfilPage() {
                 </div>
               </div>
             </div>
+            {(bannerError || bannerSaved) && (
+              <p className="px-6 pb-4 font-mono text-[10px]">
+                {bannerError && (
+                  <span className="text-red-400">{bannerError}</span>
+                )}
+                {bannerSaved && !bannerError && (
+                  <span className="text-emerald-400">Banner guardado.</span>
+                )}
+              </p>
+            )}
           </div>
 
           {/* dos columnas: edición a la izquierda, preview + radar a
@@ -429,17 +458,68 @@ export default function PerfilPage() {
                 </div>
               </div>
 
-              <p className="font-mono text-[10px] text-tdf-muted flex flex-wrap items-center gap-x-1.5">
-                {bgError && <span className="text-red-400">{bgError}</span>}
-                {bgSaved && !bgError && (
-                  <span className="text-emerald-400">Banner guardado.</span>
-                )}
-                <span>
-                  El botón de "Cambiar banner" arriba en la foto de fondo edita
-                  esa misma imagen. Si necesitas sacarla del todo (no
-                  reemplazarla), pídeselo a staff.
-                </span>
-              </p>
+              {!user.is_staff && (
+                <div className="hud-frame bg-tdf-charcoal px-6 py-5 flex flex-col gap-4">
+                  <div>
+                    <h2 className="font-mono text-xs uppercase text-tdf-muted mb-1">
+                      Foto de fondo de tu card
+                    </h2>
+                    <p className="font-mono text-[10px] text-tdf-muted">
+                      Es la imagen que se ve en tu card pública en{" "}
+                      <Link
+                        to="/jugadores"
+                        className="text-tdf-magenta hover:underline"
+                      >
+                        Jugadores
+                      </Link>
+                      . Se ve reflejada al instante en la vista previa de acá al
+                      lado.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => bgFileInputRef.current?.click()}
+                    disabled={bgSaving}
+                    className="self-start inline-flex items-center gap-1.5 font-body text-xs font-medium text-tdf-muted hover:text-white bg-tdf-dark border border-tdf-line hover:border-tdf-magenta px-3 py-1.5 rounded disabled:opacity-50"
+                  >
+                    <ImagePlus size={13} />
+                    {bgSaving
+                      ? "Subiendo..."
+                      : bgPreview
+                        ? "Reemplazar foto"
+                        : "Subir foto"}
+                  </button>
+                  <input
+                    ref={bgFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleBackgroundFile(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  {bgError && (
+                    <p className="text-red-400 text-xs font-body">{bgError}</p>
+                  )}
+                  {bgSaved && !bgError && (
+                    <p className="text-emerald-400 text-xs font-body">
+                      Foto de fondo guardada.
+                    </p>
+                  )}
+                  <p className="font-mono text-[10px] text-tdf-muted">
+                    Si necesitas sacarla (no reemplazarla), pídeselo a staff. Es
+                    lo único que queda del lado de moderación.
+                  </p>
+                </div>
+              )}
+
+              {user.is_staff && (
+                <p className="font-mono text-[10px] text-tdf-muted">
+                  La foto de fondo de tu card (o la de cualquiera) se administra
+                  desde /jugadores, como staff.
+                </p>
+              )}
 
               <AchievementsPlaceholder />
             </div>

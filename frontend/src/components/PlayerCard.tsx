@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import InitialsAvatar from "./InitialsAvatar";
 import Skeleton from "./Skeleton";
 import { characterColorClass, characterColorHex } from "../lib/characterColors";
@@ -398,6 +399,15 @@ export default function PlayerCard({
           >
             Liquipedia ↗
           </a>
+        )}
+        {!preview && (
+          <Link
+            to={`/jugadores/${player.cfn_id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="font-mono text-[10px] border border-white/25 hover:bg-tdf-magenta hover:border-tdf-magenta transition-colors px-2 py-1"
+          >
+            Perfil →
+          </Link>
         )}
         <button
           onClick={stopAnd(() => onOpenHistory(player))}

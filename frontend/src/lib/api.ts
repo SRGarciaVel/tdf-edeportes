@@ -146,6 +146,14 @@ export async function listCfnPlayers(): Promise<CFNPlayer[]> {
   return parseOrThrow<CFNPlayer[]>(res);
 }
 
+// un jugador puntual (para /jugadores/:cfnId, el perfil público de
+// cualquiera) — más liviano que traer el roster completo solo para
+// mostrar a una persona
+export async function getCfnPlayer(cfnId: string): Promise<CFNPlayer> {
+  const res = await fetch(`${API_URL}/cfn/players/${cfnId}`);
+  return parseOrThrow<CFNPlayer>(res);
+}
+
 // radar de habilidades para /perfil — público, sin auth, escala
 // relativa al roster (ver docstring del endpoint en cfn.py)
 export async function getPlayerSkills(cfnId: string): Promise<SkillAxis[]> {
@@ -194,12 +202,17 @@ export async function updateMyCardBackground(
 // (exclude_unset) — permite editar uno sin pisar el otro.
 export async function updateMyProfile(
   token: string,
-  changes: { bio?: string | null; avatarOverride?: string | null },
+  changes: {
+    bio?: string | null;
+    avatarOverride?: string | null;
+    bannerUrl?: string | null;
+  },
 ): Promise<CFNRegistration> {
   const body: Record<string, string | null> = {};
   if ("bio" in changes) body.bio = changes.bio ?? null;
   if ("avatarOverride" in changes)
     body.avatar_override = changes.avatarOverride ?? null;
+  if ("bannerUrl" in changes) body.banner_url = changes.bannerUrl ?? null;
   const res = await fetch(`${API_URL}/cfn/register/me/profile`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },

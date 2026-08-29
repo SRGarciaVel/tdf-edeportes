@@ -42,6 +42,9 @@ class CFNPlayerRead(BaseModel):
     # bio corta, opcional — la propia persona la escribe desde su card
     # (PATCH /cfn/register/me/profile). None si nunca escribió una.
     bio: str | None
+    # portada de /perfil — distinta de card_background_url a propósito
+    # (ver comentario en el modelo CFNRegistration)
+    banner_url: str | None
     # foto de fondo de la card — la propia persona la puede subir/cambiar
     # cuando quiera (no solo al registrarse), y staff la puede
     # reemplazar o sacar en cualquier momento. None: el frontend cae al
@@ -152,6 +155,7 @@ class MyProfileUpdate(BaseModel):
 
     bio: str | None = Field(default=None, max_length=280)
     avatar_override: str | None = Field(default=None, max_length=200_000)
+    banner_url: str | None = Field(default=None, max_length=200_000)
 
 
 class CardBackgroundUpdate(BaseModel):

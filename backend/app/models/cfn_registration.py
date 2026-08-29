@@ -58,6 +58,14 @@ class CFNRegistration(Base):
     # que avatar_override pero como texto en vez de imagen. Límite de
     # largo vive en el schema (MyProfileUpdate), no acá.
     bio: Mapped[str | None] = mapped_column(String, nullable=True)
+    # banner de /perfil — DISTINTO de card_background_url (pedido
+    # explícito de Seba, 29-08-2026: son dos imágenes con propósitos
+    # distintos, aunque compartan el mismo pipeline de subida en el
+    # frontend. card_background_url es la foto de fondo de la card
+    # pública en /jugadores; banner_url es solo la portada de la página
+    # de perfil (propia o la de otro jugador). Antes reusaban el mismo
+    # campo por conveniencia, pero mezclaba dos conceptos.
+    banner_url: Mapped[str | None] = mapped_column(String, nullable=True)
     # foto de fondo de la card en /jugadores — a diferencia de
     # avatar_override (la foto de perfil chica), esto es la imagen grande
     # que le da identidad a la esquina de la card. La persona la puede

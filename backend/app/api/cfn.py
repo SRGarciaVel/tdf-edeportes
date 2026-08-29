@@ -43,6 +43,39 @@ SKILL_CATEGORIES: list[tuple[str, str]] = [
 ]
 
 
+def _build_player_read(
+    reg: CFNRegistration, profile: CFNProfile | None, user: User | None
+) -> CFNPlayerRead:
+    """Arma un CFNPlayerRead a partir de las filas relacionadas — usado
+    por list_cfn_players (roster completo) y get_cfn_player (un
+    jugador puntual, para /jugadores/{cfn_id}), así que la
+    construcción vive en un solo lugar en vez de duplicarse."""
+    return CFNPlayerRead(
+        cfn_id=reg.cfn_id,
+        display_name=reg.display_name,
+        is_tdf=reg.is_tdf,
+        liquipedia_url=reg.liquipedia_url,
+        avatar_url=reg.avatar_override or (user.avatar_url if user else None),
+        bio=reg.bio,
+        banner_url=reg.banner_url,
+        card_background_url=reg.card_background_url,
+        card_background_brightness=reg.card_background_brightness,
+        league_rank=profile.league_rank if profile else None,
+        league_points=profile.league_points if profile else None,
+        master_rating=profile.master_rating if profile else None,
+        character_name=profile.character_name if profile else None,
+        drive_impact_received=profile.drive_impact_received if profile else None,
+        drive_parry_perfect=profile.drive_parry_perfect if profile else None,
+        drive_impact_punish_landed=(
+            profile.drive_impact_punish_landed if profile else None
+        ),
+        corner_time_opponent=profile.corner_time_opponent if profile else None,
+        throws_landed=profile.throws_landed if profile else None,
+        updated_at=profile.updated_at if profile else None,
+        last_error=profile.last_error if profile else None,
+    )
+
+
 @router.get("/players", response_model=list[CFNPlayerRead])
 def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerRead]:
     """Público, sin auth. El roster = filas de cfn_registrations con
@@ -57,32 +90,30 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
         .outerjoin(User, User.id == CFNRegistration.user_id)
         .all()
     )
-    return [
-        CFNPlayerRead(
-            cfn_id=reg.cfn_id,
-            display_name=reg.display_name,
-            is_tdf=reg.is_tdf,
-            liquipedia_url=reg.liquipedia_url,
-            avatar_url=reg.avatar_override or (user.avatar_url if user else None),
-            bio=reg.bio,
-            card_background_url=reg.card_background_url,
-            card_background_brightness=reg.card_background_brightness,
-            league_rank=profile.league_rank if profile else None,
-            league_points=profile.league_points if profile else None,
-            master_rating=profile.master_rating if profile else None,
-            character_name=profile.character_name if profile else None,
-            drive_impact_received=profile.drive_impact_received if profile else None,
-            drive_parry_perfect=profile.drive_parry_perfect if profile else None,
-            drive_impact_punish_landed=(
-                profile.drive_impact_punish_landed if profile else None
-            ),
-            corner_time_opponent=profile.corner_time_opponent if profile else None,
-            throws_landed=profile.throws_landed if profile else None,
-            updated_at=profile.updated_at if profile else None,
-            last_error=profile.last_error if profile else None,
-        )
-        for reg, profile, user in rows
-    ]
+    return [_build_player_read(reg, profile, user) for reg, profile, user in rows]
+
+
+@router.get("/players/{cfn_id}", response_model=CFNPlayerRead)
+def get_cfn_player(
+    cfn_id: str, db: Annotated[Session, Depends(get_db)]
+) -> CFNPlayerRead:
+    """Un jugador puntual — mismos datos que list_cfn_players pero sin
+    traer el roster completo. Alimenta el perfil público de un jugador
+    en /jugadores/{cfn_id} (pedido de Seba, 29-08-2026: poder ver el
+    perfil de otros, no solo el propio en /perfil). Público, sin auth,
+    404 si no existe o no está aprobado — mismo criterio que el resto
+    de endpoints públicos de este archivo."""
+    row = (
+        db.query(CFNRegistration, CFNProfile, User)
+        .filter(CFNRegistration.status == "approved", CFNRegistration.cfn_id == cfn_id)
+        .outerjoin(CFNProfile, CFNProfile.cfn_id == CFNRegistration.cfn_id)
+        .outerjoin(User, User.id == CFNRegistration.user_id)
+        .first()
+    )
+    if row is None:
+        raise HTTPException(404, "Jugador no encontrado")
+    reg, profile, user = row
+    return _build_player_read(reg, profile, user)
 
 
 @router.get("/players/{cfn_id}/matches", response_model=CFNMatchStats)
