@@ -8,6 +8,8 @@ import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import SkillRadarChart from "../components/SkillRadarChart";
 import Skeleton from "../components/Skeleton";
+import SocialLinksEditor from "../components/SocialLinksEditor";
+import SocialLinksRow from "../components/SocialLinksRow";
 import {
   getMatchStats,
   getMyCfnRegistration,
@@ -18,13 +20,20 @@ import {
   updateMyProfile,
 } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import { getImageBrightness, resizeImageFile } from "../lib/imageResize";
+import {
+  getImageBrightness,
+  resizeImageFile,
+  isAnimatedGif,
+  fileToDataUrl,
+  MAX_GIF_FILE_SIZE,
+} from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
 import type {
   CFNMatchStats,
   CFNPlayer,
   CFNRegistration,
   SkillAxis,
+  SocialLink,
 } from "../lib/types";
 
 const BIO_MAX_LENGTH = 280;
@@ -95,6 +104,7 @@ export default function PerfilPage() {
   const [bio, setBio] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [newAvatar, setNewAvatar] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -135,6 +145,7 @@ export default function PerfilPage() {
           setPlayer(own);
           setBio(own?.bio ?? "");
           setDisplayName(own?.display_name ?? "");
+          setSocialLinks(own?.social_links ?? []);
           setAvatarPreview(own?.avatar_url ?? null);
           setBannerPreview(own?.banner_url ?? null);
           setBgPreview(own?.card_background_url ?? null);
@@ -155,6 +166,19 @@ export default function PerfilPage() {
 
   async function handleAvatarFile(file: File) {
     try {
+      if (isAnimatedGif(file)) {
+        if (file.size > MAX_GIF_FILE_SIZE) {
+          setError("Ese GIF pesa más de 5MB. Prueba con uno más liviano.");
+          return;
+        }
+        // sin canvas de por medio — así el GIF mantiene su animación
+        // (ver isAnimatedGif en lib/imageResize.ts)
+        const raw = await fileToDataUrl(file);
+        setNewAvatar(raw);
+        setAvatarPreview(raw);
+        setSaved(false);
+        return;
+      }
       const resized = await resizeImageFile(file, AVATAR_SIZE, 0.85);
       setNewAvatar(resized);
       setAvatarPreview(resized);
@@ -191,6 +215,15 @@ export default function PerfilPage() {
     }
   }
 
+  // redes sociales — persiste al toque desde SocialLinksEditor, no
+  // queda pendiente del botón "Guardar" de bio/nombre (ver el
+  // comentario en ese componente sobre por qué)
+  async function handleSaveSocialLinks(updated: SocialLink[]) {
+    if (!token) throw new Error("no token");
+    await updateMyProfile(token, { socialLinks: updated });
+    setSocialLinks(updated);
+  }
+
   // el recorte/zoom ya lo resolvió BannerCropModal — acá solo queda
   // guardar el resultado
   async function handleBannerCropped(dataUrl: string) {
@@ -212,6 +245,18 @@ export default function PerfilPage() {
   async function handleCardBackgroundUpload(_cfnId: string, file: File) {
     if (!token) return;
     try {
+      if (isAnimatedGif(file)) {
+        if (file.size > MAX_GIF_FILE_SIZE) return; // silencioso, ver comentario abajo
+        const raw = await fileToDataUrl(file);
+        // el brillo se sigue calculando con canvas — ESO no destruye
+        // la animación porque el resultado (un número) no se usa como
+        // la imagen final, solo como aproximación de qué tan clara es
+        const brightness = await getImageBrightness(raw);
+        setBgPreview(raw);
+        setBgBrightness(brightness);
+        await updateMyCardBackground(token, raw, brightness);
+        return;
+      }
       const resized = await resizeImageFile(file, CARD_BACKGROUND_SIZE, 0.82);
       const brightness = await getImageBrightness(resized);
       setBgPreview(resized);
@@ -377,7 +422,22 @@ export default function PerfilPage() {
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) setCroppingBannerFile(file);
+                  if (!file) return;
+                  if (isAnimatedGif(file)) {
+                    // el editor de recorte usa canvas para dejar
+                    // elegir encuadre/zoom — canvas aplanaría la
+                    // animación igual que el pipeline automático, así
+                    // que un GIF se sube directo, sin pasar por ahí
+                    if (file.size > MAX_GIF_FILE_SIZE) {
+                      setBannerError(
+                        "Ese GIF pesa más de 5MB. Prueba con uno más liviano.",
+                      );
+                      return;
+                    }
+                    fileToDataUrl(file).then(handleBannerCropped);
+                  } else {
+                    setCroppingBannerFile(file);
+                  }
                   e.target.value = "";
                 }}
               />
@@ -447,6 +507,9 @@ export default function PerfilPage() {
                       {player.character_name}
                     </span>
                   )}
+                </div>
+                <div className="mt-2.5">
+                  <SocialLinksRow links={socialLinks} />
                 </div>
               </div>
             </div>
@@ -544,6 +607,11 @@ export default function PerfilPage() {
                 de arriba a la derecha, en tu vista previa
                 {user.is_staff ? " (como staff, también puedes sacarla)" : ""}.
               </p>
+
+              <SocialLinksEditor
+                links={socialLinks}
+                onSave={handleSaveSocialLinks}
+              />
 
               <AchievementsPlaceholder />
             </div>

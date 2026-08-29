@@ -16,7 +16,13 @@ import {
   updateMyCardBackground,
 } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import { getImageBrightness, resizeImageFile } from "../lib/imageResize";
+import {
+  fileToDataUrl,
+  getImageBrightness,
+  isAnimatedGif,
+  MAX_GIF_FILE_SIZE,
+  resizeImageFile,
+} from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
 import type { CFNMatchStats, CFNPlayer, CFNRegistration } from "../lib/types";
 
@@ -416,15 +422,22 @@ export default function JugadoresPage() {
   ) {
     if (!token) return;
     try {
-      const resized = await resizeImageFile(file, CARD_BACKGROUND_SIZE, 0.82);
-      // se calcula sobre la imagen YA redimensionada (lo que realmente
-      // se va a mostrar), una sola vez acá — no en cada carga de
-      // página para cada visitante (ver getImageBrightness)
-      const brightness = await getImageBrightness(resized);
-      if (isOwn) {
-        await updateMyCardBackground(token, resized, brightness);
+      let imageData: string;
+      if (isAnimatedGif(file)) {
+        if (file.size > MAX_GIF_FILE_SIZE) return; // silencioso, ver catch abajo
+        // sin canvas — mantiene la animación (ver isAnimatedGif)
+        imageData = await fileToDataUrl(file);
       } else {
-        await setPlayerCardBackground(token, cfnId, resized, brightness);
+        imageData = await resizeImageFile(file, CARD_BACKGROUND_SIZE, 0.82);
+      }
+      // se calcula sobre la imagen final (ya redimensionada, o el GIF
+      // tal cual) una sola vez acá — no en cada carga de página para
+      // cada visitante (ver getImageBrightness)
+      const brightness = await getImageBrightness(imageData);
+      if (isOwn) {
+        await updateMyCardBackground(token, imageData, brightness);
+      } else {
+        await setPlayerCardBackground(token, cfnId, imageData, brightness);
       }
       refreshPlayers();
     } catch {

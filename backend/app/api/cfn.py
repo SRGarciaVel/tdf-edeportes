@@ -58,6 +58,7 @@ def _build_player_read(
         avatar_url=reg.avatar_override or (user.avatar_url if user else None),
         bio=reg.bio,
         banner_url=reg.banner_url,
+        social_links=reg.social_links or [],
         card_background_url=reg.card_background_url,
         card_background_brightness=reg.card_background_brightness,
         league_rank=profile.league_rank if profile else None,

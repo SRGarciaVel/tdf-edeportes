@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PlayerCard, { CardBackgroundPhoto } from "../components/PlayerCard";
+import SocialLinksRow from "../components/SocialLinksRow";
 import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
@@ -129,6 +130,11 @@ export default function PlayerProfilePage() {
                   </span>
                 )}
               </div>
+              {player.social_links.length > 0 && (
+                <div className="mt-2.5">
+                  <SocialLinksRow links={player.social_links} />
+                </div>
+              )}
               {player.bio && (
                 <p className="font-body text-sm text-tdf-muted italic mt-2 max-w-lg">
                   "{player.bio}"

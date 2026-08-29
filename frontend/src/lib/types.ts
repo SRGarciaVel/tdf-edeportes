@@ -51,6 +51,12 @@ export interface SkillAxis {
   score: number | null;
 }
 
+export interface SocialLink {
+  platform: "instagram" | "x" | "youtube" | "twitch" | "other";
+  label: string;
+  url: string;
+}
+
 export interface CFNPlayer {
   cfn_id: string;
   display_name: string;
@@ -59,6 +65,7 @@ export interface CFNPlayer {
   avatar_url: string | null;
   bio: string | null;
   banner_url: string | null;
+  social_links: SocialLink[];
   card_background_url: string | null;
   card_background_brightness: number | null;
   league_rank: string | null;

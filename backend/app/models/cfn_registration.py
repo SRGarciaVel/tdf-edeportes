@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -85,6 +85,12 @@ class CFNRegistration(Base):
     # antes de que existiera este campo (cae a un valor medio por
     # default en el frontend).
     card_background_brightness: Mapped[float | None] = mapped_column(nullable=True)
+    # hasta 5 links a redes sociales, editables por la propia persona
+    # sin aprobación (mismo criterio libre que bio) — [{platform, label,
+    # url}], platform es uno de instagram/x/youtube/twitch/other; label
+    # solo se usa quen platform="other" (el resto usa un label fijo del
+    # frontend). Ver schemas/cfn.py:SocialLink para la validación real.
+    social_links: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

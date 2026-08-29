@@ -21,6 +21,7 @@ import type {
   PatchNote,
   TwitchLiveStatus,
   SkillAxis,
+  SocialLink,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -206,18 +207,17 @@ export async function updateMyProfile(
     bio?: string | null;
     avatarOverride?: string | null;
     bannerUrl?: string | null;
-    // a diferencia del resto, no acepta null — display_name nunca
-    // puede quedar vacío (el backend lo rechaza con 422 si se manda
-    // vacío/solo espacios)
     displayName?: string;
+    socialLinks?: SocialLink[];
   },
 ): Promise<CFNRegistration> {
-  const body: Record<string, string | null> = {};
+  const body: Record<string, unknown> = {};
   if ("bio" in changes) body.bio = changes.bio ?? null;
   if ("avatarOverride" in changes)
     body.avatar_override = changes.avatarOverride ?? null;
   if ("bannerUrl" in changes) body.banner_url = changes.bannerUrl ?? null;
   if ("displayName" in changes) body.display_name = changes.displayName ?? null;
+  if ("socialLinks" in changes) body.social_links = changes.socialLinks ?? [];
   const res = await fetch(`${API_URL}/cfn/register/me/profile`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },

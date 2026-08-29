@@ -1,10 +1,45 @@
 import re
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 CFN_ID_RE = re.compile(r"^\d{5,20}$")
+# límite de siempre (avatar/fondo/banner estáticos, WebP comprimido) —
+# ver MAX_IMAGE_DATA_URL_LEN en tier_lists.py, mismo criterio
+MAX_IMAGE_DATA_URL_LEN = 200_000
+# avatar/fondo/banner en avatar_override, card_background_url y
+# banner_url usan este límite más generoso en vez del de arriba
+# (pedido de Seba, 29-08-2026: soportar GIF animado ahí). Un GIF no
+# pasa por el pipeline de canvas/WebP de siempre — no se puede, canvas
+# solo captura un frame fijo — así que se sube "tal cual" hasta 5MB de
+# archivo original; en base64 eso son ~6.7MB de texto, 7_500_000 deja
+# margen. Costo real a tener en cuenta si el roster crece mucho: estos
+# tres campos viajan enteros en CADA fila de GET /cfn/players (la lista
+# pública completa), así que muchos GIFs pesados ahí inflan esa
+# respuesta bastante — vale la pena revisarlo si se vuelve un problema
+# real, no antes.
+MAX_ANIMATABLE_DATA_URL_LEN = 7_500_000
+
+
+class SocialLink(BaseModel):
+    """Un link de red social del perfil — hasta 5 por persona (ver
+    MyProfileUpdate). Los 4 predefinidos muestran su propio ícono de
+    marca en el frontend con un label fijo ahí mismo; "other" es el
+    único caso donde label es de verdad libre (para links que no son
+    de ninguna red conocida, ej. un portfolio o un Linktree)."""
+
+    platform: Literal["instagram", "x", "youtube", "twitch", "other"]
+    label: str = Field(max_length=30)
+    url: str = Field(max_length=500)
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("El link tiene que empezar con http:// o https://")
+        return v
 
 
 class CFNProfileRead(BaseModel):
@@ -45,6 +80,9 @@ class CFNPlayerRead(BaseModel):
     # portada de /perfil — distinta de card_background_url a propósito
     # (ver comentario en el modelo CFNRegistration)
     banner_url: str | None
+    # hasta 5 links a redes sociales, en el orden en que la persona los
+    # cargó — el frontend dibuja el ícono según platform, ver SocialLink
+    social_links: list[SocialLink]
     # foto de fondo de la card — la propia persona la puede subir/cambiar
     # cuando quiera (no solo al registrarse), y staff la puede
     # reemplazar o sacar en cualquier momento. None: el frontend cae al
@@ -74,9 +112,9 @@ class CFNPlayerRead(BaseModel):
 
 class CFNRegistrationCreate(BaseModel):
     cfn_id: str
-    # mismo formato/límite que las imágenes de tier list — ver
-    # MAX_IMAGE_DATA_URL_LEN en tier_lists.py, mismo criterio acá
-    avatar_override: str | None = Field(default=None, max_length=200_000)
+    avatar_override: str | None = Field(
+        default=None, max_length=MAX_ANIMATABLE_DATA_URL_LEN
+    )
 
     @field_validator("cfn_id")
     @classmethod
@@ -160,17 +198,34 @@ class MyProfileUpdate(BaseModel):
     # body cuando el tipo es str | None, así que ese caso puntual se
     # valida a mano en el endpoint (ver update_my_profile)
     display_name: str | None = Field(default=None, max_length=40)
-    avatar_override: str | None = Field(default=None, max_length=200_000)
-    banner_url: str | None = Field(default=None, max_length=200_000)
+    avatar_override: str | None = Field(
+        default=None, max_length=MAX_ANIMATABLE_DATA_URL_LEN
+    )
+    banner_url: str | None = Field(default=None, max_length=MAX_ANIMATABLE_DATA_URL_LEN)
+    social_links: list[SocialLink] | None = Field(default=None)
+
+    @field_validator("social_links")
+    @classmethod
+    def validate_social_links_count(
+        cls, v: list[SocialLink] | None
+    ) -> list[SocialLink] | None:
+        if v is not None and len(v) > 5:
+            raise ValueError("Máximo 5 links de redes sociales")
+        return v
 
 
 class CardBackgroundUpdate(BaseModel):
-    """Body para subir/reemplazar la foto de fondo de una card — mismo
-    formato/límite que las imágenes de tier list. brightness es
-    opcional para no romper si algún cliente viejo no lo manda, pero el
-    frontend real siempre lo calcula al subir (ver /jugadores)."""
+    """Body para subir/reemplazar la foto de fondo de una card — puede
+    ser un GIF animado (ver MAX_ANIMATABLE_DATA_URL_LEN), por eso el
+    límite es el generoso, no el de tier list. brightness es opcional
+    para no romper si algún cliente viejo no lo manda, pero el frontend
+    real siempre lo calcula al subir (ver /jugadores) — para un GIF,
+    brightness se calcula sobre el primer frame nada más, es solo una
+    aproximación."""
 
-    card_background_url: str = Field(min_length=1, max_length=200_000)
+    card_background_url: str = Field(
+        min_length=1, max_length=MAX_ANIMATABLE_DATA_URL_LEN
+    )
     card_background_brightness: float | None = Field(default=None, ge=0, le=1)
 
 

@@ -1,3 +1,32 @@
+/** GIF animado — canvas nunca puede exportar animación (drawImage
+ * solo captura el frame que esté "actual" en ese instante), así que
+ * para estos hay que saltarse todo el pipeline de recorte/compresión
+ * de canvas y subir el archivo casi tal cual (ver fileToDataUrl). No
+ * distingue GIF animado de GIF de un solo frame — tratarlos igual es
+ * más simple y un GIF estático de más no rompe nada, solo pesa un
+ * poco más de lo necesario. */
+export function isAnimatedGif(file: File): boolean {
+  return file.type === "image/gif";
+}
+
+// tope del lado del cliente para GIFs — el backend acepta hasta
+// ~5.6MB reales en base64 (MAX_ANIMATABLE_DATA_URL_LEN en
+// schemas/cfn.py), este límite queda con margen debajo de eso
+export const MAX_GIF_FILE_SIZE = 5 * 1024 * 1024;
+
+/** Lee un archivo tal cual, sin pasar por canvas — a diferencia de
+ * resizeImageFile, no recorta ni comprime nada, así que preserva la
+ * animación de un GIF. Usar solo para GIFs (ver isAnimatedGif); para
+ * el resto de formatos sigue conviniendo resizeImageFile. */
+export function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+}
+
 /** Redimensiona un archivo de imagen a un cuadrado de `size`x`size`
  * (recorte centrado tipo "cover", igual que hace TierMaker con sus
  * miniaturas) y lo devuelve como data URL WebP comprimido — así nunca se
