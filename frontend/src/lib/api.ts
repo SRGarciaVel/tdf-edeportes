@@ -23,6 +23,7 @@ import type {
   SkillAxis,
   SocialLink,
   ProfileComment,
+  NotificationListResponse,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -179,6 +180,25 @@ export async function createProfileComment(
     body: JSON.stringify({ body }),
   });
   return parseOrThrow<ProfileComment>(res);
+}
+
+export async function getNotifications(
+  token: string,
+): Promise<NotificationListResponse> {
+  const res = await fetch(`${API_URL}/notifications`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<NotificationListResponse>(res);
+}
+
+export async function markNotificationsRead(
+  token: string,
+): Promise<NotificationListResponse> {
+  const res = await fetch(`${API_URL}/notifications/read-all`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<NotificationListResponse>(res);
 }
 
 export async function deleteProfileComment(

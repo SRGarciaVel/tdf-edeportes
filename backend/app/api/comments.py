@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_authenticated
 from app.core.database import get_db
-from app.models import CFNRegistration, ProfileComment, User
+from app.models import CFNRegistration, Notification, ProfileComment, User
 from app.schemas.profile_comment import (
     CommentAuthor,
     ProfileCommentCreate,
@@ -95,6 +95,26 @@ def create_profile_comment(
         raise HTTPException(422, "El comentario no puede estar vacío")
     comment = ProfileComment(cfn_id=cfn_id, author_user_id=user.id, body=body)
     db.add(comment)
+    db.flush()  # necesitamos comment.id para el payload de la notificación
+
+    # notifica al dueño del perfil — nunca a uno mismo si comenta su
+    # propia página, y nunca si el perfil es del roster viejo sin
+    # cuenta de Twitch vinculada (registration.user_id es None ahí)
+    if registration.user_id is not None and registration.user_id != user.id:
+        db.add(
+            Notification(
+                user_id=registration.user_id,
+                type="comment_received",
+                payload={
+                    "comment_id": str(comment.id),
+                    "cfn_id": cfn_id,
+                    "author_display_name": user.display_name,
+                    "author_avatar_url": user.avatar_url,
+                    "body_preview": body[:80],
+                },
+            )
+        )
+
     db.commit()
     db.refresh(comment)
     return _to_read(comment, user, user, registration.user_id)

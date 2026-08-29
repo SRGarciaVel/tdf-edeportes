@@ -11,6 +11,7 @@ from app.api import (
     events,
     goals,
     health,
+    notifications,
     sf6,
     tier_lists,
     twitch,
@@ -51,6 +52,7 @@ app.include_router(events.router)
 app.include_router(goals.router)
 app.include_router(cfn.router)
 app.include_router(comments.router)
+app.include_router(notifications.router)
 app.include_router(tier_lists.router)
 app.include_router(users.router)
 app.include_router(sf6.router)

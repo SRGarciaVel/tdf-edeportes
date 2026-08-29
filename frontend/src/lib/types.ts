@@ -57,6 +57,19 @@ export interface SocialLink {
   url: string;
 }
 
+export interface AppNotification {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: AppNotification[];
+  unread_count: number;
+}
+
 export interface CommentAuthor {
   user_id: string;
   display_name: string;

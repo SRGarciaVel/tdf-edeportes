@@ -3,6 +3,7 @@ from app.models.cfn_profile import CFNProfile
 from app.models.cfn_registration import CFNRegistration
 from app.models.event import Event
 from app.models.event_comment import EventComment
+from app.models.notification import Notification
 from app.models.profile_comment import ProfileComment
 from app.models.quarterly_goal import QuarterlyGoal
 from app.models.role import Role, user_roles
@@ -18,6 +19,7 @@ __all__ = [
     "CFNRegistration",
     "Event",
     "EventComment",
+    "Notification",
     "ProfileComment",
     "QuarterlyGoal",
     "Role",

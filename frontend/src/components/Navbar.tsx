@@ -20,6 +20,7 @@ import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 import type { CFNPlayer, EventItem, TierListSummaryData } from "../lib/types";
 import CommunityLinks from "./CommunityLinks";
 import LoginButton from "./LoginButton";
+import NotificationBell from "./NotificationBell";
 
 // las más visitadas quedan sueltas y directas — el resto se agrupa en
 // desplegables para no saturar la barra (conversación de diseño,
@@ -544,6 +545,7 @@ export default function Navbar() {
             </AnimatePresence>
           </div>
 
+          <NotificationBell />
           <LoginButton />
         </div>
 
@@ -624,7 +626,10 @@ export default function Navbar() {
               </a>
               <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
                 <CommunityLinks />
-                <LoginButton variant="inline" />
+                <div className="flex items-center gap-3">
+                  <NotificationBell />
+                  <LoginButton variant="inline" />
+                </div>
               </div>
             </div>
           </motion.nav>
