@@ -197,6 +197,19 @@ export default function BannerCropModal({
                   height: imgRef.current
                     ? imgRef.current.naturalHeight * baseScale * zoomMult
                     : undefined,
+                  // el preflight de Tailwind le pone `max-width: 100%;
+                  // height: auto` a TODO <img> por defecto — sin esto
+                  // el ancho quedaba capado al ancho del stage (420px)
+                  // pero el alto no, así que la imagen se veía
+                  // estirada verticalmente y los cálculos de límites de
+                  // arrastre (clamp) no coincidían con lo que
+                  // realmente se veía en pantalla (bug reportado
+                  // 29-08-2026: no se podía mover en vertical, y hacia
+                  // la izquierda se veía fondo negro). maxWidth: "none"
+                  // anula ese default puntual, sin tocar el resto de
+                  // imágenes del sitio.
+                  maxWidth: "none",
+                  maxHeight: "none",
                   pointerEvents: "none",
                 }}
               />
