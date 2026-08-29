@@ -10,6 +10,7 @@ import ObjetivosPage from "./pages/ObjetivosPage";
 import PerfilPage from "./pages/PerfilPage";
 import PlayerProfilePage from "./pages/PlayerProfilePage";
 import PuntosPage from "./pages/PuntosPage";
+import RecopilacionesPage from "./pages/RecopilacionesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sf6MetaPage from "./pages/Sf6MetaPage";
 import Sf6PatchNotesPage from "./pages/Sf6PatchNotesPage";
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/objetivos" element={<ObjetivosPage />} />
           <Route path="/nosotros" element={<NosotrosPage />} />
           <Route path="/puntos" element={<PuntosPage />} />
+          <Route path="/recopilaciones" element={<RecopilacionesPage />} />
           <Route path="/tierlist" element={<TierListPage />} />
           <Route path="/tierlist/comunidad" element={<TierListGalleryPage />} />
           <Route path="/tierlist/:id" element={<TierListSharedPage />} />

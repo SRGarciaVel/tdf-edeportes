@@ -25,6 +25,7 @@ import type {
   SocialLink,
   ProfileComment,
   RecentCommentEntry,
+  InstagramHighlight,
   NotificationListResponse,
 } from "./types";
 
@@ -176,6 +177,35 @@ export async function listProfileComments(
 export async function getRecentComments(): Promise<RecentCommentEntry[]> {
   const res = await fetch(`${API_URL}/profiles/recent-comments`);
   return parseOrThrow<RecentCommentEntry[]>(res);
+}
+
+// recopilaciones de Instagram curadas por staff — público, sin auth
+export async function listHighlights(): Promise<InstagramHighlight[]> {
+  const res = await fetch(`${API_URL}/highlights`);
+  return parseOrThrow<InstagramHighlight[]>(res);
+}
+
+export async function createHighlight(
+  token: string,
+  url: string,
+): Promise<InstagramHighlight> {
+  const res = await fetch(`${API_URL}/highlights`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ url }),
+  });
+  return parseOrThrow<InstagramHighlight>(res);
+}
+
+export async function deleteHighlight(
+  token: string,
+  highlightId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/highlights/${highlightId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
 export async function createProfileComment(

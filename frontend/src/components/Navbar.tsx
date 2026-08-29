@@ -12,6 +12,7 @@ import {
   Target,
   Trophy,
   Users,
+  Clapperboard,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -37,6 +38,7 @@ const COMUNIDAD_LINKS = [
   { to: "/nosotros", label: "Nosotros", Icon: Info },
   { to: "/puntos", label: "Puntos", Icon: Star },
   { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
+  { to: "/recopilaciones", label: "Recopilaciones", Icon: Clapperboard },
 ];
 
 const SF6_LINKS = [

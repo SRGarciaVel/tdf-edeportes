@@ -2,19 +2,33 @@ import { Radio } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import InitialsAvatar from "../components/InitialsAvatar";
+import InstagramEmbed from "../components/InstagramEmbed";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import TwitchEmbed from "../components/TwitchEmbed";
-import { getRecentComments, listCfnPlayers, listEvents } from "../lib/api";
+import {
+  getRecentComments,
+  listCfnPlayers,
+  listEvents,
+  listHighlights,
+} from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import type { CFNPlayer, EventItem, RecentCommentEntry } from "../lib/types";
+import type {
+  CFNPlayer,
+  EventItem,
+  InstagramHighlight,
+  RecentCommentEntry,
+} from "../lib/types";
 import { useFriendsLiveStatus } from "../lib/useFriendsLiveStatus";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 
 // cuántas caras mostrar en el vistazo de comunidad — más que esto en
 // una fila empieza a sentirse apretado en mobile (2 columnas)
 const COMMUNITY_PREVIEW_COUNT = 6;
+// mismo criterio que COMMUNITY_PREVIEW_COUNT — el vistazo del Home
+// muestra pocas, la página completa (/recopilaciones) las tiene todas
+const HIGHLIGHTS_PREVIEW_COUNT = 2;
 
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -38,6 +52,8 @@ export default function HomePage() {
     [],
   );
   const [loadingComments, setLoadingComments] = useState(true);
+  const [highlights, setHighlights] = useState<InstagramHighlight[]>([]);
+  const [loadingHighlights, setLoadingHighlights] = useState(true);
 
   useEffect(() => {
     listEvents(null)
@@ -73,6 +89,13 @@ export default function HomePage() {
       .then(setRecentComments)
       .catch(() => setRecentComments([]))
       .finally(() => setLoadingComments(false));
+  }, []);
+
+  useEffect(() => {
+    listHighlights()
+      .then(setHighlights)
+      .catch(() => setHighlights([]))
+      .finally(() => setLoadingHighlights(false));
   }, []);
 
   return (
@@ -337,7 +360,33 @@ export default function HomePage() {
       </section>
 
       <section className="mb-12">
-        <SectionLabel index="06">Actividad reciente</SectionLabel>
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <SectionLabel index="06">Recopilaciones</SectionLabel>
+          <Link
+            to="/recopilaciones"
+            className="font-mono text-xs uppercase text-tdf-magenta hover:text-white underline"
+          >
+            Ver todas →
+          </Link>
+        </div>
+        {loadingHighlights && (
+          <div className="grid sm:grid-cols-2 gap-6">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 w-full" />
+            ))}
+          </div>
+        )}
+        {!loadingHighlights && highlights.length > 0 && (
+          <div className="grid sm:grid-cols-2 gap-6">
+            {highlights.slice(0, HIGHLIGHTS_PREVIEW_COUNT).map((h) => (
+              <InstagramEmbed key={h.id} url={h.url} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mb-12">
+        <SectionLabel index="07">Actividad reciente</SectionLabel>
         {loadingComments && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 3 }).map((_, i) => (

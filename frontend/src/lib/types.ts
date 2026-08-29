@@ -85,6 +85,12 @@ export interface ProfileComment {
   can_delete: boolean;
 }
 
+export interface InstagramHighlight {
+  id: string;
+  url: string;
+  created_at: string;
+}
+
 export interface RecentCommentEntry {
   id: string;
   body: string;
