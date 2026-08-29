@@ -1,3 +1,4 @@
+import { Download, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import FodaEntryCard from "../components/FodaEntryCard";
 import FodaForm from "../components/FodaForm";
@@ -15,9 +16,13 @@ import type { FodaEntry } from "../lib/types";
  * con o sin cuenta, mismo criterio que ranquear una tier list ya
  * existente. */
 export default function FodaPage() {
-  const { token } = useAuth();
+  const { user, token } = useAuth();
   const [entries, setEntries] = useState<FodaEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  // se llena solo cuando se acaba de mandar una PRIVADA — es el aviso
+  // destacado de "descargala ahora" (ver comentario más abajo)
+  const [justCreatedPrivate, setJustCreatedPrivate] =
+    useState<FodaEntry | null>(null);
 
   useEffect(() => {
     listFoda(token ?? undefined)
@@ -28,6 +33,7 @@ export default function FodaPage() {
   async function handleCreate(entry: {
     subjectName: string;
     authorName?: string;
+    isPublic: boolean;
     fortalezas: string;
     oportunidades: string;
     debilidades: string;
@@ -35,6 +41,7 @@ export default function FodaPage() {
   }) {
     const created = await createFoda(entry, token ?? undefined);
     setEntries((prev) => [created, ...prev]);
+    if (!created.is_public) setJustCreatedPrivate(created);
   }
 
   async function handleDelete(id: string) {
@@ -60,6 +67,28 @@ export default function FodaPage() {
       <div className="mb-8">
         <FodaForm onSubmit={handleCreate} />
       </div>
+
+      {justCreatedPrivate && (
+        <div className="hud-frame bg-tdf-purple/10 border border-tdf-magenta p-5 mb-8 flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 text-tdf-magenta">
+              <Download size={16} />
+              <p className="font-mono text-xs uppercase">
+                Este quedó privado
+                {!user && ". Descárgalo antes de salir de esta página"}
+              </p>
+            </div>
+            <button
+              onClick={() => setJustCreatedPrivate(null)}
+              aria-label="Cerrar aviso"
+              className="text-tdf-muted hover:text-white shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <FodaEntryCard entry={justCreatedPrivate} />
+        </div>
+      )}
 
       {loading && (
         <div className="flex flex-col gap-6">

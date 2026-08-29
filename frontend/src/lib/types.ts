@@ -90,6 +90,7 @@ export interface FodaEntry {
   id: string;
   subject_name: string;
   author_name: string;
+  is_public: boolean;
   fortalezas: string;
   oportunidades: string;
   debilidades: string;

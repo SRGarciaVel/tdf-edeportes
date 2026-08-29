@@ -24,6 +24,9 @@ class FodaEntryCreate(BaseModel):
     # se puede spoofear el nombre de otra persona, mismo criterio que
     # tier list)
     author_name: str | None = Field(default=None, max_length=MAX_GUEST_NAME_LEN)
+    # default público — elegido por quien lo manda (ver
+    # FodaEntry.is_public en el modelo para la lógica de visibilidad)
+    is_public: bool = True
     fortalezas: str = Field(min_length=1, max_length=MAX_FODA_FIELD_LEN)
     oportunidades: str = Field(min_length=1, max_length=MAX_FODA_FIELD_LEN)
     debilidades: str = Field(min_length=1, max_length=MAX_FODA_FIELD_LEN)
@@ -36,6 +39,7 @@ class FodaEntryRead(BaseModel):
     id: uuid.UUID
     subject_name: str
     author_name: str
+    is_public: bool
     fortalezas: str
     oportunidades: str
     debilidades: str

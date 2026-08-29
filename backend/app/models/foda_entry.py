@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,6 +38,15 @@ class FodaEntry(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     author_name: Mapped[str] = mapped_column(String, nullable=False)
+    # true (default) = visible para cualquiera en /foda. false = solo
+    # quien lo mandó (si estaba logueado, ver created_by) y staff lo
+    # ven en el listado — pedido de Seba (29-08-2026): quien lo manda
+    # elige. Un invitado sin cuenta que lo marca privado NO tiene
+    # ninguna otra forma de volver a verlo después (no hay con qué
+    # identificarlo como "el mismo" más tarde) — por eso el frontend le
+    # ofrece descargarlo como imagen al toque de mandarlo, se lo avisa
+    # explícito antes de confirmar.
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     fortalezas: Mapped[str] = mapped_column(String, nullable=False)
     oportunidades: Mapped[str] = mapped_column(String, nullable=False)
     debilidades: Mapped[str] = mapped_column(String, nullable=False)

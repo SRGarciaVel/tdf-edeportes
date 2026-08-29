@@ -311,6 +311,7 @@ export async function createFoda(
   entry: {
     subjectName: string;
     authorName?: string;
+    isPublic: boolean;
     fortalezas: string;
     oportunidades: string;
     debilidades: string;
@@ -327,6 +328,7 @@ export async function createFoda(
     body: JSON.stringify({
       subject_name: entry.subjectName,
       author_name: entry.authorName ?? null,
+      is_public: entry.isPublic,
       fortalezas: entry.fortalezas,
       oportunidades: entry.oportunidades,
       debilidades: entry.debilidades,

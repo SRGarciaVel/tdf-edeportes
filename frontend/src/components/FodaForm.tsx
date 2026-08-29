@@ -52,6 +52,7 @@ export default function FodaForm({
   onSubmit: (entry: {
     subjectName: string;
     authorName?: string;
+    isPublic: boolean;
     fortalezas: string;
     oportunidades: string;
     debilidades: string;
@@ -69,6 +70,7 @@ export default function FodaForm({
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState(true);
 
   const canSubmit =
     subjectName.trim().length > 0 &&
@@ -82,6 +84,7 @@ export default function FodaForm({
       await onSubmit({
         subjectName: subjectName.trim(),
         authorName: user ? undefined : authorName.trim(),
+        isPublic,
         fortalezas: values.fortalezas.trim(),
         oportunidades: values.oportunidades.trim(),
         debilidades: values.debilidades.trim(),
@@ -89,6 +92,7 @@ export default function FodaForm({
       });
       setSubjectName("");
       setAuthorName("");
+      setIsPublic(true);
       setValues({
         fortalezas: "",
         oportunidades: "",
@@ -149,6 +153,44 @@ export default function FodaForm({
           <span className="text-white">{user.display_name}</span>.
         </p>
       )}
+
+      <div>
+        <label className="font-mono text-[10px] uppercase text-tdf-muted mb-1.5 block">
+          Visibilidad
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPublic(true)}
+            className={`font-body text-xs px-3 py-1.5 border transition-colors ${
+              isPublic
+                ? "bg-tdf-magenta border-tdf-magenta text-white"
+                : "bg-tdf-dark border-tdf-line text-tdf-muted hover:text-white"
+            }`}
+          >
+            Público
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPublic(false)}
+            className={`font-body text-xs px-3 py-1.5 border transition-colors ${
+              !isPublic
+                ? "bg-tdf-magenta border-tdf-magenta text-white"
+                : "bg-tdf-dark border-tdf-line text-tdf-muted hover:text-white"
+            }`}
+          >
+            Privado
+          </button>
+        </div>
+        {!isPublic && (
+          <p className="font-mono text-[10px] text-tdf-muted mt-1.5 max-w-md">
+            No va a aparecer en el listado de nadie más.{" "}
+            {user
+              ? "Lo vas a poder ver de nuevo entrando a esta página con tu cuenta."
+              : "Como no tienes cuenta, la imagen que descargues al mandarlo va a ser la única copia que te quede."}
+          </p>
+        )}
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         {FODA_QUADRANTS.map((q) => {

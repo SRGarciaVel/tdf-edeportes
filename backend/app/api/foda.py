@@ -2,6 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_authenticated
@@ -27,6 +28,7 @@ def _to_read(entry: FodaEntry, viewer: User | None) -> FodaEntryRead:
         id=entry.id,
         subject_name=entry.subject_name,
         author_name=entry.author_name,
+        is_public=entry.is_public,
         fortalezas=entry.fortalezas,
         oportunidades=entry.oportunidades,
         debilidades=entry.debilidades,
@@ -41,14 +43,22 @@ def list_foda(
     db: Annotated[Session, Depends(get_db)],
     viewer: Annotated[User | None, Depends(get_current_user)],
 ) -> list[FodaEntryRead]:
-    """Público, auth opcional — auth solo importa para calcular
-    can_delete, no para poder ver la lista. Más nuevo primero."""
-    entries = (
-        db.query(FodaEntry)
-        .order_by(FodaEntry.created_at.desc())
-        .limit(MAX_LISTED)
-        .all()
-    )
+    """Público, auth opcional — pero la visibilidad SÍ depende de quién
+    pregunta (a diferencia del resto de listados públicos del sitio):
+    - sin login: solo las públicas
+    - logueado, no staff: las públicas + las propias (aunque sean
+      privadas)
+    - staff: todas, públicas y privadas (mismo criterio de moderación
+      que el resto del sitio)
+    Más nuevo primero."""
+    query = db.query(FodaEntry)
+    if viewer is None:
+        query = query.filter(FodaEntry.is_public.is_(True))
+    elif not viewer.is_staff:
+        query = query.filter(
+            or_(FodaEntry.is_public.is_(True), FodaEntry.created_by == viewer.id)
+        )
+    entries = query.order_by(FodaEntry.created_at.desc()).limit(MAX_LISTED).all()
     return [_to_read(e, viewer) for e in entries]
 
 
@@ -78,6 +88,7 @@ def create_foda(
         subject_name=payload.subject_name.strip(),
         created_by=user.id if user is not None else None,
         author_name=author_name,
+        is_public=payload.is_public,
         fortalezas=payload.fortalezas.strip(),
         oportunidades=payload.oportunidades.strip(),
         debilidades=payload.debilidades.strip(),
