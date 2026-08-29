@@ -10,6 +10,7 @@ import ObjetivosPage from "./pages/ObjetivosPage";
 import PerfilPage from "./pages/PerfilPage";
 import PlayerProfilePage from "./pages/PlayerProfilePage";
 import AdminPage from "./pages/AdminPage";
+import FodaPage from "./pages/FodaPage";
 import PuntosPage from "./pages/PuntosPage";
 import RecopilacionesPage from "./pages/RecopilacionesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/puntos" element={<PuntosPage />} />
           <Route path="/recopilaciones" element={<RecopilacionesPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/foda" element={<FodaPage />} />
           <Route path="/tierlist" element={<TierListPage />} />
           <Route path="/tierlist/comunidad" element={<TierListGalleryPage />} />
           <Route path="/tierlist/:id" element={<TierListSharedPage />} />

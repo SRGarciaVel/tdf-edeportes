@@ -29,6 +29,7 @@ import type {
   RoleRead,
   AdminUserRead,
   DashboardStats,
+  FodaEntry,
   NotificationListResponse,
 } from "./types";
 
@@ -291,6 +292,55 @@ export async function unassignRole(
   roleId: string,
 ): Promise<void> {
   const res = await fetch(`${API_URL}/admin/users/${userId}/roles/${roleId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+// FODA de la comunidad — público, sin auth requerida para ver ni para
+// mandar (mismo criterio que ranquear una tier list existente)
+export async function listFoda(token?: string): Promise<FodaEntry[]> {
+  const res = await fetch(`${API_URL}/foda`, {
+    headers: authHeaders(token ?? null),
+  });
+  return parseOrThrow<FodaEntry[]>(res);
+}
+
+export async function createFoda(
+  entry: {
+    subjectName: string;
+    authorName?: string;
+    fortalezas: string;
+    oportunidades: string;
+    debilidades: string;
+    amenazas: string;
+  },
+  token?: string,
+): Promise<FodaEntry> {
+  const res = await fetch(`${API_URL}/foda`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token ?? null),
+    },
+    body: JSON.stringify({
+      subject_name: entry.subjectName,
+      author_name: entry.authorName ?? null,
+      fortalezas: entry.fortalezas,
+      oportunidades: entry.oportunidades,
+      debilidades: entry.debilidades,
+      amenazas: entry.amenazas,
+    }),
+  });
+  return parseOrThrow<FodaEntry>(res);
+}
+
+export async function deleteFoda(
+  token: string,
+  entryId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/foda/${entryId}`, {
     method: "DELETE",
     headers: authHeaders(token),
   });

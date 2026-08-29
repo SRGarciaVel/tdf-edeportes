@@ -1,18 +1,19 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Calendar,
+  Clapperboard,
   FileText,
   Gamepad2,
   Home,
   Info,
   LayoutGrid,
   Radio,
+  Scale,
   Search,
   Star,
   Target,
   Trophy,
   Users,
-  Clapperboard,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -39,6 +40,7 @@ const COMUNIDAD_LINKS = [
   { to: "/puntos", label: "Puntos", Icon: Star },
   { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
   { to: "/recopilaciones", label: "Recopilaciones", Icon: Clapperboard },
+  { to: "/foda", label: "FODA", Icon: Scale },
 ];
 
 const SF6_LINKS = [

@@ -86,6 +86,18 @@ export interface ProfileComment {
   can_delete: boolean;
 }
 
+export interface FodaEntry {
+  id: string;
+  subject_name: string;
+  author_name: string;
+  fortalezas: string;
+  oportunidades: string;
+  debilidades: string;
+  amenazas: string;
+  created_at: string;
+  can_delete: boolean;
+}
+
 export interface RoleRead {
   id: string;
   name: string;

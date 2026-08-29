@@ -10,6 +10,7 @@ from app.api import (
     cfn,
     comments,
     events,
+    foda,
     goals,
     health,
     highlights,
@@ -70,6 +71,7 @@ app.include_router(comments.router)
 app.include_router(notifications.router)
 app.include_router(highlights.router)
 app.include_router(admin.router)
+app.include_router(foda.router)
 app.include_router(tier_lists.router)
 app.include_router(users.router)
 app.include_router(sf6.router)
