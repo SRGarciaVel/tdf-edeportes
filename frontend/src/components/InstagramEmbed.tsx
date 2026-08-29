@@ -33,6 +33,15 @@ function loadEmbedScript(): Promise<void> {
  * Seba, 29-08-2026) — esto corre 100% en el navegador de quien visita
  * la página, nuestro backend no le pega a Instagram para nada.
  *
+ * Va envuelto en un panel oscuro (hud-frame, mismo lenguaje visual del
+ * resto del sitio) — Instagram no ofrece ningún parámetro oficial de
+ * tema oscuro para este embed (chequeado 29-08-2026, confirmado que
+ * no existe), y un filtro CSS de inversión de color invierte también
+ * la foto/video real del post, no solo el fondo blanco de la tarjeta.
+ * En vez de pelear con eso, el blanco queda "enmarcado" a propósito,
+ * como un cuadro dentro del panel oscuro, en vez de flotar solo contra
+ * el fondo del sitio.
+ *
  * Si el script no carga (bloqueadores de ads/trackers bloquean
  * embed.js seguido), el <blockquote> se degrada solo al link de
  * abajo — no queda un hueco vacío. */
@@ -44,7 +53,7 @@ export default function InstagramEmbed({ url }: { url: string }) {
   }, [url]);
 
   return (
-    <div className="flex justify-center">
+    <div className="hud-frame bg-tdf-charcoal p-4 flex justify-center">
       <blockquote
         className="instagram-media"
         data-instgrm-permalink={url}
