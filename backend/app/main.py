@@ -27,6 +27,19 @@ from app.core.limiter import limiter
 # siguen disponibles, no hace falta tocar nada del flujo de desarrollo.
 is_production = settings.environment == "production"
 
+# auditoría de seguridad 29-08-2026: JWT_SECRET tiene "change_me" como
+# default en config.py (necesario para que el proyecto arranque sin
+# .env en desarrollo) — si esa variable de entorno nunca se configura
+# en Render por error humano, cualquiera podría FIRMAR sus propios
+# tokens de sesión (ese string es público, está en este mismo repo).
+# Falla el arranque en vez de correr silenciosamente insegura — mejor
+# que Render marque el deploy como roto a que la API funcione mal.
+if is_production and settings.jwt_secret == "change_me":
+    raise RuntimeError(
+        "JWT_SECRET sigue en su valor por default en producción — "
+        "configura la variable de entorno real en Render antes de desplegar."
+    )
+
 app = FastAPI(
     title="TDF e-deportes API",
     docs_url=None if is_production else "/docs",

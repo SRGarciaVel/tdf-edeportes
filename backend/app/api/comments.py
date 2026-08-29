@@ -1,11 +1,12 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_authenticated
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models import CFNRegistration, Notification, ProfileComment, User
 from app.schemas.profile_comment import (
     CommentAuthor,
@@ -79,7 +80,9 @@ def list_profile_comments(
 
 
 @router.post("/{cfn_id}/comments", response_model=ProfileCommentRead, status_code=201)
+@limiter.limit("20/hour")
 def create_profile_comment(
+    request: Request,
     cfn_id: str,
     payload: ProfileCommentCreate,
     db: Annotated[Session, Depends(get_db)],
@@ -88,7 +91,13 @@ def create_profile_comment(
     """Cualquier persona logueada con Twitch puede comentar en
     CUALQUIER perfil aprobado, esté o no ella misma en el roster —
     decisión explícita de Seba (29-08-2026), a diferencia del resto de
-    /cfn que requiere estar en el roster para auto-gestionar algo."""
+    /cfn que requiere estar en el roster para auto-gestionar algo.
+
+    Límite propio de 20/hora (default del sitio es 300/hora, ver
+    limiter.py) — auditoría de seguridad 29-08-2026: sin esto, una
+    cuenta logueada podía inundar el perfil de cualquiera con
+    comentarios repetidos a un ritmo mucho más alto que lo que
+    cualquier persona real escribiría."""
     registration = _get_approved_cfn_id(db, cfn_id)
     body = payload.body.strip()
     if not body:

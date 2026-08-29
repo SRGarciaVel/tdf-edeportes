@@ -21,6 +21,25 @@ MAX_IMAGE_DATA_URL_LEN = 200_000
 # respuesta bastante — vale la pena revisarlo si se vuelve un problema
 # real, no antes.
 MAX_ANIMATABLE_DATA_URL_LEN = 7_500_000
+# auditoría de seguridad (29-08-2026): avatar_override, banner_url y
+# card_background_url solo tenían límite de largo, nunca se validó que
+# el contenido fuera de verdad una imagen en base64 — un usuario podía
+# mandar cualquier string, incluida una URL externa (ej.
+# "https://evil.com/tracker.gif"), que el frontend renderiza tal cual
+# en un <img src>. Eso filtra la IP/fingerprint de CUALQUIERA que vea
+# ese perfil a un tercero (pixel de tracking), sin pasar por nuestro
+# pipeline de subida en absoluto. Mismo patrón que ya existía en
+# tier_lists.py (IMAGE_DATA_URL_RE) — acá con "gif" sumado porque estos
+# tres campos sí soportan animado (ver MAX_ANIMATABLE_DATA_URL_LEN).
+PROFILE_IMAGE_DATA_URL_RE = re.compile(r"^data:image/(png|jpeg|jpg|webp|gif);base64,")
+
+
+def _validate_profile_image(v: str | None) -> str | None:
+    if v is not None and not PROFILE_IMAGE_DATA_URL_RE.match(v):
+        raise ValueError(
+            "La imagen tiene que venir de la subida normal del sitio, no un link externo"
+        )
+    return v
 
 
 class SocialLink(BaseModel):
@@ -123,6 +142,11 @@ class CFNRegistrationCreate(BaseModel):
             raise ValueError("El CFN ID debe ser solo números (5 a 20 dígitos)")
         return v
 
+    @field_validator("avatar_override")
+    @classmethod
+    def validate_avatar(cls, v: str | None) -> str | None:
+        return _validate_profile_image(v)
+
 
 class CFNRegistrationRead(BaseModel):
     """Lo que ve la propia persona sobre su solicitud — GET
@@ -213,6 +237,11 @@ class MyProfileUpdate(BaseModel):
             raise ValueError("Máximo 5 links de redes sociales")
         return v
 
+    @field_validator("avatar_override", "banner_url")
+    @classmethod
+    def validate_images(cls, v: str | None) -> str | None:
+        return _validate_profile_image(v)
+
 
 class CardBackgroundUpdate(BaseModel):
     """Body para subir/reemplazar la foto de fondo de una card — puede
@@ -227,6 +256,12 @@ class CardBackgroundUpdate(BaseModel):
         min_length=1, max_length=MAX_ANIMATABLE_DATA_URL_LEN
     )
     card_background_brightness: float | None = Field(default=None, ge=0, le=1)
+
+    @field_validator("card_background_url")
+    @classmethod
+    def validate_card_background(cls, v: str) -> str:
+        _validate_profile_image(v)
+        return v
 
 
 class CFNMatchStats(BaseModel):
