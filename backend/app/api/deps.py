@@ -58,3 +58,19 @@ def require_authenticated(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="No autenticado"
         )
     return user
+
+
+def require_admin(
+    user: Annotated[User | None, Depends(get_current_user)],
+) -> User:
+    """Nivel por encima de Staff — pedido de Seba (29-08-2026): panel de
+    Administración accesible SOLO para AckermanFG y bazthyfreeman.
+    is_admin se asigna a mano en la base, nunca desde ningún endpoint
+    (ni siquiera los del propio panel de Administración pueden
+    otorgarlo — ver admin.py, esa línea no se cruza)."""
+    if user is None or not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Requiere ser administrador del sitio",
+        )
+    return user

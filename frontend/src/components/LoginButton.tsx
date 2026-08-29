@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, ShieldAlert, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { getTwitchLoginUrl } from "../lib/api";
@@ -87,6 +87,11 @@ export default function LoginButton({
           <NavLink to="/perfil" className={menuLinkClass}>
             <User size={14} /> Mi perfil
           </NavLink>
+          {user.is_admin && (
+            <NavLink to="/admin" className={menuLinkClass}>
+              <ShieldAlert size={14} /> Administración
+            </NavLink>
+          )}
           <button
             onClick={logout}
             className="flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase text-tdf-muted hover:text-white text-left"
@@ -127,6 +132,15 @@ export default function LoginButton({
               >
                 <User size={14} /> Mi perfil
               </NavLink>
+              {user.is_admin && (
+                <NavLink
+                  to="/admin"
+                  onClick={() => setOpen(false)}
+                  className={menuLinkClass}
+                >
+                  <ShieldAlert size={14} /> Administración
+                </NavLink>
+              )}
               <button
                 onClick={() => {
                   setOpen(false);

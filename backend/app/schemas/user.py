@@ -11,3 +11,4 @@ class UserRead(BaseModel):
     display_name: str
     avatar_url: str | None
     is_staff: bool
+    is_admin: bool

@@ -4,6 +4,7 @@ export interface User {
   display_name: string;
   avatar_url: string | null;
   is_staff: boolean;
+  is_admin: boolean;
 }
 
 export type EventType = "torneo" | "stream" | "reunion" | "otro";
@@ -83,6 +84,36 @@ export interface ProfileComment {
   created_at: string;
   author: CommentAuthor;
   can_delete: boolean;
+}
+
+export interface RoleRead {
+  id: string;
+  name: string;
+}
+
+export interface AdminUserRead {
+  id: string;
+  twitch_username: string;
+  display_name: string;
+  avatar_url: string | null;
+  is_staff: boolean;
+  is_admin: boolean;
+  roles: RoleRead[];
+}
+
+export interface DashboardStats {
+  environment: string;
+  total_users: number;
+  staff_count: number;
+  admin_count: number;
+  approved_players: number;
+  pending_registrations: number;
+  rejected_registrations: number;
+  last_cfn_refresh: string | null;
+  total_comments: number;
+  total_notifications_sent: number;
+  total_tier_lists: number;
+  total_instagram_highlights: number;
 }
 
 export interface InstagramHighlight {

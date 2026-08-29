@@ -26,6 +26,9 @@ import type {
   ProfileComment,
   RecentCommentEntry,
   InstagramHighlight,
+  RoleRead,
+  AdminUserRead,
+  DashboardStats,
   NotificationListResponse,
 } from "./types";
 
@@ -202,6 +205,92 @@ export async function deleteHighlight(
   highlightId: string,
 ): Promise<void> {
   const res = await fetch(`${API_URL}/highlights/${highlightId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+// panel de Administración — solo AckermanFG y bazthyfreeman (is_admin
+// en el backend, ver require_admin en deps.py). Estas llamadas dan
+// 403 para cualquier otra cuenta, is_staff incluido.
+export async function getAdminDashboard(
+  token: string,
+): Promise<DashboardStats> {
+  const res = await fetch(`${API_URL}/admin/dashboard`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<DashboardStats>(res);
+}
+
+export async function listAdminUsers(token: string): Promise<AdminUserRead[]> {
+  const res = await fetch(`${API_URL}/admin/users`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<AdminUserRead[]>(res);
+}
+
+export async function setUserStaff(
+  token: string,
+  userId: string,
+  isStaff: boolean,
+): Promise<AdminUserRead> {
+  const res = await fetch(`${API_URL}/admin/users/${userId}/staff`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ is_staff: isStaff }),
+  });
+  return parseOrThrow<AdminUserRead>(res);
+}
+
+export async function listAdminRoles(token: string): Promise<RoleRead[]> {
+  const res = await fetch(`${API_URL}/admin/roles`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<RoleRead[]>(res);
+}
+
+export async function createAdminRole(
+  token: string,
+  name: string,
+): Promise<RoleRead> {
+  const res = await fetch(`${API_URL}/admin/roles`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ name }),
+  });
+  return parseOrThrow<RoleRead>(res);
+}
+
+export async function deleteAdminRole(
+  token: string,
+  roleId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/admin/roles/${roleId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+export async function assignRole(
+  token: string,
+  userId: string,
+  roleId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/admin/users/${userId}/roles/${roleId}`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+export async function unassignRole(
+  token: string,
+  userId: string,
+  roleId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/admin/users/${userId}/roles/${roleId}`, {
     method: "DELETE",
     headers: authHeaders(token),
   });
