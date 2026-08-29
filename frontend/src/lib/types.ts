@@ -44,6 +44,13 @@ export interface QuarterlyGoal {
   status: GoalStatus;
 }
 
+export interface SkillAxis {
+  key: string;
+  label: string;
+  value: number | null;
+  score: number | null;
+}
+
 export interface CFNPlayer {
   cfn_id: string;
   display_name: string;

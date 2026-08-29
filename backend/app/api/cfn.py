@@ -22,11 +22,25 @@ from app.schemas.cfn import (
     EncounterRead,
     LinkAccountRequest,
     MyProfileUpdate,
+    SkillAxis,
     UnlinkedCandidate,
     UnlinkedRegistration,
 )
 
 router = APIRouter(prefix="/cfn", tags=["cfn"])
+
+# categorías de "Records" reusadas como ejes del radar de habilidades en
+# /perfil — mismas 5 columnas de CFNProfile que ya alimentan los
+# leaderboards de /jugadores (ver RECORD_CATEGORIES en el frontend),
+# pero acá con labels cortos pensados para caber en un eje de radar, no
+# para un título de leaderboard tipo "El que más Drive Impact se come"
+SKILL_CATEGORIES: list[tuple[str, str]] = [
+    ("drive_impact_received", "Drive Impact recibido"),
+    ("drive_parry_perfect", "Perfect Parry"),
+    ("drive_impact_punish_landed", "Punish con DI"),
+    ("corner_time_opponent", "Tiempo en esquina"),
+    ("throws_landed", "Throws"),
+]
 
 
 @router.get("/players", response_model=list[CFNPlayerRead])
@@ -128,6 +142,44 @@ def get_recent_matches(
         .limit(limit)
         .all()
     )
+
+
+@router.get("/players/{cfn_id}/skills", response_model=list[SkillAxis])
+def get_player_skills(
+    cfn_id: str, db: Annotated[Session, Depends(get_db)]
+) -> list[SkillAxis]:
+    """Radar de habilidades para /perfil — público, sin auth. Escala
+    RELATIVA acordada con Seba (28-08-2026): el valor más alto entre
+    TODO el roster aprobado con perfil en cada categoría = 100, el
+    resto se escala proporcional contra ese máximo. A propósito NO usa
+    el piso de 20 partidas de /jugadores (MIN_MATCHES_FOR_RECORDS,
+    frontend) — ese piso es para decidir quién puede "ganar" un
+    leaderboard público, acá es el propio jugador viendo su radar
+    personal, tiene sentido mostrarle su número real aunque tenga pocas
+    partidas trackeadas todavía."""
+    _get_approved_registration(db, cfn_id)  # 404 si no existe/no aprobado
+    profile = db.query(CFNProfile).filter(CFNProfile.cfn_id == cfn_id).first()
+
+    all_profiles = (
+        db.query(CFNProfile)
+        .join(CFNRegistration, CFNRegistration.cfn_id == CFNProfile.cfn_id)
+        .filter(CFNRegistration.status == "approved")
+        .all()
+    )
+
+    axes = []
+    for key, label in SKILL_CATEGORIES:
+        value = getattr(profile, key) if profile else None
+        max_value = (
+            max((getattr(p, key) or 0) for p in all_profiles) if all_profiles else 0
+        )
+        score = (
+            round(min(value / max_value, 1.0) * 100)
+            if value is not None and max_value > 0
+            else None
+        )
+        axes.append(SkillAxis(key=key, label=label, value=value, score=score))
+    return axes
 
 
 @router.get("/encounters/recent", response_model=list[EncounterRead])

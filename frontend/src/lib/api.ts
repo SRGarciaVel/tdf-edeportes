@@ -20,6 +20,7 @@ import type {
   MetaSnapshot,
   PatchNote,
   TwitchLiveStatus,
+  SkillAxis,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -145,6 +146,13 @@ export async function listCfnPlayers(): Promise<CFNPlayer[]> {
   return parseOrThrow<CFNPlayer[]>(res);
 }
 
+// radar de habilidades para /perfil — público, sin auth, escala
+// relativa al roster (ver docstring del endpoint en cfn.py)
+export async function getPlayerSkills(cfnId: string): Promise<SkillAxis[]> {
+  const res = await fetch(`${API_URL}/cfn/players/${cfnId}/skills`);
+  return parseOrThrow<SkillAxis[]>(res);
+}
+
 // auto-registro — requiere login, queda pendiente hasta que staff lo
 // apruebe (GET /cfn/registrations/pending). Rate-limited en el backend
 // (5/hora por IP).
@@ -190,7 +198,8 @@ export async function updateMyProfile(
 ): Promise<CFNRegistration> {
   const body: Record<string, string | null> = {};
   if ("bio" in changes) body.bio = changes.bio ?? null;
-  if ("avatarOverride" in changes) body.avatar_override = changes.avatarOverride ?? null;
+  if ("avatarOverride" in changes)
+    body.avatar_override = changes.avatarOverride ?? null;
   const res = await fetch(`${API_URL}/cfn/register/me/profile`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...authHeaders(token) },

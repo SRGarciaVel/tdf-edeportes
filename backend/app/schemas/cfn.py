@@ -126,6 +126,21 @@ class CFNRegistrationDecision(BaseModel):
     liquipedia_url: str | None = None
 
 
+class SkillAxis(BaseModel):
+    """Un eje del radar de habilidades — el valor crudo del jugador más
+    su score normalizado 0-100 para dibujar el radar. La normalización
+    es RELATIVA al roster (el valor más alto entre jugadores aprobados
+    con perfil = 100, ver get_player_skills), no una escala fija — así
+    que el mismo valor crudo puede dar un score distinto si cambia el
+    resto del roster. Ambos vienen juntos para que el frontend pueda
+    mostrar el número real además de la posición en el radar."""
+
+    key: str
+    label: str
+    value: float | None
+    score: int | None
+
+
 class MyProfileUpdate(BaseModel):
     """Body de PATCH /cfn/register/me/profile — bio y avatar juntos en
     un solo endpoint porque el frontend los edita en el mismo panel
