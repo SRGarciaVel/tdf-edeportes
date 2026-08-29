@@ -57,6 +57,21 @@ export interface SocialLink {
   url: string;
 }
 
+export interface CommentAuthor {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+export interface ProfileComment {
+  id: string;
+  cfn_id: string;
+  body: string;
+  created_at: string;
+  author: CommentAuthor;
+  can_delete: boolean;
+}
+
 export interface CFNPlayer {
   cfn_id: string;
   display_name: string;

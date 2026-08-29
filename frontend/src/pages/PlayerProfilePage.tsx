@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PlayerCard, { CardBackgroundPhoto } from "../components/PlayerCard";
+import CommentsSection from "../components/CommentsSection";
 import SocialLinksRow from "../components/SocialLinksRow";
 import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
@@ -173,6 +174,7 @@ export default function PlayerProfilePage() {
 
         <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           <div className="flex flex-col gap-6">
+            <CommentsSection cfnId={player.cfn_id} />
             <div className="hud-frame bg-tdf-charcoal px-6 py-5">
               <h2 className="font-mono text-xs uppercase text-tdf-muted mb-4">
                 Achievements

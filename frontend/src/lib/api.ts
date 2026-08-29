@@ -22,6 +22,7 @@ import type {
   TwitchLiveStatus,
   SkillAxis,
   SocialLink,
+  ProfileComment,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -153,6 +154,42 @@ export async function listCfnPlayers(): Promise<CFNPlayer[]> {
 export async function getCfnPlayer(cfnId: string): Promise<CFNPlayer> {
   const res = await fetch(`${API_URL}/cfn/players/${cfnId}`);
   return parseOrThrow<CFNPlayer>(res);
+}
+
+// comentarios de perfil (estilo Steam) — auth opcional: sin token trae
+// la lista igual, pero can_delete siempre viene en false
+export async function listProfileComments(
+  cfnId: string,
+  token?: string,
+): Promise<ProfileComment[]> {
+  const res = await fetch(`${API_URL}/profiles/${cfnId}/comments`, {
+    headers: authHeaders(token ?? null),
+  });
+  return parseOrThrow<ProfileComment[]>(res);
+}
+
+export async function createProfileComment(
+  token: string,
+  cfnId: string,
+  body: string,
+): Promise<ProfileComment> {
+  const res = await fetch(`${API_URL}/profiles/${cfnId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ body }),
+  });
+  return parseOrThrow<ProfileComment>(res);
+}
+
+export async function deleteProfileComment(
+  token: string,
+  commentId: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/profiles/comments/${commentId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
 // radar de habilidades para /perfil — público, sin auth, escala

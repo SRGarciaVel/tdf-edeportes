@@ -8,6 +8,7 @@ import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import SkillRadarChart from "../components/SkillRadarChart";
 import Skeleton from "../components/Skeleton";
+import CommentsSection from "../components/CommentsSection";
 import SocialLinksEditor from "../components/SocialLinksEditor";
 import SocialLinksRow from "../components/SocialLinksRow";
 import {
@@ -612,6 +613,8 @@ export default function PerfilPage() {
                 links={socialLinks}
                 onSave={handleSaveSocialLinks}
               />
+
+              <CommentsSection cfnId={player.cfn_id} />
 
               <AchievementsPlaceholder />
             </div>
