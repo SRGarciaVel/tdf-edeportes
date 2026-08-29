@@ -265,9 +265,52 @@ export default function PerfilPage() {
       <SectionLabel index="P1">Mi perfil</SectionLabel>
 
       {loading && (
-        <div className="hud-frame bg-tdf-charcoal px-6 py-5 max-w-md flex flex-col gap-4">
-          <Skeleton className="h-16 w-16 rounded-full" />
-          <Skeleton className="h-20 w-full" />
+        <div className="flex flex-col gap-6">
+          {/* banner + avatar — mismas medidas que el real (h-32
+              sm:h-44, avatar 24, -mt-12) para que no salte el layout
+              cuando entra el contenido de verdad */}
+          <div className="hud-frame bg-tdf-charcoal overflow-hidden">
+            <Skeleton className="h-32 sm:h-44 w-full rounded-none" />
+            <div className="px-6 pb-5 pt-3 flex flex-col sm:flex-row sm:items-start gap-4">
+              <Skeleton className="w-24 h-24 rounded-full shrink-0 -mt-12 border-4 border-tdf-charcoal" />
+              <div className="flex-1 pt-3 sm:pt-4 flex flex-col gap-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
+            <div className="flex flex-col gap-6">
+              <div className="hud-frame bg-tdf-charcoal px-6 py-5 flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-2.5 w-14" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-2.5 w-10" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+                <Skeleton className="h-9 w-28" />
+              </div>
+              <div className="hud-frame bg-tdf-charcoal px-6 py-5 flex flex-col gap-4">
+                <Skeleton className="h-3 w-32" />
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="aspect-square rounded-full" />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <Skeleton className="min-h-[210px] w-full" />
+              <div className="hud-frame bg-tdf-charcoal px-4 py-5 flex flex-col items-center gap-3">
+                <Skeleton className="h-2.5 w-32" />
+                <Skeleton className="h-52 w-52 rounded-full" />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
