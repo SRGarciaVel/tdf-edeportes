@@ -24,6 +24,7 @@ import {
   resizeImageFile,
 } from "../lib/imageResize";
 import { useAuth } from "../lib/auth";
+import { useCachedData } from "../lib/useCachedData";
 import type { CFNMatchStats, CFNPlayer, CFNRegistration } from "../lib/types";
 
 const DAY_OPTIONS = [1, 3, 7] as const;
@@ -353,11 +354,15 @@ function RegistrationForm({
 
 export default function JugadoresPage() {
   const { user, token } = useAuth();
-  const [players, setPlayers] = useState<CFNPlayer[]>([]);
-  const [playersLoading, setPlayersLoading] = useState(true);
-  const [matchStats, setMatchStats] = useState<Map<string, CFNMatchStats>>(
-    new Map(),
-  );
+  const {
+    data: playersData,
+    loading: playersLoading,
+    refresh: refreshPlayersCache,
+  } = useCachedData("cfn-players", listCfnPlayers);
+  const players = playersData ?? [];
+  function refreshPlayers() {
+    refreshPlayersCache();
+  }
   const [statsLoading, setStatsLoading] = useState(true);
   const [days, setDays] = useState<(typeof DAY_OPTIONS)[number]>(7);
   const [historyPlayer, setHistoryPlayer] = useState<CFNPlayer | null>(null);
@@ -376,17 +381,9 @@ export default function JugadoresPage() {
   );
   const [sortBy, setSortBy] = useState<"lp" | "mr" | "name">("lp");
 
-  function refreshPlayers() {
-    listCfnPlayers()
-      .then(setPlayers)
-      .catch(() => setPlayers([]));
-  }
-
-  useEffect(() => {
-    refreshPlayers();
-    setPlayersLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const [matchStats, setMatchStats] = useState<Map<string, CFNMatchStats>>(
+    new Map(),
+  );
 
   useEffect(() => {
     if (!token) {

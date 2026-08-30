@@ -1,5 +1,5 @@
 import { Radio } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import InitialsAvatar from "../components/InitialsAvatar";
 import InstagramEmbed from "../components/InstagramEmbed";
@@ -14,12 +14,7 @@ import {
   listHighlights,
 } from "../lib/api";
 import { characterColorClass } from "../lib/characterColors";
-import type {
-  CFNPlayer,
-  EventItem,
-  InstagramHighlight,
-  RecentCommentEntry,
-} from "../lib/types";
+import { useCachedData } from "../lib/useCachedData";
 import { useFriendsLiveStatus } from "../lib/useFriendsLiveStatus";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 
@@ -44,59 +39,48 @@ function relativeTime(iso: string): string {
 export default function HomePage() {
   const liveStatus = useTwitchLiveStatus();
   const friendsLive = useFriendsLiveStatus();
-  const [nextEvent, setNextEvent] = useState<EventItem | null>(null);
-  const [loadingEvent, setLoadingEvent] = useState(true);
-  const [communityPreview, setCommunityPreview] = useState<CFNPlayer[]>([]);
-  const [loadingPlayers, setLoadingPlayers] = useState(true);
-  const [recentComments, setRecentComments] = useState<RecentCommentEntry[]>(
-    [],
+
+  const { data: eventsData, loading: loadingEvent } = useCachedData(
+    "events-public",
+    () => listEvents(null),
   );
-  const [loadingComments, setLoadingComments] = useState(true);
-  const [highlights, setHighlights] = useState<InstagramHighlight[]>([]);
-  const [loadingHighlights, setLoadingHighlights] = useState(true);
+  const nextEvent = useMemo(() => {
+    const upcoming = (eventsData ?? [])
+      .filter((e) => new Date(e.start_at) > new Date())
+      .sort((a, b) => a.start_at.localeCompare(b.start_at));
+    return upcoming[0] ?? null;
+  }, [eventsData]);
 
-  useEffect(() => {
-    listEvents(null)
-      .then((events) => {
-        const upcoming = events
-          .filter((e) => new Date(e.start_at) > new Date())
-          .sort((a, b) => a.start_at.localeCompare(b.start_at));
-        setNextEvent(upcoming[0] ?? null);
-      })
-      .finally(() => setLoadingEvent(false));
-  }, []);
+  // mismo key "cfn-players" que usa /jugadores — visitar cualquiera de
+  // las dos páginas calienta el caché para la otra también, gratis
+  const { data: playersData, loading: loadingPlayers } = useCachedData(
+    "cfn-players",
+    listCfnPlayers,
+  );
+  const communityPreview = useMemo(() => {
+    // los mejores rankeados primero (MR más alto arriba) — sin MR (sin
+    // partidas registradas todavía) van al final, no antes que alguien
+    // con rango real
+    const sorted = [...(playersData ?? [])].sort((a, b) => {
+      if (a.master_rating == null && b.master_rating == null) return 0;
+      if (a.master_rating == null) return 1;
+      if (b.master_rating == null) return -1;
+      return b.master_rating - a.master_rating;
+    });
+    return sorted.slice(0, COMMUNITY_PREVIEW_COUNT);
+  }, [playersData]);
 
-  useEffect(() => {
-    listCfnPlayers()
-      .then((players) => {
-        // los mejores rankeados primero (MR más alto arriba) — sin MR
-        // (sin partidas registradas todavía) van al final, no antes
-        // que alguien con rango real
-        const sorted = [...players].sort((a, b) => {
-          if (a.master_rating == null && b.master_rating == null) return 0;
-          if (a.master_rating == null) return 1;
-          if (b.master_rating == null) return -1;
-          return b.master_rating - a.master_rating;
-        });
-        setCommunityPreview(sorted.slice(0, COMMUNITY_PREVIEW_COUNT));
-      })
-      .catch(() => setCommunityPreview([]))
-      .finally(() => setLoadingPlayers(false));
-  }, []);
+  const { data: recentCommentsData, loading: loadingComments } = useCachedData(
+    "recent-comments",
+    getRecentComments,
+  );
+  const recentComments = recentCommentsData ?? [];
 
-  useEffect(() => {
-    getRecentComments()
-      .then(setRecentComments)
-      .catch(() => setRecentComments([]))
-      .finally(() => setLoadingComments(false));
-  }, []);
-
-  useEffect(() => {
-    listHighlights()
-      .then(setHighlights)
-      .catch(() => setHighlights([]))
-      .finally(() => setLoadingHighlights(false));
-  }, []);
+  const { data: highlightsData, loading: loadingHighlights } = useCachedData(
+    "instagram-highlights",
+    listHighlights,
+  );
+  const highlights = highlightsData ?? [];
 
   return (
     <Layout>
