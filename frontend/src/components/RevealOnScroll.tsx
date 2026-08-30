@@ -6,6 +6,9 @@ type Direction = "left" | "right" | "up";
 // recorrido largo a propósito — pedido explícito de Seba (30-08-2026):
 // "marcada, tipo Capcom", no un desplazamiento sutil de 20-30px
 const DISTANCE = 140;
+// duración de la animación — subida de 0.8s a 1.6s a pedido de Seba
+// (30-08-2026): la primera versión se sentía "muy rápida"
+const DURATION = 1.6;
 
 function getVariants(direction: Direction): Variants {
   const offset =
@@ -62,7 +65,7 @@ export default function RevealOnScroll({
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: DURATION, delay, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}
     </motion.div>

@@ -161,7 +161,7 @@ export default function HomePage() {
                 centro real cae cerca del 30% del alto total. */}
             <RevealOnScroll
               direction="right"
-              delay={0.15}
+              delay={0.3}
               className="relative shrink-0 mx-auto lg:mx-0"
             >
               <div
