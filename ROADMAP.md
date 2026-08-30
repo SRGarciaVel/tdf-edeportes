@@ -222,15 +222,26 @@ verdad, no lo que decía la IA de Google sin chequear.
 - **Fightcade** — la plataforma donde vive la comunidad competitiva actual
   de Third Strike. Tiene una API pública real (`fightcade.com/api/`) y un
   wrapper de código abierto genuino, `fightcade-api` de xBiggs (confirmado
-  en npm/GitHub/JSR, no inventado). El juego está trackeado bajo el ID
+  en npm/GitHub/JSR, activamente mantenido, TypeScript con validación
+  `zod`, MIT — Seba lo encontró de nuevo el 30-08-2026, sigue siendo una
+  librería legítima y bien hecha). El juego está trackeado bajo el ID
   `sfiii3n` — ojo que también existe `sfiii3nr1` (otra variante de ROM),
   hay que confirmar cuál juega la comunidad antes de asumir.
-  **Bloqueante activo ahora mismo (confirmado en vivo el 20-08-2026):** la
-  API pública de Fightcade está caída por cambios de Cloudflare — un sitio
-  de terceros que la usa (fightcade.voidtalker.com) muestra el aviso en
-  vivo. No es algo resuelto, es un bloqueo actual. Primer paso obligado al
-  retomar esto: volver a probar si la API ya responde antes de construir
-  nada arriba.
+  **Sigue bloqueado (re-verificado en vivo el 30-08-2026, no solo leído):**
+  un intento real de `fightcade.com/api/` rebotó por detección de bots de
+  Cloudflare, mismo síntoma reportado por un desarrollador externo en el
+  Discord de Cloudflare desde octubre/noviembre 2025 ("fightcade
+  developers not responding to anyone's requests for assistance") — no es
+  un problema nuevo ni resuelto, lleva bloqueado casi un año. La librería
+  de xBiggs no cambia nada acá: es un cliente HTTP prolijo sobre el MISMO
+  endpoint bloqueado, cualquier librería pegaría contra el mismo desafío
+  de Cloudflare. **Decisión, mismo criterio que el Turnstile de Capcom en
+  §12:** no se automatiza evadir un sistema anti-bot de un tercero, sin
+  importar lo inocente del propósito — no es una limitación técnica que
+  se resuelva con más esfuerzo, es un límite que este proyecto no cruza.
+  Sigue parado hasta que Fightcade arregle su propia configuración de
+  Cloudflare o abra un canal oficial para integraciones — no hay nada más
+  que investigar de nuestro lado por ahora.
 - **Start.gg** — API GraphQL real y bien documentada, pero para otra cosa:
   torneos/brackets/resultados de eventos, no estadísticas de jugadores.
   Complementario, no un reemplazo de Fightcade.
