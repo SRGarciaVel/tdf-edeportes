@@ -71,7 +71,10 @@ para tener un molde consistente donde seguir incorporando contenido real.
 - [x] Chips de comunidad (Twitch/Discord/7TV) en el navbar.
 - [x] `/puntos`: molde visual (podio + tabla), sin mecánica real todavía —
       ver `SPECS.md §13`, requiere definir con el CEO/staff cómo se
-      acumulan los puntos antes de implementar de verdad.
+      acumulan los puntos antes de implementar de verdad. **Próximo paso
+      confirmado (29-08-2026):** el CEO va a estar disponible durante la
+      semana para definir esto en conjunto con la integración de Twitch —
+      primer punto pendiente real de la Fase 2 (ver más abajo).
 - [x] `/tierlist`: herramienta de tier lists para la comunidad, basada
       100% en plantillas subidas por la propia comunidad (no hay roster
       propio de SF6/Third Strike incorporado al sitio — decisión de
@@ -236,6 +239,76 @@ verdad, no lo que decía la IA de Google sin chequear.
   entrenamiento de IA para jugar el juego, no pensada como fuente de datos
   para un sitio — el fit que sugirió la IA de Google parece forzado, hay
   que confirmarlo antes de darlo por bueno).
+
+## Sesión 29-08-2026 — Perfil ampliado, comunidad y moderación
+
+**Origen:** conversación larga partiendo de "actualicemos el navbar/Home"
+tras notar que el sitio ganó profundidad — terminó siendo la sesión más
+grande hasta ahora. Todo lo de acá está construido, probado contra Postgres
+real y desplegado; se documenta acá porque no existía un lugar propio
+todavía.
+
+- [x] **Perfil ampliado** (`/perfil` propio, `/jugadores/:cfnId` público):
+      bio, cambio de nombre libre, avatar propio (con GIF animado — bypassea
+      el pipeline de canvas a propósito, canvas nunca puede exportar
+      animación), banner de portada CON editor de recorte/zoom estilo
+      Discord (`BannerCropModal`, formato de embed tokenless de Meta),
+      radar de habilidades (escala relativa al roster, el mejor de cada
+      categoría = 100), redes sociales (Instagram/X/YouTube/Twitch/otro,
+      hasta 5, con ícono de marca vía `react-icons`), foto de fondo de la
+      card editable directo desde la vista previa en vivo. Achievements
+      queda como placeholder honesto ("Muy pronto") — pendiente definir la
+      mecánica con calma, no ahora.
+- [x] **Comentarios de perfil** — estilo Steam, libre para cualquier cuenta
+      de Twitch (esté o no en el roster), borra el autor/dueño del
+      perfil/staff. Sección "Actividad reciente" en Home con los últimos
+      de todo el sitio.
+- [x] **Sistema de notificaciones** — extensible a futuros tipos, hoy solo
+      `comment_received`. Campanita en el navbar (separada del menú de
+      usuario a propósito, para no compartir click-target), se marcan
+      leídas en bloque al abrir el desplegable.
+- [x] **Panel de Administración** (`/admin`) — nivel `is_admin` por encima
+      de Staff, solo AckermanFG y bazthyfreeman (asignado a mano en la
+      base, nunca vía la propia página). Gestión de Staff y del catálogo de
+      roles (crear/asignar/sacar), dashboard técnico (roster + salud del
+      sitio en un solo vistazo).
+- [x] **FODA de la comunidad** (`/foda`) — actividad pedida por el CEO,
+      centrada en Pochoclo23/Younghou/Kane Blueriver pero abierta a
+      cualquier nombre. Público o privado (con descarga como imagen para
+      quien no tiene cuenta — única copia que le queda). Cuadrantes con
+      color semántico, textareas que crecen solas.
+- [x] **Recopilaciones de Instagram** (`/recopilaciones`) — posts curados a
+      mano por Staff desde @tdf_edeportes, embed oficial tokenless (sin
+      conexión a ninguna API propia), enmarcados en panel oscuro
+      (Instagram no ofrece tema oscuro real).
+- [x] **Streams de Younghou/Pochoclo23 destacados en Home** cuando están en
+      vivo (los dos a la vez si coincide, sin forzar elegir uno) + pestañas
+      de chat por canal en el panel deslizable, solo mientras están en vivo.
+- [x] **Auditoría de seguridad** (29-08-2026, continuación de la del
+      18-08-2026) — hallazgo real más serio: `avatar_override`/`banner_url`/
+      `card_background_url` nunca validaban ser una imagen de verdad
+      (aceptaban una URL externa cualquiera, filtraba IP de quien mirara el
+      perfil). Corregido con el mismo patrón que ya existía en
+      `tier_lists.py` pero nunca se había aplicado acá. Más: rate limit
+      propio en comentarios, guard de arranque si `JWT_SECRET` sigue en su
+      valor por default en producción.
+- [x] Caché chico en memoria (`useCachedData`) para `/jugadores` y Home —
+      evita el skeleton al volver a una página ya visitada, sin librería
+      nueva. Acotado a esas dos páginas a propósito, ver conversación sobre
+      riesgo de datos viejos antes de extenderlo a más.
+- [x] Fix CSP: `instagram.com` faltaba en `script-src`/`frame-src`/
+      `connect-src` cuando se agregó el embed de recopilaciones (estaba en
+      modo report-only, nunca rompió nada visible pero habría roto el embed
+      si algún día se pasa a enforced). `Permissions-Policy` simplificado
+      (se sacó el intento de opt-out de FLoC/Topics, el nombre del feature
+      sigue cambiando entre versiones de Chrome y no aporta mucho).
+- [x] **Búsqueda del navbar → perfil de jugador**: bug encontrado de paso
+      (mismo patrón que el de Home) — el resultado de buscar un jugador
+      mandaba al listado genérico en vez de al perfil de esa persona.
+      Corregido.
+- [ ] **Pendiente real, sin empezar:** el Home todavía no tiene la sección
+      de "Hero" nueva mencionada en la sesión del 21-08-2026 (bullet más
+      arriba, sigue sin aplicarse). No se retomó esta sesión tampoco.
 
 ## Notas de proceso
 
