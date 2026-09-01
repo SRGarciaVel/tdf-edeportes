@@ -623,6 +623,12 @@ def get_character_win_rates(
         )
         _dismiss_cookie_banner(page)
         _close_open_modal(page)
+        # dump temprano, antes de cualquier click - si algo de lo de
+        # abajo falla, igual queda un HTML/screenshot util para ajustar
+        # selectores (antes se guardaba solo al final, y una corrida
+        # real de Seba mostró que perdíamos el debug entero si el click
+        # de "Total" fallaba antes de llegar a esa línea).
+        _debug_dump(page, f"character_stats_{cfn_id}_00_loaded", debug)
 
         # click al sub-tab "Characters" - mismo patron que "Results" en
         # get_advanced_stats (no tiene URL propia, hay que clickearlo a
@@ -633,13 +639,17 @@ def get_character_win_rates(
             characters_tab.click(timeout=5000)
             page.wait_for_timeout(800)
 
-        # el filtro de ventana temporal (1/30/90 dias, "Total") - "Total"
-        # es el que da el historico completo, que es lo que queremos acá
-        # (a diferencia de cfn_matches, que solo tiene lo que vimos
-        # nosotros desde que empezamos a trackear).
-        total_filter = page.get_by_text("Total", exact=True).first
-        if total_filter.count() > 0:
-            total_filter.click(timeout=5000)
+        # El filtro de ventana temporal ("Total" = historico completo,
+        # que es lo que queremos acá, a diferencia de cfn_matches que
+        # solo tiene lo que vimos nosotros desde que empezamos a
+        # trackear) es un <select> NATIVO del HTML, no un botón/link -
+        # confirmado por el error real en la corrida de Seba
+        # (01-09-2026): "locator resolved to <option value="-1">Total
+        # </option>". Un <option> dentro de un <select> no se puede
+        # "clickear" con Playwright, hay que usar select_option().
+        total_select = page.locator("select:has(option:text-is('Total'))").first
+        if total_select.count() > 0:
+            total_select.select_option(label="Total")
             page.wait_for_timeout(800)
 
         _debug_dump(page, f"character_stats_{cfn_id}", debug)
