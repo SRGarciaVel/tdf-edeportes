@@ -10,9 +10,17 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_authenticated, require_staff
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.models import CFNMatch, CFNProfile, CFNRegistration, ProfileComment, User
+from app.models import (
+    CFNCharacterStats,
+    CFNMatch,
+    CFNProfile,
+    CFNRegistration,
+    ProfileComment,
+    User,
+)
 from app.schemas.cfn import (
     CardBackgroundUpdate,
+    CFNCharacterStatsRead,
     CFNMatchRead,
     CFNMatchStats,
     CFNPlayerRead,
@@ -196,6 +204,63 @@ def get_recent_matches(
         .order_by(CFNMatch.played_at.desc())
         .limit(limit)
         .all()
+    )
+
+
+@router.get(
+    "/players/{cfn_id}/character-stats/{character_name}",
+    response_model=CFNCharacterStatsRead,
+)
+def get_character_stats(
+    cfn_id: str,
+    character_name: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> CFNCharacterStatsRead:
+    """Win rate TOTAL (histórico completo, no una ventana de días) de un
+    jugador con un personaje puntual. Público, sin auth — pensado para
+    consumo externo (tdf-random-select lo llama al banear un personaje
+    en el draft, para mostrarlo unos segundos en el HUD).
+
+    A diferencia de /players/{id}/matches (que agrega cfn_matches, solo
+    cubre lo que vimos nosotros desde que empezamos a trackear), esto
+    lee un cache aparte (cfn_character_stats) que sí refleja el
+    histórico completo del jugador con ese personaje, tal cual lo
+    muestra Capcom.
+
+    character_name no distingue mayúsculas/acentos de más o de menos en
+    los espacios (ej. "chun-li", "Chun-Li" y "CHUN-LI" matchean igual) -
+    el llamador no necesita saber el casing exacto que usa Capcom.
+
+    200 con ever_played=False (no 404) si el personaje no está en
+    nuestro cache para ese jugador - "nunca lo jugó" es una respuesta
+    válida, no un error. 404 solo si el cfn_id no está en nuestro
+    roster en absoluto (mismo criterio que el resto de este archivo).
+    """
+    _get_approved_registration(db, cfn_id)
+
+    normalized = character_name.strip().lower()
+    row = (
+        db.query(CFNCharacterStats)
+        .filter(
+            CFNCharacterStats.cfn_id == cfn_id,
+            func.lower(CFNCharacterStats.character_name) == normalized,
+        )
+        .first()
+    )
+    if row is None or not row.matches_played:
+        return CFNCharacterStatsRead(
+            cfn_id=cfn_id,
+            character_name=character_name,
+            matches_played=None,
+            win_rate=None,
+            ever_played=False,
+        )
+    return CFNCharacterStatsRead(
+        cfn_id=cfn_id,
+        character_name=row.character_name,
+        matches_played=row.matches_played,
+        win_rate=row.win_rate,
+        ever_played=True,
     )
 
 

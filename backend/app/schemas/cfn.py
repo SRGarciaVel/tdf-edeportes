@@ -286,6 +286,26 @@ class CFNMatchStats(BaseModel):
     characters: dict[str, int]
 
 
+class CFNCharacterStatsRead(BaseModel):
+    """Win rate TOTAL (histórico completo) de un jugador con un personaje
+    puntual — a diferencia de CFNMatchStats (ventana de días, calculado
+    de cfn_matches), este número viene directo de la pestaña /play del
+    perfil de Buckler's Boot Camp, así que sí cubre partidas de ANTES de
+    que empezáramos a trackear a la persona. Pensado para consumo de
+    apps externas (ej. tdf-random-select, que lo muestra en el HUD del
+    draft al banear un personaje)."""
+
+    cfn_id: str
+    character_name: str
+    # None en los dos si el personaje figura en la respuesta pero sin
+    # datos suficientes; ever_played=False (matches_played es None o 0)
+    # es el caso "nunca lo jugó" que el llamador tiene que mostrar
+    # distinto de un winrate real de 0%.
+    matches_played: int | None
+    win_rate: float | None
+    ever_played: bool
+
+
 class CFNMatchRead(BaseModel):
     """Una partida individual — a diferencia de CFNMatchStats (el
     agregado), esto es para cuando hace falta ver el detalle real, partida

@@ -44,7 +44,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.database import SessionLocal
-from app.models import CFNMatch, CFNProfile, CFNRegistration
+from app.models import CFNCharacterStats, CFNMatch, CFNProfile, CFNRegistration
 from app.services.cfn_scraper import refresh_all_players
 
 
@@ -146,6 +146,34 @@ def save_advanced_stats(db, stats: list[dict]) -> int:
     return saved
 
 
+def save_character_stats(db, character_stats: list[dict]) -> int:
+    """Win rate TOTAL por personaje (ver get_character_win_rates en
+    cfn_scraper.py) — a diferencia de save_matches (partidas
+    individuales, se acumulan), esto SÍ se pisa cada corrida: el número
+    que muestra Capcom ya es el acumulado total, no hace falta que
+    nosotros lo vayamos sumando nosotros mismos."""
+    saved = 0
+    for s in character_stats:
+        row = (
+            db.query(CFNCharacterStats)
+            .filter(
+                CFNCharacterStats.cfn_id == s["cfn_id"],
+                CFNCharacterStats.character_name == s["character_name"],
+            )
+            .first()
+        )
+        if row is None:
+            row = CFNCharacterStats(
+                cfn_id=s["cfn_id"], character_name=s["character_name"]
+            )
+            db.add(row)
+        row.matches_played = s["matches_played"]
+        row.win_rate = s["win_rate"]
+        saved += 1
+    db.commit()
+    return saved
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true")
@@ -180,7 +208,7 @@ def main() -> None:
     )
 
     print(f"Consultando {len(players)} jugadores...")
-    profiles, matches, advanced_stats = refresh_all_players(
+    profiles, matches, advanced_stats, character_stats = refresh_all_players(
         list(players.keys()), debug=args.debug, known_match_keys=known_match_keys
     )
 
@@ -189,6 +217,12 @@ def main() -> None:
     saved_records = save_advanced_stats(db, advanced_stats)
     print(
         f"\nRecords: {saved_records} perfiles con stats de Drive Impact/Perfect Parry actualizados"
+    )
+
+    saved_char_stats = save_character_stats(db, character_stats)
+    print(
+        f"\nWin rate por personaje: {saved_char_stats} filas actualizadas "
+        f"({len(character_stats)} personajes-jugador en total)"
     )
 
     print(f"\nHistorial: {len(matches)} partidas encontradas en total")

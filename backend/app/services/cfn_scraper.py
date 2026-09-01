@@ -591,16 +591,126 @@ def get_advanced_stats(
     return result
 
 
+def get_character_win_rates(
+    context: BrowserContext, cfn_id: str, debug: bool = False
+) -> list[dict]:
+    """Win rate TOTAL por personaje (histórico completo, no una ventana
+    de días) - de la sub-pestaña "Characters" dentro de /play, filtro
+    "Total" (no confundir con get_advanced_stats, que lee la sub-pestaña
+    "Results" de esa misma URL - son dos secciones distintas de la
+    misma página).
+
+    NO confirmado contra HTML real todavía (mismo caso que
+    get_advanced_stats) - Seba solo compartió la URL de referencia
+    (streetfighter.com/6/buckler/es-es/profile/{cfn_id}/play), no una
+    captura del HTML real de esta sub-pestaña puntual. Correr con
+    --debug en la primera corrida real y ajustar selectores contra
+    debug_output/ si esto vuelve todo vacío.
+
+    Devuelve una lista de dicts (uno por personaje que la persona jugó
+    alguna vez) con character_name/matches_played/win_rate - lista
+    vacía si no se pudo leer nada (el llamador decide qué hacer, mismo
+    criterio que el resto de este archivo: mejor datos parciales o
+    vacíos que tumbar todo el refresh).
+    """
+    page = context.new_page()
+    results: list[dict] = []
+    try:
+        page.goto(
+            STATS_URL_TEMPLATE.format(cfn_id=cfn_id),
+            wait_until="domcontentloaded",
+            timeout=45000,
+        )
+        _dismiss_cookie_banner(page)
+        _close_open_modal(page)
+
+        # click al sub-tab "Characters" - mismo patron que "Results" en
+        # get_advanced_stats (no tiene URL propia, hay que clickearlo a
+        # mano). Si no aparece, no clickea nada y sigue por si esta
+        # sub-pestaña ya viene seleccionada por default.
+        characters_tab = page.get_by_text("Characters", exact=True).first
+        if characters_tab.count() > 0:
+            characters_tab.click(timeout=5000)
+            page.wait_for_timeout(800)
+
+        # el filtro de ventana temporal (1/30/90 dias, "Total") - "Total"
+        # es el que da el historico completo, que es lo que queremos acá
+        # (a diferencia de cfn_matches, que solo tiene lo que vimos
+        # nosotros desde que empezamos a trackear).
+        total_filter = page.get_by_text("Total", exact=True).first
+        if total_filter.count() > 0:
+            total_filter.click(timeout=5000)
+            page.wait_for_timeout(800)
+
+        _debug_dump(page, f"character_stats_{cfn_id}", debug)
+
+        # cada fila: nombre del personaje + win rate + cantidad de
+        # partidas - selector generico por patron de clase (mismo
+        # criterio que battle_data_* en get_match_history), ajustar
+        # contra HTML real cuando se confirme.
+        rows = page.locator('[class*="character_result_row__"]')
+        count = rows.count()
+        for i in range(count):
+            try:
+                row = rows.nth(i)
+                character_name = (
+                    row.locator('[class*="character_result_name__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+                win_rate_text = (
+                    row.locator('[class*="character_result_winrate__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+                matches_text = (
+                    row.locator('[class*="character_result_matches__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+
+                win_rate_digits = re.search(r"([\d]+\.?[\d]*)", win_rate_text)
+                win_rate = (
+                    float(win_rate_digits.group(1)) / 100 if win_rate_digits else None
+                )
+                matches_digits = re.search(r"(\d+)", matches_text)
+                matches_played = (
+                    int(matches_digits.group(1)) if matches_digits else None
+                )
+
+                results.append(
+                    {
+                        "cfn_id": cfn_id,
+                        "character_name": character_name,
+                        "matches_played": matches_played,
+                        "win_rate": win_rate,
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001 — una fila rara no debe tumbar el resto
+                logger.warning(
+                    "No se pudo parsear la fila de personaje %d de %s: %s",
+                    i,
+                    cfn_id,
+                    exc,
+                )
+                continue
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("get_character_win_rates falló para %s: %s", cfn_id, exc)
+    finally:
+        page.close()
+    return results
+
+
 def refresh_all_players(
     cfn_ids: list[str],
     debug: bool = False,
     known_match_keys: frozenset[tuple[str, datetime, str]] = frozenset(),
-) -> tuple[list[dict], list[dict], list[dict]]:
+) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
     """Carga la sesión guardada una sola vez y consulta todos los CFN IDs
     con ella — evita repetir el login (que ni siquiera se automatiza) por
-    jugador. Devuelve (perfiles, partidas, records) — un solo
-    browser/sesión para los tres, no se abre una sesión aparte para cada
-    tipo de dato.
+    jugador. Devuelve (perfiles, partidas, records, win_rates_por_personaje)
+    - un solo browser/sesión para los cuatro, no se abre una sesión aparte
+    para cada tipo de dato.
 
     `known_match_keys` se pasa tal cual a get_match_history — ver ahí para
     qué sirve (evitar el costo extra de abrir el modal de detalle en
@@ -637,10 +747,12 @@ def refresh_all_players(
         profiles = []
         matches = []
         advanced_stats = []
+        character_stats = []
         for cfn_id in cfn_ids:
             profiles.append(get_player_stats(context, cfn_id, debug))
             matches.extend(get_match_history(context, cfn_id, debug, known_match_keys))
             advanced_stats.append(get_advanced_stats(context, cfn_id, debug))
+            character_stats.extend(get_character_win_rates(context, cfn_id, debug))
 
         browser.close()
-        return profiles, matches, advanced_stats
+        return profiles, matches, advanced_stats, character_stats
