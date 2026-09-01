@@ -595,17 +595,22 @@ def get_character_win_rates(
     context: BrowserContext, cfn_id: str, debug: bool = False
 ) -> list[dict]:
     """Win rate TOTAL por personaje (histórico completo, no una ventana
-    de días) - de la sub-pestaña "Characters" dentro de /play, filtro
+    de días) - de la sub-pestaña "Win Rate" dentro de /play, filtro
     "Total" (no confundir con get_advanced_stats, que lee la sub-pestaña
-    "Results" de esa misma URL - son dos secciones distintas de la
-    misma página).
+    "Results" de esa misma URL - son secciones distintas de la misma
+    página).
 
-    NO confirmado contra HTML real todavía (mismo caso que
-    get_advanced_stats) - Seba solo compartió la URL de referencia
-    (streetfighter.com/6/buckler/es-es/profile/{cfn_id}/play), no una
-    captura del HTML real de esta sub-pestaña puntual. Correr con
-    --debug en la primera corrida real y ajustar selectores contra
-    debug_output/ si esto vuelve todo vacío.
+    Selectores CONFIRMADOS contra HTML real (character_stats_3987753314.html,
+    Seba, 01-09-2026): la pestaña de arriba se llama "Win Rate", no
+    "Characters" (nombre que había inventado sin ver el HTML - queda
+    seleccionada por default, `<li class="play_nav_active__...">Win
+    Rate</li>`, así que ni hace falta clickearla). El filtro de ventana
+    temporal es un <select> nativo (confirmado también en esa misma
+    corrida - ver el fix de select_option() más abajo). Cada fila de
+    personaje: `winning_rate_name__` (nombre), `winning_rate_rate__`
+    (texto "Wins: X/Battles: Y"), `winning_rate_number__` (win rate en
+    %). La primera fila siempre es "ANY" - agregado de todos los
+    personajes juntos, no un personaje real, se descarta.
 
     Devuelve una lista de dicts (uno por personaje que la persona jugó
     alguna vez) con character_name/matches_played/win_rate - lista
@@ -630,14 +635,9 @@ def get_character_win_rates(
         # de "Total" fallaba antes de llegar a esa línea).
         _debug_dump(page, f"character_stats_{cfn_id}_00_loaded", debug)
 
-        # click al sub-tab "Characters" - mismo patron que "Results" en
-        # get_advanced_stats (no tiene URL propia, hay que clickearlo a
-        # mano). Si no aparece, no clickea nada y sigue por si esta
-        # sub-pestaña ya viene seleccionada por default.
-        characters_tab = page.get_by_text("Characters", exact=True).first
-        if characters_tab.count() > 0:
-            characters_tab.click(timeout=5000)
-            page.wait_for_timeout(800)
+        # La sub-pestaña "Win Rate" ya viene seleccionada por default
+        # (confirmado en HTML real) - no hace falta clickear nada acá,
+        # a diferencia de "Results" en get_advanced_stats.
 
         # El filtro de ventana temporal ("Total" = historico completo,
         # que es lo que queremos acá, a diferencia de cfn_matches que
@@ -654,27 +654,34 @@ def get_character_win_rates(
 
         _debug_dump(page, f"character_stats_{cfn_id}", debug)
 
-        # cada fila: nombre del personaje + win rate + cantidad de
-        # partidas - selector generico por patron de clase (mismo
-        # criterio que battle_data_* en get_match_history), ajustar
-        # contra HTML real cuando se confirme.
-        rows = page.locator('[class*="character_result_row__"]')
+        # El <ul> de las filas no tiene clase propia, pero su padre
+        # directo (winning_rate_inner__) sí - escopear con > para no
+        # matchear tambien el <ul class="bar_graf"> anidado adentro de
+        # cada fila (la barra de progreso visual de cada personaje).
+        rows = page.locator(
+            'article[class*="winning_rate_winning_rate__"] > div > ul > li'
+        )
         count = rows.count()
         for i in range(count):
             try:
                 row = rows.nth(i)
                 character_name = (
-                    row.locator('[class*="character_result_name__"]')
+                    row.locator('[class*="winning_rate_name__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+                if character_name.strip().upper() == "ANY":
+                    # fila agregada ("todos los personajes juntos"), no
+                    # es un personaje real - siempre la primera fila.
+                    continue
+
+                matches_text = (
+                    row.locator('[class*="winning_rate_rate__"]')
                     .inner_text(timeout=3000)
                     .strip()
                 )
                 win_rate_text = (
-                    row.locator('[class*="character_result_winrate__"]')
-                    .inner_text(timeout=3000)
-                    .strip()
-                )
-                matches_text = (
-                    row.locator('[class*="character_result_matches__"]')
+                    row.locator('[class*="winning_rate_number__"]')
                     .inner_text(timeout=3000)
                     .strip()
                 )
@@ -683,7 +690,11 @@ def get_character_win_rates(
                 win_rate = (
                     float(win_rate_digits.group(1)) / 100 if win_rate_digits else None
                 )
-                matches_digits = re.search(r"(\d+)", matches_text)
+                # el texto es "Wins: X/Battles: Y" - Battles es el total
+                # de partidas jugadas, distinto de Wins (que también es
+                # un numero en el mismo texto, hay que apuntar al
+                # correcto explícitamente).
+                matches_digits = re.search(r"Battles:\s*(\d+)", matches_text)
                 matches_played = (
                     int(matches_digits.group(1)) if matches_digits else None
                 )
