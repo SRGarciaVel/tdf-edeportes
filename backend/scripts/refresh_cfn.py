@@ -151,9 +151,24 @@ def save_character_stats(db, character_stats: list[dict]) -> int:
     cfn_scraper.py) — a diferencia de save_matches (partidas
     individuales, se acumulan), esto SÍ se pisa cada corrida: el número
     que muestra Capcom ya es el acumulado total, no hace falta que
-    nosotros lo vayamos sumando nosotros mismos."""
-    saved = 0
+    nosotros lo vayamos sumando nosotros mismos.
+
+    Deduplica por (cfn_id, character_name) ANTES de tocar la base - bug
+    real encontrado en la primera carga contra Supabase (01-09-2026):
+    el scraper devolvió "RANDOM" dos veces para un mismo jugador, y como
+    la tabla estaba vacía (primera carga, sin filas previas que
+    `.first()` pudiera encontrar), SQLAlchemy 2.0 agrupó todos los
+    inserts pendientes en un solo INSERT masivo al hacer commit -
+    ninguna de las dos filas "RANDOM" se detectó como duplicada de la
+    otra hasta que Postgres tiró el error de la constraint única. Se
+    queda con la ÚLTIMA aparición si hay más de una.
+    """
+    deduped: dict[tuple[str, str], dict] = {}
     for s in character_stats:
+        deduped[(s["cfn_id"], s["character_name"])] = s
+
+    saved = 0
+    for s in deduped.values():
         row = (
             db.query(CFNCharacterStats)
             .filter(
