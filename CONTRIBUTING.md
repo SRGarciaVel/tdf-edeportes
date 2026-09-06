@@ -2,7 +2,7 @@
 
 Gracias por sumarte al proyecto. Este documento es la guía práctica para
 trabajar en el código — no repite lo que ya está en otros archivos, así que
-antes de tocar nada, leé en este orden:
+antes de tocar nada, lee en este orden:
 
 1. [`README.md`](./README.md) — qué es el proyecto y cómo correrlo local.
 2. [`DOCUMENTACION.md`](./DOCUMENTACION.md) — qué hace cada parte del sitio
@@ -22,7 +22,7 @@ probar antes de dar algo por terminado) igual valen para cualquiera.
 
 ## Configurar el entorno local
 
-Seguí la sección "Cómo correrlo (local)" del `README.md`. Resumen rápido:
+Sigue la sección "Cómo correrlo (local)" del `README.md`. Resumen rápido:
 
 ```bash
 git clone <repo-url> tdf-edeportes
@@ -55,9 +55,9 @@ simple de rama por cambio:
    donde alguien más pueda revisar antes de que se mezcle.
 4. Seba revisa y mergea (o pide ajustes).
 
-Si esto no te calza con cómo prefieren trabajar en el equipo, es una
-sugerencia de arranque, no una regla grabada en piedra — ajústenla y
-actualicen esta sección.
+Si esto no calza con cómo prefieren trabajar en el equipo, es una sugerencia
+de arranque, no una regla grabada en piedra — se puede ajustar y actualizar
+esta sección.
 
 ---
 
@@ -67,7 +67,7 @@ Todo lo de `CODESTYLE.md` aplica (nomenclatura en inglés, `strict: true`,
 nada de `any` sin justificar en comentario, un archivo con una sola
 responsabilidad). Además, específico de este proyecto:
 
-- **Antes de crear un componente nuevo, revisá si ya existe uno reusable.**
+- **Antes de crear un componente nuevo, revisa si ya existe uno reusable.**
   El proyecto tiene bastantes piezas comunes en `frontend/src/components/`:
   `Layout`, `SectionLabel`, `Skeleton`, `InitialsAvatar`, `PlayerCard`, y
   varios editores/embeds específicos. Reusarlos mantiene el sitio
@@ -86,7 +86,7 @@ responsabilidad). Además, específico de este proyecto:
   `font-body` (texto de lectura). El patrón `hud-frame` es el panel base
   que se usa en casi todas las pantallas — mira cómo se usa en una página
   existente antes de armar un panel nuevo desde cero.
-- **Antes de pedir review, corré:**
+- **Antes de pedir review, corre:**
   ```bash
   cd frontend
   npx tsc --noEmit
@@ -119,7 +119,7 @@ no admite excepciones.
 | contá, mirá, tocá, probá | cuéntanos/cuenta, mira, toca, prueba |
 | necesitás | necesitas |
 
-Antes de dar por terminado cualquier texto nuevo, releelo buscando
+Antes de dar por terminado cualquier texto nuevo, reléelo buscando
 específicamente conjugaciones en "-ás", "-és", "-ís" sin tilde de tú, y la
 palabra "vos". Si tienes dudas con una palabra puntual, la forma tuteante
 casi siempre termina en "-as", "-es" o "-e" en vez de "-ás"/"-és"/"-í(s)".
@@ -159,9 +159,9 @@ Tipos: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`. Formatear
 
 ## Si agregas o cambias algo de alcance
 
-- Reflejalo en `ROADMAP.md` — no dejar trabajo hecho sin anotar.
+- Refléjalo en `ROADMAP.md` — no dejar trabajo hecho sin anotar.
 - Si corregiste algo por una lección aprendida (un bug raro, una decisión
-  que no era la esperada), anotalo en `tasks/lessons.md` para que no se
+  que no era la esperada), anótalo en `tasks/lessons.md` para que no se
   repita.
 
 ---
@@ -169,6 +169,6 @@ Tipos: `feat`, `fix`, `refactor`, `docs`, `chore`, `test`. Formatear
 ## Dudas
 
 Ante cualquier duda de producto o de prioridad (no de sintaxis), la
-referencia es Seba (programador principal) — evitá asumir la respuesta
+referencia es Seba (programador principal) — evita asumir la respuesta
 "más razonable" en decisiones de diseño o alcance, mejor preguntar antes de
 construir algo grande sobre un supuesto que puede no ser el correcto.
