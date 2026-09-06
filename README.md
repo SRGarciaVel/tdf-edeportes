@@ -130,6 +130,9 @@ VITE_API_URL=
 - [`DOCUMENTACION.md`](./DOCUMENTACION.md) — funcionalidades, roles y
   permisos, flujos, reglas de negocio, glosario. Punto de partida para
   cualquier persona nueva en el proyecto, técnica o no.
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — cómo trabajar en el código:
+  entorno local, flujo de Git, convenciones de frontend, y la regla de
+  idioma (tuteo chileno, nunca voseo).
 - [`SPECS.md`](./SPECS.md) — especificación técnica por fase.
 - [`CODESTYLE.md`](./CODESTYLE.md) — convenciones de código.
 - [`ROADMAP.md`](./ROADMAP.md) — estado de avance y prioridades acordadas
