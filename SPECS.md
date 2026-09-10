@@ -268,9 +268,19 @@ Paso a paso para Seba (repetir cuando la sesión venza):
    navegador normal y loguearse con Capcom ID (resolviendo el Turnstile
    normalmente).
 2. Con la extensión Cookie-Editor, exportar las cookies del dominio
-   `capcom.com` (incluye subdominios como `auth.cid.capcom.com`) como JSON.
-3. Guardar ese JSON como `backend/cfn_session.json`.
-4. Correr `docker compose exec backend python scripts/refresh_cfn.py --debug`.
+   `www.streetfighter.com` (las dos que importan son `buckler_id` y
+   `buckler_r_id` — confirmado en producción el 10-09-2026, un fallo real
+   de sesión vencida se resolvió reexportando exactamente estas dos; no
+   `capcom.com`/`auth.cid.capcom.com` como decía una versión anterior de
+   este documento — ese dominio interviene en el login inicial, pero el
+   scraper solo visita `www.streetfighter.com/6/buckler/...`, así que la
+   sesión que de verdad se chequea vive en las cookies de ese dominio).
+3. Guardar ese JSON como `backend/cfn_session.json` (local) o como el
+   secret `CFN_SESSION_JSON` en GitHub (producción, lo reconstruye el
+   workflow en cada corrida — ver §14, "CFN tracker en producción").
+4. Correr `docker compose exec backend python scripts/refresh_cfn.py --debug`
+   (local) o volver a correr el workflow "Refrescar CFN tracker" desde la
+   pestaña Actions (producción).
 
 Cuando la sesión venza, `_verify_session` en `app/services/cfn_scraper.py`
 lo detecta (Buckler's Boot Camp muestra el botón de login en vez del
