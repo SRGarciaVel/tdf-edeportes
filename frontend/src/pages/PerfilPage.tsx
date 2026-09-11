@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import BannerCropModal from "../components/BannerCropModal";
 import PlayerCard, { CardBackgroundPhoto } from "../components/PlayerCard";
 import InitialsAvatar from "../components/InitialsAvatar";
+import ProfileStatsStrip from "../components/ProfileStatsStrip";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import SkillRadarChart from "../components/SkillRadarChart";
@@ -524,6 +525,10 @@ export default function PerfilPage() {
                 )}
               </p>
             )}
+          </div>
+
+          <div className="mb-6">
+            <ProfileStatsStrip player={player} />
           </div>
 
           {/* dos columnas: edición a la izquierda, preview + radar a

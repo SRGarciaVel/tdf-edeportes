@@ -4,23 +4,15 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_authenticated, require_staff
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.models import (
-    CFNCharacterStats,
-    CFNMatch,
-    CFNProfile,
-    CFNRegistration,
-    ProfileComment,
-    User,
-)
+from app.models import CFNMatch, CFNProfile, CFNRegistration, ProfileComment, User
 from app.schemas.cfn import (
     CardBackgroundUpdate,
-    CFNCharacterStatsRead,
     CFNMatchRead,
     CFNMatchStats,
     CFNPlayerRead,
@@ -57,11 +49,27 @@ def _build_player_read(
     profile: CFNProfile | None,
     user: User | None,
     comment_count: int = 0,
+    match_totals: tuple[int, int, int] | None = None,
 ) -> CFNPlayerRead:
     """Arma un CFNPlayerRead a partir de las filas relacionadas — usado
     por list_cfn_players (roster completo) y get_cfn_player (un
     jugador puntual, para /jugadores/{cfn_id}), así que la
-    construcción vive en un solo lugar en vez de duplicarse."""
+    construcción vive en un solo lugar en vez de duplicarse.
+
+    match_totals = (total, wins, losses) de TODO el historial trackeado
+    (sin ventana de días, a diferencia de get_match_stats) — para la
+    franja de stats del perfil (pedido de Seba, 06-09-2026): "partidas
+    trackeadas" + "win rate general" tienen que ser el total real, no
+    un recorte de los últimos N días."""
+    total_matches, wins, losses = match_totals or (0, 0, 0)
+    total_decided = wins + losses
+    win_rate_all_time = wins / total_decided if total_decided > 0 else None
+    # "miembro desde" = cuándo lo aprobó staff (reviewed_at) — para el
+    # roster original migrado en bloque, nunca pasó por esa revisión,
+    # así que cae a requested_at (fecha de la migración, no la fecha
+    # real en que esa persona se sumó a la comunidad — aproximación
+    # conocida, no hay un dato mejor para esos casos)
+    member_since = reg.reviewed_at or reg.requested_at
     return CFNPlayerRead(
         cfn_id=reg.cfn_id,
         display_name=reg.display_name,
@@ -72,6 +80,9 @@ def _build_player_read(
         banner_url=reg.banner_url,
         social_links=reg.social_links or [],
         comment_count=comment_count,
+        total_matches_all_time=total_matches,
+        win_rate_all_time=win_rate_all_time,
+        member_since=member_since,
         card_background_url=reg.card_background_url,
         card_background_brightness=reg.card_background_brightness,
         league_rank=profile.league_rank if profile else None,
@@ -113,8 +124,30 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
         .group_by(ProfileComment.cfn_id)
         .all()
     )
+    # mismo criterio para los totales de partidas de TODO el roster —
+    # un solo query agregado, no uno por jugador
+    match_rows = (
+        db.query(
+            CFNMatch.cfn_id,
+            func.count(CFNMatch.id),
+            func.sum(case((CFNMatch.won.is_(True), 1), else_=0)),
+            func.sum(case((CFNMatch.won.is_(False), 1), else_=0)),
+        )
+        .group_by(CFNMatch.cfn_id)
+        .all()
+    )
+    match_totals_by_cfn_id = {
+        cfn_id: (total, wins or 0, losses or 0)
+        for cfn_id, total, wins, losses in match_rows
+    }
     return [
-        _build_player_read(reg, profile, user, comment_counts.get(reg.cfn_id, 0))
+        _build_player_read(
+            reg,
+            profile,
+            user,
+            comment_counts.get(reg.cfn_id, 0),
+            match_totals_by_cfn_id.get(reg.cfn_id),
+        )
         for reg, profile, user in rows
     ]
 
@@ -145,7 +178,19 @@ def get_cfn_player(
         .scalar()
         or 0
     )
-    return _build_player_read(reg, profile, user, comment_count)
+    match_row = (
+        db.query(
+            func.count(CFNMatch.id),
+            func.sum(case((CFNMatch.won.is_(True), 1), else_=0)),
+            func.sum(case((CFNMatch.won.is_(False), 1), else_=0)),
+        )
+        .filter(CFNMatch.cfn_id == cfn_id)
+        .first()
+    )
+    match_totals = (
+        (match_row[0], match_row[1] or 0, match_row[2] or 0) if match_row else None
+    )
+    return _build_player_read(reg, profile, user, comment_count, match_totals)
 
 
 @router.get("/players/{cfn_id}/matches", response_model=CFNMatchStats)
@@ -204,63 +249,6 @@ def get_recent_matches(
         .order_by(CFNMatch.played_at.desc())
         .limit(limit)
         .all()
-    )
-
-
-@router.get(
-    "/players/{cfn_id}/character-stats/{character_name}",
-    response_model=CFNCharacterStatsRead,
-)
-def get_character_stats(
-    cfn_id: str,
-    character_name: str,
-    db: Annotated[Session, Depends(get_db)],
-) -> CFNCharacterStatsRead:
-    """Win rate TOTAL (histórico completo, no una ventana de días) de un
-    jugador con un personaje puntual. Público, sin auth — pensado para
-    consumo externo (tdf-random-select lo llama al banear un personaje
-    en el draft, para mostrarlo unos segundos en el HUD).
-
-    A diferencia de /players/{id}/matches (que agrega cfn_matches, solo
-    cubre lo que vimos nosotros desde que empezamos a trackear), esto
-    lee un cache aparte (cfn_character_stats) que sí refleja el
-    histórico completo del jugador con ese personaje, tal cual lo
-    muestra Capcom.
-
-    character_name no distingue mayúsculas/acentos de más o de menos en
-    los espacios (ej. "chun-li", "Chun-Li" y "CHUN-LI" matchean igual) -
-    el llamador no necesita saber el casing exacto que usa Capcom.
-
-    200 con ever_played=False (no 404) si el personaje no está en
-    nuestro cache para ese jugador - "nunca lo jugó" es una respuesta
-    válida, no un error. 404 solo si el cfn_id no está en nuestro
-    roster en absoluto (mismo criterio que el resto de este archivo).
-    """
-    _get_approved_registration(db, cfn_id)
-
-    normalized = character_name.strip().lower()
-    row = (
-        db.query(CFNCharacterStats)
-        .filter(
-            CFNCharacterStats.cfn_id == cfn_id,
-            func.lower(CFNCharacterStats.character_name) == normalized,
-        )
-        .first()
-    )
-    if row is None or not row.matches_played:
-        return CFNCharacterStatsRead(
-            cfn_id=cfn_id,
-            character_name=character_name,
-            matches_played=None,
-            win_rate=None,
-            ever_played=False,
-        )
-    return CFNCharacterStatsRead(
-        cfn_id=cfn_id,
-        character_name=row.character_name,
-        matches_played=row.matches_played,
-        win_rate=row.win_rate,
-        ever_played=True,
     )
 
 

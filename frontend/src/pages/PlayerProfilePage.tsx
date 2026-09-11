@@ -4,6 +4,7 @@ import PlayerCard, { CardBackgroundPhoto } from "../components/PlayerCard";
 import CommentsSection from "../components/CommentsSection";
 import SocialLinksRow from "../components/SocialLinksRow";
 import InitialsAvatar from "../components/InitialsAvatar";
+import ProfileStatsStrip from "../components/ProfileStatsStrip";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import SkillRadarChart from "../components/SkillRadarChart";
@@ -171,6 +172,8 @@ export default function PlayerProfilePage() {
             </div>
           </div>
         </div>
+
+        <ProfileStatsStrip player={player} />
 
         <div className="grid lg:grid-cols-[1fr_340px] gap-6 items-start">
           <div className="flex flex-col gap-6">

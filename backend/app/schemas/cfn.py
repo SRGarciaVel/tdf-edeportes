@@ -106,6 +106,17 @@ class CFNPlayerRead(BaseModel):
     # comunidad") y en el futuro donde haga falta sin traer los
     # comentarios completos solo para contarlos
     comment_count: int = 0
+    # franja de stats del perfil (pedido de Seba, 06-09-2026) — historial
+    # COMPLETO trackeado, no una ventana de días como
+    # GET /players/{cfn_id}/matches. None en win_rate: "sin partidas
+    # decididas todavía", no "0% de winrate" (mismo criterio que
+    # CFNMatchStats.win_rate).
+    total_matches_all_time: int = 0
+    win_rate_all_time: float | None = None
+    # cuándo staff lo aprobó (o, para el roster migrado en bloque sin
+    # una aprobación real, cuándo se creó la fila) — ver
+    # _build_player_read en api/cfn.py para el fallback exacto
+    member_since: datetime
     # foto de fondo de la card — la propia persona la puede subir/cambiar
     # cuando quiera (no solo al registrarse), y staff la puede
     # reemplazar o sacar en cualquier momento. None: el frontend cae al
@@ -284,26 +295,6 @@ class CFNMatchStats(BaseModel):
     # personaje -> cuántas veces se usó en la ventana, ordenado de más a
     # menos usado
     characters: dict[str, int]
-
-
-class CFNCharacterStatsRead(BaseModel):
-    """Win rate TOTAL (histórico completo) de un jugador con un personaje
-    puntual — a diferencia de CFNMatchStats (ventana de días, calculado
-    de cfn_matches), este número viene directo de la pestaña /play del
-    perfil de Buckler's Boot Camp, así que sí cubre partidas de ANTES de
-    que empezáramos a trackear a la persona. Pensado para consumo de
-    apps externas (ej. tdf-random-select, que lo muestra en el HUD del
-    draft al banear un personaje)."""
-
-    cfn_id: str
-    character_name: str
-    # None en los dos si el personaje figura en la respuesta pero sin
-    # datos suficientes; ever_played=False (matches_played es None o 0)
-    # es el caso "nunca lo jugó" que el llamador tiene que mostrar
-    # distinto de un winrate real de 0%.
-    matches_played: int | None
-    win_rate: float | None
-    ever_played: bool
 
 
 class CFNMatchRead(BaseModel):

@@ -154,6 +154,9 @@ export interface CFNPlayer {
   banner_url: string | null;
   social_links: SocialLink[];
   comment_count: number;
+  total_matches_all_time: number;
+  win_rate_all_time: number | null;
+  member_since: string;
   card_background_url: string | null;
   card_background_brightness: number | null;
   league_rank: string | null;
