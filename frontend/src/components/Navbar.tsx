@@ -14,6 +14,7 @@ import {
   Target,
   Trophy,
   Users,
+  Award,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -41,6 +42,7 @@ const COMUNIDAD_LINKS = [
   { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
   { to: "/recopilaciones", label: "Recopilaciones", Icon: Clapperboard },
   { to: "/foda", label: "FODA", Icon: Scale },
+  { to: "/logros", label: "Logros", Icon: Award },
 ];
 
 const SF6_LINKS = [

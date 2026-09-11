@@ -30,6 +30,8 @@ import type {
   AdminUserRead,
   DashboardStats,
   FodaEntry,
+  PlayerAchievements,
+  AchievementLeaderboardEntry,
   NotificationListResponse,
 } from "./types";
 
@@ -296,6 +298,22 @@ export async function unassignRole(
     headers: authHeaders(token),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+// logros — público, sin auth, calculado en vivo en cada request (ver
+// compute_achievements en el backend)
+export async function getPlayerAchievements(
+  cfnId: string,
+): Promise<PlayerAchievements> {
+  const res = await fetch(`${API_URL}/achievements/${cfnId}`);
+  return parseOrThrow<PlayerAchievements>(res);
+}
+
+export async function getAchievementsLeaderboard(): Promise<
+  AchievementLeaderboardEntry[]
+> {
+  const res = await fetch(`${API_URL}/achievements/leaderboard`);
+  return parseOrThrow<AchievementLeaderboardEntry[]>(res);
 }
 
 // FODA de la comunidad — público, sin auth requerida para ver ni para

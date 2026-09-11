@@ -99,6 +99,29 @@ export interface FodaEntry {
   can_delete: boolean;
 }
 
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  rarity: "raza" | "ansatsuken" | "psycho_power" | "satsui_no_hado";
+  ap: number;
+  unlocked: boolean;
+}
+
+export interface PlayerAchievements {
+  cfn_id: string;
+  total_ap: number;
+  achievements: Achievement[];
+}
+
+export interface AchievementLeaderboardEntry {
+  cfn_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  total_ap: number;
+  master_rating: number | null;
+}
+
 export interface RoleRead {
   id: string;
   name: string;

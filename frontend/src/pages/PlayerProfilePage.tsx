@@ -5,6 +5,7 @@ import CommentsSection from "../components/CommentsSection";
 import SocialLinksRow from "../components/SocialLinksRow";
 import InitialsAvatar from "../components/InitialsAvatar";
 import ProfileStatsStrip from "../components/ProfileStatsStrip";
+import AchievementsPanel from "../components/AchievementsPanel";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import SkillRadarChart from "../components/SkillRadarChart";
@@ -182,10 +183,7 @@ export default function PlayerProfilePage() {
               <h2 className="font-mono text-xs uppercase text-tdf-muted mb-4">
                 Achievements
               </h2>
-              <p className="font-mono text-[10px] text-tdf-muted">
-                Todavía no hay achievements en el sitio. Van a aparecer acá
-                cuando estén listos.
-              </p>
+              <AchievementsPanel cfnId={player.cfn_id} />
             </div>
           </div>
 

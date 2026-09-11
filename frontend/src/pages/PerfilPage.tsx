@@ -1,10 +1,11 @@
-import { Camera, ImagePlus, Lock } from "lucide-react";
+import { Camera, ImagePlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import BannerCropModal from "../components/BannerCropModal";
 import PlayerCard, { CardBackgroundPhoto } from "../components/PlayerCard";
 import InitialsAvatar from "../components/InitialsAvatar";
 import ProfileStatsStrip from "../components/ProfileStatsStrip";
+import AchievementsPanel from "../components/AchievementsPanel";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import SkillRadarChart from "../components/SkillRadarChart";
@@ -46,42 +47,6 @@ const CARD_BACKGROUND_SIZE = 480;
 // elegir 1D/3D/7D, acá no hace falta ese control: es solo para que la
 // card de vista previa no se vea vacía, no un análisis de verdad
 const PREVIEW_STATS_DAYS = 7;
-
-/** Achievements sigue sin mecánica real (pedido explícito de Seba,
- * 28-08-2026: "dejemos un placeholder por mientras, luego las creamos
- * con calma") — a diferencia de /puntos (que muestra un leaderboard
- * placeholder con datos inventados como si fueran reales), acá se
- * muestra honestamente bloqueado: es el perfil de la propia persona,
- * mostrarle logros falsos como "ganados" sería confuso/engañoso de
- * verdad, no solo un molde visual de una tabla genérica. */
-function AchievementsPlaceholder() {
-  return (
-    <div className="hud-frame bg-tdf-charcoal px-6 py-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-mono text-xs uppercase text-tdf-muted">
-          Achievements
-        </h2>
-        <span className="font-mono text-[10px] text-tdf-magenta uppercase">
-          Muy pronto
-        </span>
-      </div>
-      <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="aspect-square rounded-full bg-tdf-dark border border-tdf-line flex items-center justify-center"
-          >
-            <Lock size={16} className="text-tdf-muted opacity-50" />
-          </div>
-        ))}
-      </div>
-      <p className="font-mono text-[10px] text-tdf-muted mt-4">
-        Todavía estamos definiendo cómo se desbloquean. Cuando estén listos, van
-        a aparecer acá solos.
-      </p>
-    </div>
-  );
-}
 
 /** Perfil propio — bio, avatar, banner de portada (con editor de
  * recorte/zoom estilo Discord, 29-08-2026), foto de fondo de la card
@@ -621,7 +586,12 @@ export default function PerfilPage() {
 
               <CommentsSection cfnId={player.cfn_id} />
 
-              <AchievementsPlaceholder />
+              <div className="hud-frame bg-tdf-charcoal px-6 py-5">
+                <h2 className="font-mono text-xs uppercase text-tdf-muted mb-4">
+                  Achievements
+                </h2>
+                <AchievementsPanel cfnId={player.cfn_id} />
+              </div>
             </div>
 
             <div className="flex flex-col gap-6 lg:sticky lg:top-24">
