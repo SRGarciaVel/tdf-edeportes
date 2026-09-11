@@ -5,6 +5,16 @@ const SIZE = 280;
 const CENTER = SIZE / 2;
 const RADIUS = 92;
 const RINGS = [0.25, 0.5, 0.75, 1];
+// margen horizontal extra para que las etiquetas más largas ("Perfect
+// Parry", "Tiempo en esquina") tengan lugar donde terminar sin cortarse
+// contra el borde del viewBox — encontrado por Seba, 06-09-2026: esos
+// dos ejes caen en ángulos casi horizontales, así que su etiqueta se
+// dibuja casi pegada al costado en vez de arriba/abajo donde hay más
+// aire natural. No toca el tamaño del círculo (RADIUS/SIZE), solo le
+// da más "lienzo" alrededor.
+const LABEL_PAD = 55;
+const VIEW_WIDTH = SIZE + LABEL_PAD * 2;
+const VIEW_HEIGHT = SIZE + 30;
 
 /** Punto sobre un eje del radar — ángulo empieza arriba (-90°) y avanza
  * en sentido horario, uno por cada categoría, repartidos parejo. */
@@ -66,8 +76,9 @@ export default function SkillRadarChart({
 
   return (
     <svg
-      viewBox={`0 0 ${SIZE} ${SIZE + 30}`}
-      className="w-full max-w-[280px] mx-auto"
+      viewBox={`${-LABEL_PAD} 0 ${VIEW_WIDTH} ${VIEW_HEIGHT}`}
+      className="w-full mx-auto"
+      style={{ maxWidth: VIEW_WIDTH }}
     >
       <defs>
         <linearGradient id="skill-fill" x1="0" y1="0" x2="1" y2="1">
