@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.cfn import SKILL_CATEGORIES
 from app.models import (
+    CFNCharacterStats,
     CFNMatch,
     CFNProfile,
     CFNRegistration,
@@ -41,6 +42,12 @@ MATCHES_TARGET_GUARDIAN = 50
 MIN_MATCHES_FOR_WINRATE_ACHIEVEMENT = 30
 WINRATE_TARGET = 0.65
 MEMBER_MONTHS_TARGET = 6
+# "Polifacético" — cuántos personajes DISTINTOS con tier ≠ None hacen
+# falta (Master o superior en el personaje, ver
+# get_character_mr_breakdown en cfn_scraper.py). Habilitado recién el
+# 12-09-2026, una vez confirmado en producción que el scraper de
+# "Master Rate (Per Character)" extrae datos reales.
+POLIFACETICO_CHARACTER_COUNT = 3
 
 
 class AchievementDef(TypedDict):
@@ -50,15 +57,15 @@ class AchievementDef(TypedDict):
     rarity: str
 
 
-# Catálogo v1 (06-09-2026) — deliberadamente NO incluye "Polifacético"
-# (3+ personajes en Master, necesita scrapear la pestaña "Master Rate
-# (Per Character)" de Buckler's, todavía no implementado) ni ningún
-# logro atado al rango de texto "Legend" (depende de la posición en el
-# top 500 dinámico, no de un número de MR fijo — habría que scrapear
-# la tabla de ranking completa, no solo el perfil). "El Trono del
-# Dojo" cumple el rol del tier más alto usando SOLO datos que ya
-# capturamos hoy (master_rating), sin fingir que es lo mismo que el
-# rango Legend real del juego.
+# Catálogo v1 (06-09-2026, "Polifacético" sumado el 12-09-2026 una vez
+# confirmado en producción el scraper de Master Rate por personaje) —
+# deliberadamente NO incluye ningún logro atado al rango de texto
+# "Legend" (depende de la posición en el top 500 dinámico, no de un
+# número de MR fijo — habría que scrapear la tabla de ranking
+# completa, no solo el perfil). "El Trono del Dojo" cumple el rol del
+# tier más alto usando SOLO datos que ya capturamos hoy
+# (master_rating), sin fingir que es lo mismo que el rango Legend real
+# del juego.
 ACHIEVEMENTS_CATALOG: list[AchievementDef] = [
     {
         "id": "espiritu_inquebrantable",
@@ -100,6 +107,12 @@ ACHIEVEMENTS_CATALOG: list[AchievementDef] = [
         "id": "el_mejor_en_su_categoria",
         "name": "El Mejor en su Categoría",
         "description": "Sé el número 1 del roster de TDF en alguna categoría de Records.",
+        "rarity": "psycho_power",
+    },
+    {
+        "id": "polifacetico",
+        "name": "Polifacético",
+        "description": f"Alcanza el rango Master o superior con {POLIFACETICO_CHARACTER_COUNT} personajes distintos.",
         "rarity": "psycho_power",
     },
     {
@@ -221,6 +234,18 @@ def compute_achievements(db: Session) -> dict[str, set[str]]:
         max(mr_candidates, key=lambda pair: pair[1])[0] if mr_candidates else None
     )
 
+    # "Polifacético" — cuántos personajes DISTINTOS por cfn_id tienen
+    # tier ≠ None (llegó a Master o superior CON ESE personaje puntual,
+    # ver get_character_mr_breakdown en cfn_scraper.py). Un solo query
+    # agrupado para todo el roster, no uno por jugador.
+    polifacetico_rows = (
+        db.query(CFNCharacterStats.cfn_id, func.count(CFNCharacterStats.id))
+        .filter(CFNCharacterStats.tier.isnot(None))
+        .group_by(CFNCharacterStats.cfn_id)
+        .all()
+    )
+    master_character_counts = dict(polifacetico_rows)
+
     now = datetime.now(timezone.utc)
     result: dict[str, set[str]] = {}
     for reg, profile in rows:
@@ -250,6 +275,8 @@ def compute_achievements(db: Session) -> dict[str, set[str]]:
             unlocked.add("poder_psiquico_absoluto")
         if cfn_id in best_in_category:
             unlocked.add("el_mejor_en_su_categoria")
+        if master_character_counts.get(cfn_id, 0) >= POLIFACETICO_CHARACTER_COUNT:
+            unlocked.add("polifacetico")
         if cfn_id == top_mr_cfn_id:
             unlocked.add("el_trono_del_dojo")
 
