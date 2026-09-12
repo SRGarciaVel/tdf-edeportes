@@ -1,3 +1,4 @@
+from app.models.cfn_character_mr_history import CFNCharacterMRHistory
 from app.models.cfn_character_stats import CFNCharacterStats
 from app.models.cfn_match import CFNMatch
 from app.models.cfn_profile import CFNProfile
@@ -17,6 +18,7 @@ from app.models.tier_list_template import TierListTemplate
 from app.models.user import User
 
 __all__ = [
+    "CFNCharacterMRHistory",
     "CFNCharacterStats",
     "CFNMatch",
     "CFNProfile",

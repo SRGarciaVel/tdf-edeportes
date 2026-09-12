@@ -39,12 +39,19 @@ entra a la próxima corrida solo, sin tocar este archivo.
 
 import argparse
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.core.database import SessionLocal
-from app.models import CFNCharacterStats, CFNMatch, CFNProfile, CFNRegistration
+from app.models import (
+    CFNCharacterMRHistory,
+    CFNCharacterStats,
+    CFNMatch,
+    CFNProfile,
+    CFNRegistration,
+)
 from app.services.cfn_scraper import refresh_all_players
 
 
@@ -189,6 +196,34 @@ def save_character_stats(db, character_stats: list[dict]) -> int:
         # ver el merge en refresh_all_players (cfn_scraper.py)
         row.master_rating = s.get("master_rating")
         row.tier = s.get("tier")
+
+        # snapshot histórico diario — solo si hay un MR real (un
+        # personaje que se jugó pero nunca llegó a Master no aporta
+        # nada a "cómo subió el MR con el tiempo"). Si ya existe una
+        # fila para HOY, se actualiza en vez de insertar de nuevo — el
+        # cron corre cada hora, pero el historial es "un snapshot por
+        # día", no uno por corrida (ver CFNCharacterMRHistory).
+        if s.get("master_rating") is not None:
+            today = datetime.now(timezone.utc).date()
+            history_row = (
+                db.query(CFNCharacterMRHistory)
+                .filter(
+                    CFNCharacterMRHistory.cfn_id == s["cfn_id"],
+                    CFNCharacterMRHistory.character_name == s["character_name"],
+                    CFNCharacterMRHistory.snapshot_date == today,
+                )
+                .first()
+            )
+            if history_row is None:
+                history_row = CFNCharacterMRHistory(
+                    cfn_id=s["cfn_id"],
+                    character_name=s["character_name"],
+                    snapshot_date=today,
+                )
+                db.add(history_row)
+            history_row.master_rating = s["master_rating"]
+            history_row.tier = s.get("tier")
+
         saved += 1
     db.commit()
     return saved
