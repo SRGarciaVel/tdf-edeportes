@@ -591,34 +591,174 @@ def get_advanced_stats(
     return result
 
 
+def get_character_win_rates(
+    context: BrowserContext, cfn_id: str, debug: bool = False
+) -> list[dict]:
+    """Win rate TOTAL por personaje (histórico completo, no una ventana
+    de días) - de la sub-pestaña "Win Rate" dentro de /play, filtro
+    "Total" (no confundir con get_advanced_stats, que lee la sub-pestaña
+    "Results" de esa misma URL - son secciones distintas de la misma
+    página).
+
+    Selectores CONFIRMADOS contra HTML real (character_stats_3987753314.html,
+    Seba, 01-09-2026): la pestaña de arriba se llama "Win Rate", no
+    "Characters" (nombre que había inventado sin ver el HTML - queda
+    seleccionada por default, `<li class="play_nav_active__...">Win
+    Rate</li>`, así que ni hace falta clickearla). El filtro de ventana
+    temporal es un <select> nativo (confirmado también en esa misma
+    corrida - ver el fix de select_option() más abajo). Cada fila de
+    personaje: `winning_rate_name__` (nombre), `winning_rate_rate__`
+    (texto "Wins: X/Battles: Y"), `winning_rate_number__` (win rate en
+    %). La primera fila siempre es "ANY" - agregado de todos los
+    personajes juntos, no un personaje real, se descarta.
+
+    Devuelve una lista de dicts (uno por personaje que la persona jugó
+    alguna vez) con character_name/matches_played/win_rate - lista
+    vacía si no se pudo leer nada (el llamador decide qué hacer, mismo
+    criterio que el resto de este archivo: mejor datos parciales o
+    vacíos que tumbar todo el refresh).
+    """
+    page = context.new_page()
+    results: list[dict] = []
+    try:
+        page.goto(
+            STATS_URL_TEMPLATE.format(cfn_id=cfn_id),
+            wait_until="domcontentloaded",
+            timeout=45000,
+        )
+        _dismiss_cookie_banner(page)
+        _close_open_modal(page)
+        # dump temprano, antes de cualquier click - si algo de lo de
+        # abajo falla, igual queda un HTML/screenshot util para ajustar
+        # selectores (antes se guardaba solo al final, y una corrida
+        # real de Seba mostró que perdíamos el debug entero si el click
+        # de "Total" fallaba antes de llegar a esa línea).
+        _debug_dump(page, f"character_stats_{cfn_id}_00_loaded", debug)
+
+        # La sub-pestaña "Win Rate" ya viene seleccionada por default
+        # (confirmado en HTML real) - no hace falta clickear nada acá,
+        # a diferencia de "Results" en get_advanced_stats.
+
+        # El filtro de ventana temporal ("Total" = historico completo,
+        # que es lo que queremos acá, a diferencia de cfn_matches que
+        # solo tiene lo que vimos nosotros desde que empezamos a
+        # trackear) es un <select> NATIVO del HTML, no un botón/link -
+        # confirmado por el error real en la corrida de Seba
+        # (01-09-2026): "locator resolved to <option value="-1">Total
+        # </option>". Un <option> dentro de un <select> no se puede
+        # "clickear" con Playwright, hay que usar select_option().
+        total_select = page.locator("select:has(option:text-is('Total'))").first
+        if total_select.count() > 0:
+            total_select.select_option(label="Total")
+            page.wait_for_timeout(800)
+
+        _debug_dump(page, f"character_stats_{cfn_id}", debug)
+
+        # El <ul> de las filas no tiene clase propia, pero su padre
+        # directo (winning_rate_inner__) sí - escopear con > para no
+        # matchear tambien el <ul class="bar_graf"> anidado adentro de
+        # cada fila (la barra de progreso visual de cada personaje).
+        rows = page.locator(
+            'article[class*="winning_rate_winning_rate__"] > div > ul > li'
+        )
+        count = rows.count()
+        for i in range(count):
+            try:
+                row = rows.nth(i)
+                character_name = (
+                    row.locator('[class*="winning_rate_name__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+                if character_name.strip().upper() == "ANY":
+                    # fila agregada ("todos los personajes juntos"), no
+                    # es un personaje real - siempre la primera fila.
+                    continue
+
+                matches_text = (
+                    row.locator('[class*="winning_rate_rate__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+                win_rate_text = (
+                    row.locator('[class*="winning_rate_number__"]')
+                    .inner_text(timeout=3000)
+                    .strip()
+                )
+
+                win_rate_digits = re.search(r"([\d]+\.?[\d]*)", win_rate_text)
+                win_rate = (
+                    float(win_rate_digits.group(1)) / 100 if win_rate_digits else None
+                )
+                # el texto es "Wins: X/Battles: Y" - Battles es el total
+                # de partidas jugadas, distinto de Wins (que también es
+                # un numero en el mismo texto, hay que apuntar al
+                # correcto explícitamente).
+                matches_digits = re.search(r"Battles:\s*(\d+)", matches_text)
+                matches_played = (
+                    int(matches_digits.group(1)) if matches_digits else None
+                )
+
+                results.append(
+                    {
+                        "cfn_id": cfn_id,
+                        "character_name": character_name,
+                        "matches_played": matches_played,
+                        "win_rate": win_rate,
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001 — una fila rara no debe tumbar el resto
+                logger.warning(
+                    "No se pudo parsear la fila de personaje %d de %s: %s",
+                    i,
+                    cfn_id,
+                    exc,
+                )
+                continue
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("get_character_win_rates falló para %s: %s", cfn_id, exc)
+    finally:
+        page.close()
+    return results
+
+
 def get_character_mr_breakdown(
     context: BrowserContext, cfn_id: str, debug: bool = False
 ) -> list[dict]:
     """Master Rate (Per Character) — SF6 rankea por personaje, no por
-    cuenta (Seba lo confirmó con captura real del juego, 06-09-2026;
-    la suposición anterior de "el rango es de la cuenta" era
-    incorrecta y quedó corregida). Vive en la misma página que
-    get_advanced_stats (STATS_URL_TEMPLATE), en su propia pestaña.
+    cuenta (Seba lo confirmó con captura real del juego, 06-09-2026).
+    Vive en la misma página que get_advanced_stats/get_character_win_rates
+    (STATS_URL_TEMPLATE), en su propia pestaña — distinta de "Win Rate"
+    (esa es la de arriba, get_character_win_rates).
 
-    SIN CONFIRMAR contra HTML real todavía — solo tenemos capturas de
-    pantalla de Seba (06-09-2026), no el DOM (mismo punto de partida
-    que tuvo get_advanced_stats en su momento). Correr con --debug
-    contra un perfil real (ej. Pochoclo23) y ajustar el patrón de acá
-    abajo si no calza — ver debug_output/mr_breakdown_{cfn_id}.html.
+    CONFIRMADO contra HTML/texto real (11-09-2026, perfil de Pochoclo23):
 
-    A propósito NO usa selectores de clase CSS (esas clases llevan un
-    hash que Capcom puede cambiar en cualquier redeploy — causa real
-    de fallos ya documentada en este archivo). En cambio lee el texto
-    plano completo de la pestaña y lo parsea con un patrón — más
-    resistente a un cambio de maquetado que no toca el contenido.
+    - El MR viene con separador de miles al estilo chileno ("1.956 MR",
+      no "1956 MR") porque el contexto de Playwright usa
+      locale="es-CL" — el patrón de acá abajo acepta tanto "." como ","
+      como separador, nunca asume dígitos puros.
+    - La insignia de texto (ULTIMATE MASTER, GRAND MASTER, HIGH MASTER)
+      NO existe como texto plano en la página — es una imagen/ícono,
+      inner_text() nunca la captura. En vez de depender de scrapearla,
+      el tier se CALCULA acá mismo con los umbrales reales del juego
+      (1600/1700/1800 MR, confirmados por Seba con captura de la
+      pantalla de "Master League" del propio SF6) — más simple y no
+      depende de que Capcom siga mostrando esa insignia de la misma
+      forma.
+    - Cada personaje aparece como dos líneas de texto consecutivas
+      (NOMBRE, luego "X.XXX MR" o "--- MR"), sin nada más entre medio
+      — se parsea línea por línea en vez de con una regex de bloque.
+
+    Todavía NO está conectada a refresh_all_players/main() a propósito
+    — se agrega en un paso aparte, una vez confirmado que esto no
+    rompe nada del pipeline existente (ver lección de 11-09-2026: una
+    versión anterior de este archivo pisó por error get_character_win_rates
+    entero al reemplazar el archivo completo en vez de agregar la
+    función nueva puntual).
 
     Devuelve una lista de {character_name, master_rating, tier} SOLO
     para personajes con MR real (se descartan las filas "--- MR",
-    nunca jugados). `tier` queda en None cuando no hay una insignia de
-    texto visible al lado del MR — el caso de un personaje en Master
-    "liso" (sin llegar a High Master todavía) no se pudo ver en las
-    capturas que mandó Seba, así que no se asume que diga "MASTER";
-    hay que confirmarlo con un perfil real que tenga ese caso."""
+    nunca jugados)."""
     page = context.new_page()
     result: list[dict] = []
     try:
@@ -630,51 +770,75 @@ def get_character_mr_breakdown(
         _dismiss_cookie_banner(page)
         _close_open_modal(page)
 
+        # esta página es una app Next.js: la barra de pestañas se
+        # renderiza recién cuando el JS hidrata — se espera a que la
+        # pestaña "Win Rate" (activa por default) esté visible como
+        # señal de que la hidratación ya terminó, antes de buscar la
+        # que realmente interesa (confirmado real, 11-09-2026).
+        page.get_by_text("Win Rate", exact=True).first.wait_for(
+            state="visible", timeout=15000
+        )
+
         tab = page.get_by_text("Master Rate (Per Character)", exact=False).first
         if tab.count() > 0:
             tab.click(timeout=5000)
-            page.wait_for_timeout(800)
+            page.wait_for_timeout(1500)
 
         _debug_dump(page, f"mr_breakdown_{cfn_id}", debug)
 
         panel_text = page.locator("body").inner_text()
-        # patrón esperado por fila, según las capturas de Seba:
-        #   ELENA
-        #   1956 MR
-        #   ULTIMATE MASTER      <- ausente si no llegó a High Master
-        # "--{2,3}" cubre tanto "--" como "---" (no se vio con certeza
-        # cuál usa Capcom exactamente en el texto plano vs. la imagen).
-        pattern = re.compile(
-            r"([A-Z][A-Z\.\s]*?)\s*\n\s*(\d+|-{2,3})\s*MR"
-            r"(?:\s*\n\s*(HIGH MASTER|GRAND MASTER|ULTIMATE MASTER))?"
-        )
-        for name, mr_raw, tier in pattern.findall(panel_text):
-            if not mr_raw.isdigit():
+        lines = [ln.strip() for ln in panel_text.split("\n") if ln.strip()]
+        # "X.XXX MR" (separador de miles "." o ",") o "--- MR"
+        # (nunca jugado, 2 o 3 guiones vistos en distintas capturas)
+        mr_line_re = re.compile(r"^([\d.,]+|-{2,3})\s*MR$")
+
+        for i in range(len(lines) - 1):
+            match = mr_line_re.match(lines[i + 1])
+            if not match:
+                continue
+            raw = match.group(1).replace(".", "").replace(",", "")
+            if not raw.isdigit():
                 continue  # "--- MR" = nunca jugó ese personaje
+            mr_value = int(raw)
             result.append(
                 {
-                    "character_name": name.strip().title(),
-                    "master_rating": int(mr_raw),
-                    "tier": tier or None,
+                    "character_name": lines[i].strip().title(),
+                    "master_rating": mr_value,
+                    "tier": _tier_for_mr(mr_value),
                 }
             )
-    except Exception as exc:  # noqa: BLE001 — selector sin confirmar contra HTML real
+    except Exception as exc:  # noqa: BLE001 — no tumbar el resto del refresh por esto
         logger.warning("get_character_mr_breakdown falló para %s: %s", cfn_id, exc)
     finally:
         page.close()
     return result
 
 
+def _tier_for_mr(mr: int) -> str:
+    """Umbrales reales del juego, confirmados por Seba con captura de
+    la pantalla de "Master League" del propio SF6 (06-09-2026) — nunca
+    números inventados. Por debajo de 1600 sigue siendo "Master" liso
+    (para tener MR hay que haber llegado a rango Master como mínimo,
+    ver esa misma captura)."""
+    if mr >= 1800:
+        return "Ultimate Master"
+    if mr >= 1700:
+        return "Grand Master"
+    if mr >= 1600:
+        return "High Master"
+    return "Master"
+
+
 def refresh_all_players(
     cfn_ids: list[str],
     debug: bool = False,
     known_match_keys: frozenset[tuple[str, datetime, str]] = frozenset(),
-) -> tuple[list[dict], list[dict], list[dict]]:
+) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
     """Carga la sesión guardada una sola vez y consulta todos los CFN IDs
     con ella — evita repetir el login (que ni siquiera se automatiza) por
-    jugador. Devuelve (perfiles, partidas, records) — un solo
-    browser/sesión para los tres, no se abre una sesión aparte para cada
-    tipo de dato.
+    jugador. Devuelve (perfiles, partidas, records, win_rates_por_personaje)
+    - un solo browser/sesión para los cuatro, no se abre una sesión aparte
+    para cada tipo de dato.
 
     `known_match_keys` se pasa tal cual a get_match_history — ver ahí para
     qué sirve (evitar el costo extra de abrir el modal de detalle en
@@ -711,10 +875,12 @@ def refresh_all_players(
         profiles = []
         matches = []
         advanced_stats = []
+        character_stats = []
         for cfn_id in cfn_ids:
             profiles.append(get_player_stats(context, cfn_id, debug))
             matches.extend(get_match_history(context, cfn_id, debug, known_match_keys))
             advanced_stats.append(get_advanced_stats(context, cfn_id, debug))
+            character_stats.extend(get_character_win_rates(context, cfn_id, debug))
 
         browser.close()
-        return profiles, matches, advanced_stats
+        return profiles, matches, advanced_stats, character_stats
