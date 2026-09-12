@@ -880,7 +880,37 @@ def refresh_all_players(
             profiles.append(get_player_stats(context, cfn_id, debug))
             matches.extend(get_match_history(context, cfn_id, debug, known_match_keys))
             advanced_stats.append(get_advanced_stats(context, cfn_id, debug))
-            character_stats.extend(get_character_win_rates(context, cfn_id, debug))
+            # Win rate y MR/tier son dos scrapers DISTINTOS de la misma
+            # página (pestañas "Win Rate" y "Master Rate (Per
+            # Character)" respectivamente) — se fusionan acá por
+            # nombre de personaje ANTES de guardar, así
+            # save_character_stats sigue escribiendo una sola fila por
+            # (cfn_id, character_name), no dos filas separadas
+            # pisándose entre sí. Un personaje puede aparecer en uno
+            # de los dos scrapers y no en el otro (ej. lo jugó lo
+            # suficiente para tener win rate pero nunca llegó a Master
+            # con él) — se guarda igual, con el otro campo en None.
+            win_rates = get_character_win_rates(context, cfn_id, debug)
+            mr_by_character = {
+                c["character_name"]: c
+                for c in get_character_mr_breakdown(context, cfn_id, debug)
+            }
+            merged_by_character: dict[str, dict] = {}
+            for wr in win_rates:
+                merged_by_character[wr["character_name"]] = dict(wr)
+            for name, mr in mr_by_character.items():
+                row = merged_by_character.setdefault(
+                    name,
+                    {
+                        "cfn_id": cfn_id,
+                        "character_name": name,
+                        "matches_played": None,
+                        "win_rate": None,
+                    },
+                )
+                row["master_rating"] = mr["master_rating"]
+                row["tier"] = mr["tier"]
+            character_stats.extend(merged_by_character.values())
 
         browser.close()
         return profiles, matches, advanced_stats, character_stats

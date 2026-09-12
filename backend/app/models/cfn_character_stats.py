@@ -53,6 +53,18 @@ class CFNCharacterStats(Base):
     win_rate: Mapped[float | None] = mapped_column(
         Float
     )  # 0.0-1.0, None si nunca jugado
+    # Master Rate y tier POR ESTE personaje puntual (SF6 rankea por
+    # personaje, no por cuenta — confirmado por Seba con captura real
+    # del juego, 06-09-2026, ver get_character_mr_breakdown en
+    # cfn_scraper.py). None cuando el personaje nunca llegó a Master
+    # con esa cuenta — no todos los personajes con win_rate acá van a
+    # tener MR, es normal que jueguen personajes fuera de Master
+    # también. `tier` es CALCULADO por nosotros a partir de
+    # master_rating (1600/1700/1800 = umbrales reales del juego), no
+    # scrapeado — Capcom muestra esa insignia como imagen, no como
+    # texto, no hay de dónde leerla directo.
+    master_rating: Mapped[int | None] = mapped_column(Integer)
+    tier: Mapped[str | None] = mapped_column(String)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

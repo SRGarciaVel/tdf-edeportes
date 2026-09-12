@@ -184,6 +184,11 @@ def save_character_stats(db, character_stats: list[dict]) -> int:
             db.add(row)
         row.matches_played = s["matches_played"]
         row.win_rate = s["win_rate"]
+        # ausentes (None) para las filas que solo vinieron del scraper
+        # de win rate, sin dato de Master Rate para ese personaje —
+        # ver el merge en refresh_all_players (cfn_scraper.py)
+        row.master_rating = s.get("master_rating")
+        row.tier = s.get("tier")
         saved += 1
     db.commit()
     return saved
