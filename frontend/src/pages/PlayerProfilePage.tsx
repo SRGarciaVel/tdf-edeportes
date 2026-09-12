@@ -6,6 +6,7 @@ import SocialLinksRow from "../components/SocialLinksRow";
 import InitialsAvatar from "../components/InitialsAvatar";
 import ProfileStatsStrip from "../components/ProfileStatsStrip";
 import AchievementsPanel from "../components/AchievementsPanel";
+import CharacterStatsList from "../components/CharacterStatsList";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import SkillRadarChart from "../components/SkillRadarChart";
@@ -184,6 +185,13 @@ export default function PlayerProfilePage() {
                 Achievements
               </h2>
               <AchievementsPanel cfnId={player.cfn_id} />
+            </div>
+
+            <div className="hud-frame bg-tdf-charcoal px-6 py-5">
+              <h2 className="font-mono text-xs uppercase text-tdf-muted mb-4">
+                También juega
+              </h2>
+              <CharacterStatsList cfnId={player.cfn_id} />
             </div>
           </div>
 

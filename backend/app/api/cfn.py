@@ -10,7 +10,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import require_authenticated, require_staff
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.models import CFNMatch, CFNProfile, CFNRegistration, ProfileComment, User
+from app.models import (
+    CFNCharacterStats,
+    CFNMatch,
+    CFNProfile,
+    CFNRegistration,
+    ProfileComment,
+    User,
+)
 from app.schemas.cfn import (
     CardBackgroundUpdate,
     CFNMatchRead,
@@ -20,6 +27,7 @@ from app.schemas.cfn import (
     CFNRegistrationDecision,
     CFNRegistrationPending,
     CFNRegistrationRead,
+    CharacterStatsRead,
     EncounterRead,
     LinkAccountRequest,
     MyProfileUpdate,
@@ -191,6 +199,30 @@ def get_cfn_player(
         (match_row[0], match_row[1] or 0, match_row[2] or 0) if match_row else None
     )
     return _build_player_read(reg, profile, user, comment_count, match_totals)
+
+
+@router.get(
+    "/players/{cfn_id}/character-stats", response_model=list[CharacterStatsRead]
+)
+def get_player_character_stats(
+    cfn_id: str, db: Annotated[Session, Depends(get_db)]
+) -> list[CFNCharacterStats]:
+    """Todos los personajes que el jugador jugó alguna vez, con su win
+    rate total y su Master Rate/tier PROPIO de ese personaje (SF6
+    rankea por personaje, no por cuenta) — para "También juega" en el
+    perfil, a diferencia de CFNPlayerRead que solo trae el personaje
+    "principal". Público, sin auth. Más alto MR primero (los sin MR,
+    al final) — no valida que el cfn_id exista en el roster porque el
+    peor caso es una lista vacía, no hace falta el 404 extra."""
+    return (
+        db.query(CFNCharacterStats)
+        .filter(CFNCharacterStats.cfn_id == cfn_id)
+        .order_by(
+            CFNCharacterStats.master_rating.desc().nullslast(),
+            CFNCharacterStats.matches_played.desc().nullslast(),
+        )
+        .all()
+    )
 
 
 @router.get("/players/{cfn_id}/matches", response_model=CFNMatchStats)

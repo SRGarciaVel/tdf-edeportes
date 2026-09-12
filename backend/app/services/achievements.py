@@ -48,6 +48,13 @@ MEMBER_MONTHS_TARGET = 6
 # 12-09-2026, una vez confirmado en producción que el scraper de
 # "Master Rate (Per Character)" extrae datos reales.
 POLIFACETICO_CHARACTER_COUNT = 3
+# "Maestro Absoluto" — mismo conteo que Polifacético, pero exigiendo
+# Grand Master o superior en vez de Master liso — mucho más difícil,
+# encaja en la rareza más alta (Satsui no Hado). Reusa el mismo umbral
+# de cantidad (3) a propósito: lo que cambia es la vara del tier, no
+# cuántos personajes hacen falta.
+MAESTRO_ABSOLUTO_CHARACTER_COUNT = 3
+GRAND_MASTER_PLUS_TIERS = {"Grand Master", "Ultimate Master"}
 
 
 class AchievementDef(TypedDict):
@@ -119,6 +126,12 @@ ACHIEVEMENTS_CATALOG: list[AchievementDef] = [
         "id": "el_trono_del_dojo",
         "name": "El Trono del Dojo",
         "description": "Sé el número 1 en Master Rating de todo el roster de TDF.",
+        "rarity": "satsui_no_hado",
+    },
+    {
+        "id": "maestro_absoluto",
+        "name": "Maestro Absoluto",
+        "description": f"Alcanza Grand Master o superior con {MAESTRO_ABSOLUTO_CHARACTER_COUNT} personajes distintos.",
         "rarity": "satsui_no_hado",
     },
 ]
@@ -246,6 +259,16 @@ def compute_achievements(db: Session) -> dict[str, set[str]]:
     )
     master_character_counts = dict(polifacetico_rows)
 
+    # "Maestro Absoluto" — mismo patrón que Polifacético, pero
+    # filtrando solo Grand Master/Ultimate Master (más difícil)
+    maestro_rows = (
+        db.query(CFNCharacterStats.cfn_id, func.count(CFNCharacterStats.id))
+        .filter(CFNCharacterStats.tier.in_(GRAND_MASTER_PLUS_TIERS))
+        .group_by(CFNCharacterStats.cfn_id)
+        .all()
+    )
+    grand_master_character_counts = dict(maestro_rows)
+
     now = datetime.now(timezone.utc)
     result: dict[str, set[str]] = {}
     for reg, profile in rows:
@@ -279,6 +302,11 @@ def compute_achievements(db: Session) -> dict[str, set[str]]:
             unlocked.add("polifacetico")
         if cfn_id == top_mr_cfn_id:
             unlocked.add("el_trono_del_dojo")
+        if (
+            grand_master_character_counts.get(cfn_id, 0)
+            >= MAESTRO_ABSOLUTO_CHARACTER_COUNT
+        ):
+            unlocked.add("maestro_absoluto")
 
         result[cfn_id] = unlocked
     return result

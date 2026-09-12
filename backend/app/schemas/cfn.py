@@ -279,6 +279,22 @@ class CardBackgroundUpdate(BaseModel):
         return v
 
 
+class CharacterStatsRead(BaseModel):
+    """Una fila de cfn_character_stats — win rate TOTAL y Master Rate
+    de UN personaje puntual para un jugador (SF6 rankea por personaje,
+    ver CFNCharacterStats en el modelo). Se usa para "También juega"
+    en el perfil — a diferencia de CFNPlayerRead, que solo trae el
+    personaje "principal" (el que Capcom muestra como resumen)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    character_name: str
+    matches_played: int | None
+    win_rate: float | None
+    master_rating: int | None
+    tier: str | None
+
+
 class CFNMatchStats(BaseModel):
     """Agregado de partidas de un jugador en una ventana de días — no
     devuelve las partidas en sí, solo el resumen (win rate, personajes

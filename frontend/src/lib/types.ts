@@ -122,6 +122,14 @@ export interface AchievementLeaderboardEntry {
   master_rating: number | null;
 }
 
+export interface CharacterStats {
+  character_name: string;
+  matches_played: number | null;
+  win_rate: number | null;
+  master_rating: number | null;
+  tier: string | null;
+}
+
 export interface RoleRead {
   id: string;
   name: string;

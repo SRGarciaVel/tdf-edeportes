@@ -9,6 +9,7 @@ import type {
   UnlinkedRegistration,
   UserSearchResult,
   CFNMatchStats,
+  CharacterStats,
   CFNMatchRead,
   EncounterData,
   TierListData,
@@ -608,6 +609,15 @@ export async function getMatchStats(
     `${API_URL}/cfn/players/${cfnId}/matches?days=${days}`,
   );
   return parseOrThrow<CFNMatchStats>(res);
+}
+
+// "También juega" en el perfil — todos los personajes que jugó
+// alguna vez, no solo el principal (SF6 rankea por personaje)
+export async function getCharacterStats(
+  cfnId: string,
+): Promise<CharacterStats[]> {
+  const res = await fetch(`${API_URL}/cfn/players/${cfnId}/character-stats`);
+  return parseOrThrow<CharacterStats[]>(res);
 }
 
 export async function getRecentMatches(
