@@ -28,23 +28,30 @@ import NotificationBell from "./NotificationBell";
 
 // las más visitadas quedan sueltas y directas — el resto se agrupa en
 // desplegables para no saturar la barra (conversación de diseño,
-// 21-08-2026: 9 ítems sueltos era demasiado)
-const DIRECT_LINKS = [
-  { to: "/", label: "Inicio", Icon: Home },
-  { to: "/calendario", label: "Calendario", Icon: Calendar },
+// 21-08-2026: 9 ítems sueltos era demasiado; segunda vuelta,
+// 13-09-2026: "Comunidad" solo había vuelto a crecer a 9 ítems
+// mezclando cosas sin mucho que ver entre sí — se separó por tema en
+// vez de por orden de creación, sin superar 4 ítems por desplegable)
+const DIRECT_LINKS = [{ to: "/", label: "Inicio", Icon: Home }];
+
+const JUGADORES_LINKS = [
   { to: "/jugadores", label: "Jugadores", Icon: Users },
+  { to: "/personajes", label: "Personajes", Icon: Swords },
+  { to: "/logros", label: "Logros", Icon: Award },
 ];
 
 const COMUNIDAD_LINKS = [
-  { to: "/torneos", label: "Torneos", Icon: Trophy },
-  { to: "/objetivos", label: "Objetivos", Icon: Target },
   { to: "/nosotros", label: "Nosotros", Icon: Info },
+  { to: "/objetivos", label: "Objetivos", Icon: Target },
+  { to: "/foda", label: "FODA", Icon: Scale },
   { to: "/puntos", label: "Puntos", Icon: Star },
+];
+
+const ACTIVIDAD_LINKS = [
+  { to: "/calendario", label: "Calendario", Icon: Calendar },
+  { to: "/torneos", label: "Torneos", Icon: Trophy },
   { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
   { to: "/recopilaciones", label: "Recopilaciones", Icon: Clapperboard },
-  { to: "/foda", label: "FODA", Icon: Scale },
-  { to: "/logros", label: "Logros", Icon: Award },
-  { to: "/personajes", label: "Personajes", Icon: Swords },
 ];
 
 const SF6_LINKS = [
@@ -54,7 +61,13 @@ const SF6_LINKS = [
 
 // para el buscador de "Páginas" — destinos fijos del sitio, no datos
 // que haya que traer de ningún lado (ver SearchPanel más abajo)
-const SEARCHABLE_PAGES = [...DIRECT_LINKS, ...COMUNIDAD_LINKS, ...SF6_LINKS];
+const SEARCHABLE_PAGES = [
+  ...DIRECT_LINKS,
+  ...JUGADORES_LINKS,
+  ...COMUNIDAD_LINKS,
+  ...ACTIVIDAD_LINKS,
+  ...SF6_LINKS,
+];
 
 type NavDropdownLink = { to: string; label: string; Icon: typeof Home };
 
@@ -491,6 +504,8 @@ export default function Navbar() {
           {DIRECT_LINKS.map((link) => (
             <AnimatedNavLink key={link.to} {...link} />
           ))}
+          <NavDropdown label="Jugadores" links={JUGADORES_LINKS} />
+          <NavDropdown label="Actividad" links={ACTIVIDAD_LINKS} />
           <NavDropdown label="Comunidad" links={COMUNIDAD_LINKS} />
         </nav>
 
@@ -591,6 +606,38 @@ export default function Navbar() {
                   {label}
                 </NavLink>
               ))}
+              <div className="pt-2 border-t border-tdf-line">
+                <p className="text-tdf-muted mb-2">Jugadores</p>
+                {JUGADORES_LINKS.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
+                    }
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-tdf-line">
+                <p className="text-tdf-muted mb-2">Actividad</p>
+                {ACTIVIDAD_LINKS.map(({ to, label, Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
+                    }
+                  >
+                    <Icon size={14} />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
               <div className="pt-2 border-t border-tdf-line">
                 <p className="text-tdf-muted mb-2">Comunidad</p>
                 {COMUNIDAD_LINKS.map(({ to, label, Icon }) => (
