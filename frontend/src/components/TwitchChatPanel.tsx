@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useFriendsLiveStatus } from "../lib/useFriendsLiveStatus";
-import { useNavbarHeight } from "../lib/navbarMetrics";
 
 const TDF_CHANNEL = "tdfedeportes";
 
@@ -27,10 +26,6 @@ export default function TwitchChatPanel() {
   // mismo motivo que en TwitchEmbed: el parent tiene que matchear el
   // dominio real que sirve la página, sin importar el entorno
   const parent = window.location.hostname;
-  // alto real de la navbar en este momento (0 en mobile, donde no
-  // hay navbar arriba) — reemplaza al "top-16" fijo que se
-  // desincronizaba cada vez que la navbar cambiaba de tamaño
-  const navbarHeight = useNavbarHeight();
 
   return (
     <>
@@ -58,24 +53,18 @@ export default function TwitchChatPanel() {
           sea uno que no cambia nada visible. Antes esto usaba
           framer-motion (transform: translateX). Ver lessons.md.
 
-          top/height calculados en vivo con useNavbarHeight (0 en
-          mobile, donde no hay navbar arriba — la navegación se mudó a
-          la tab bar de abajo, ver MobileTabBar.tsx). Antes esto era un
-          top-24 fijo calibrado a la navbar vieja de dos pisos, y
-          después un intento con clases estáticas (top-0/md:top-16) que
-          solo cubría UNA de las dos alturas reales de la navbar
-          reactiva al scroll (64px arriba, 68px comprimida) — bug real
-          encontrado por Seba dos veces (13-09-2026): cada vez que la
-          navbar cambia de tamaño, un número adivinado se desincroniza.
-          Medir la altura real en vez de adivinarla resuelve esto de
-          raíz, no solo para el estado actual de la navbar. */}
+          Ocupa el 100% del alto siempre — pedido explícito de Seba
+          (13-09-2026, tras varias vueltas con esto): "que no tenga
+          hueco en la parte superior, que cubra verticalmente la
+          totalidad". La navbar (z-40, translúcida) queda flotando
+          ENCIMA de la porción de arriba del chat en vez de dejar un
+          hueco vacío ahí — por eso el chat va en z-30, más bajo que
+          la navbar y que la tab bar mobile (las dos en z-40), a
+          propósito, para que sean ELLAS las que se vean por encima
+          donde se superponen, no el chat tapándolas. */}
       <div
-        className="fixed w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
-        style={{
-          right: open ? 0 : "-100%",
-          top: navbarHeight,
-          height: `calc(100% - ${navbarHeight}px)`,
-        }}
+        className="fixed top-0 h-full w-full sm:w-[350px] z-30 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
+        style={{ right: open ? 0 : "-100%" }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-tdf-line shrink-0">
           <div className="flex items-center gap-1 overflow-x-auto">
