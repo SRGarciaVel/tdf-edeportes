@@ -59,6 +59,20 @@ function activeTabFromPath(pathname: string): TabKey {
 }
 
 const TAB_SLOT = 56; // px por ícono, el blob se mueve en múltiplos de esto
+
+// animación de entrada escalonada para el contenido de los paneles —
+// referencia: developer.motion.dev, ejemplo real "Sheet Modal"
+// ("animaciones de contenido escalonadas"), 13-09-2026. Antes todo el
+// contenido de un panel aparecía junto de golpe al abrirse; con esto,
+// cada fila/ítem entra un poco después del anterior.
+const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.04 } },
+};
+const staggerItem = {
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0 },
+};
 const TOTAL_SLOTS = TABS.length + 1; // +1 = el hamburguesa, fuera del blob
 
 function LinkList({
@@ -69,24 +83,30 @@ function LinkList({
   onNavigate: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="flex flex-col gap-1"
+    >
       {links.map((l) => (
-        <NavLink
-          key={l.to}
-          to={l.to}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            `px-3 py-2.5 rounded font-mono text-xs uppercase ${
-              isActive
-                ? "text-tdf-magenta bg-tdf-magenta/10"
-                : "text-tdf-muted hover:bg-tdf-dark/60"
-            }`
-          }
-        >
-          {l.label}
-        </NavLink>
+        <motion.div key={l.to} variants={staggerItem}>
+          <NavLink
+            to={l.to}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              `block px-3 py-2.5 rounded font-mono text-xs uppercase ${
+                isActive
+                  ? "text-tdf-magenta bg-tdf-magenta/10"
+                  : "text-tdf-muted hover:bg-tdf-dark/60"
+              }`
+            }
+          >
+            {l.label}
+          </NavLink>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -97,21 +117,27 @@ function LinkList({
  * (grilla de íconos en vez de lista de texto). */
 function ActividadGridContent({ onNavigate }: { onNavigate: () => void }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="grid grid-cols-2 gap-3"
+    >
       {ACTIVIDAD_LINKS.map(({ to, label, Icon }) => (
-        <NavLink
-          key={to}
-          to={to}
-          onClick={onNavigate}
-          className="flex flex-col items-center gap-2 py-5 rounded-xl bg-tdf-dark/40 hover:bg-tdf-dark/70 transition-colors"
-        >
-          <Icon size={26} className="text-tdf-magenta" />
-          <span className="font-mono text-[10px] uppercase text-tdf-muted text-center">
-            {label}
-          </span>
-        </NavLink>
+        <motion.div key={to} variants={staggerItem}>
+          <NavLink
+            to={to}
+            onClick={onNavigate}
+            className="flex flex-col items-center gap-2 py-5 rounded-xl bg-tdf-dark/40 hover:bg-tdf-dark/70 transition-colors"
+          >
+            <Icon size={26} className="text-tdf-magenta" />
+            <span className="font-mono text-[10px] uppercase text-tdf-muted text-center">
+              {label}
+            </span>
+          </NavLink>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 

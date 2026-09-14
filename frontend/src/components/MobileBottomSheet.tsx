@@ -16,7 +16,17 @@ import type { ReactNode } from "react";
  * accidente. Antes la agarradera era puramente decorativa: al no
  * capturar el gesto, el swipe hacia abajo se filtraba hacia el
  * navegador entero y disparaba el pull-to-refresh nativo del
- * celular en vez de cerrar el panel. */
+ * celular en vez de cerrar el panel.
+ *
+ * El botón de arrastre (agarradera) tiene ahora feedback táctil real
+ * (`whileHover`/`whileTap`, mismo patrón que usa el ejemplo real
+ * "Sheet Modal" de developer.motion.dev) — antes no reaccionaba para
+ * nada al tocarlo, aunque sí funcionara. El desvanecido del fondo en
+ * proporción al arrastre (la otra pieza de ese mismo ejemplo) se
+ * evaluó y se descartó por ahora: mezclar un `useMotionValue` externo
+ * con el `exit` que necesita `AnimatePresence` para animar el cierre
+ * compite por la misma propiedad de forma poco confiable — no vale
+ * la pena el riesgo para un efecto tan sutil. */
 export default function MobileBottomSheet({
   open,
   onClose,
@@ -63,12 +73,14 @@ export default function MobileBottomSheet({
                 una barra de 4px es casi imposible de agarrar bien con
                 el dedo, el padding de acá arriba/abajo la hace
                 utilizable sin agrandar la barra en sí */}
-            <div
+            <motion.div
               onPointerDown={(e) => dragControls.start(e)}
+              whileHover={{ opacity: 0.8 }}
+              whileTap={{ scale: 0.92 }}
               className="py-3 -mb-2 touch-none cursor-grab active:cursor-grabbing"
             >
               <div className="w-10 h-1 bg-tdf-line rounded-full mx-auto" />
-            </div>
+            </motion.div>
             <p className="font-mono text-[10px] uppercase text-tdf-muted px-5 pt-2 pb-3 border-b border-tdf-line">
               {title}
             </p>
