@@ -62,6 +62,13 @@ function activeTabFromPath(pathname: string): TabKey {
 const TAB_SLOT = 56; // px por ícono, el blob se mueve en múltiplos de esto
 const TOTAL_SLOTS = TABS.length + 1; // +1 = el hamburguesa, fuera del blob
 
+// layoutId compartido entre el mini-preview del tab de Actividad y el
+// ícono real en la grilla expandida — mismo `to` en los dos lados,
+// así Framer Motion sabe qué ícono chico se convierte en cuál grande
+function activityIconLayoutId(to: string): string {
+  return `activity-icon-${to}`;
+}
+
 function LinkList({
   links,
   onNavigate,
@@ -101,7 +108,18 @@ function LinkList({
  * (13-09-2026): "algo así como el sistema de Android de carpetas
  * donde se guardan las aplicaciones". Reusa ACTIVIDAD_LINKS tal cual
  * (ya trae su propio ícono por link), solo cambia cómo se dibuja
- * (grilla de íconos en vez de lista de texto). */
+ * (grilla de íconos en vez de lista de texto).
+ *
+ * Segunda vuelta (13-09-2026, referencia real: developer.motion.dev
+ * "iOS App Folder"): cada ícono comparte `layoutId` con su versión
+ * chica dentro del tab de Actividad (ver ACTIVITY_ICON_LAYOUT_ID en
+ * MobileTabBar) — al abrir el panel, los íconos "vuelan" desde la
+ * posición del tab hacia acá, en vez de aparecer de la nada. Para que
+ * esto funcione bien, el tab esconde su mini-preview MIENTRAS el
+ * panel está abierto (ver `activeTab === "actividad" && !open` en el
+ * render del tab) — si las dos versiones existieran a la vez, Framer
+ * Motion no tiene una relación clara de "uno se va, el otro llega" y
+ * la animación queda rara. */
 function ActividadGridContent({ onNavigate }: { onNavigate: () => void }) {
   return (
     <motion.div
@@ -117,7 +135,9 @@ function ActividadGridContent({ onNavigate }: { onNavigate: () => void }) {
             onClick={onNavigate}
             className="flex flex-col items-center gap-2 py-5 rounded-xl bg-tdf-dark/40 hover:bg-tdf-dark/70 transition-colors"
           >
-            <Icon size={26} className="text-tdf-magenta" />
+            <motion.div layoutId={activityIconLayoutId(to)}>
+              <Icon size={26} className="text-tdf-magenta" />
+            </motion.div>
             <span className="font-mono text-[10px] uppercase text-tdf-muted text-center">
               {label}
             </span>
@@ -320,10 +340,41 @@ export default function MobileTabBar() {
                     transition={{ type: "spring", stiffness: 300, damping: 22 }}
                   />
                 )}
-                <Icon
-                  size={19}
-                  className={`relative ${activeTab === key ? "text-white" : "text-tdf-muted"}`}
-                />
+                {/* mini-preview tipo "carpeta de apps" — SOLO mientras
+                    el panel de Actividad está cerrado. Si se dejara
+                    siempre visible, cuando el panel se abre existirían
+                    DOS versiones de cada ícono a la vez (esta chica +
+                    la grande de ActividadGridContent) compartiendo el
+                    mismo layoutId, y Framer Motion no tiene una
+                    relación clara de cuál "se convierte" en cuál — la
+                    animación queda rota. Escondiendo esta versión
+                    mientras la otra existe, queda un solo ícono de
+                    cada uno en todo momento, y el "vuelo" entre las
+                    dos posiciones funciona bien (referencia real:
+                    developer.motion.dev "iOS App Folder", 13-09-2026). */}
+                {key === "actividad" && openPanel !== "actividad" ? (
+                  <div className="relative grid grid-cols-2 gap-0.5 w-5 h-5">
+                    {ACTIVIDAD_LINKS.map((link) => (
+                      <motion.div
+                        key={link.to}
+                        layoutId={activityIconLayoutId(link.to)}
+                        className="flex items-center justify-center"
+                      >
+                        <link.Icon
+                          size={7}
+                          className={
+                            activeTab === key ? "text-white" : "text-tdf-muted"
+                          }
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <Icon
+                    size={19}
+                    className={`relative ${activeTab === key ? "text-white" : "text-tdf-muted"}`}
+                  />
+                )}
               </button>
             ))}
             <button
