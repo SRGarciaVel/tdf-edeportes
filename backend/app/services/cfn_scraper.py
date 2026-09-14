@@ -669,6 +669,16 @@ def get_character_win_rates(
                     row.locator('[class*="winning_rate_name__"]')
                     .inner_text(timeout=3000)
                     .strip()
+                    # normalizado a Title Case a propósito — el DOM real
+                    # lo muestra en mayúsculas ("ELENA"), pero
+                    # get_character_mr_breakdown (la otra función que
+                    # escribe en esta misma tabla) ya normaliza a
+                    # "Elena". Sin esto, el mismo personaje real queda
+                    # guardado dos veces con distinta capitalización —
+                    # bug real encontrado en producción, 12-09-2026
+                    # (Seba: "por qué hay personajes que se repiten en
+                    # la lista").
+                    .title()
                 )
                 if character_name.strip().upper() == "ANY":
                     # fila agregada ("todos los personajes juntos"), no
