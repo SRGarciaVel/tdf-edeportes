@@ -51,9 +51,18 @@ export default function TwitchChatPanel() {
           chat de Twitch como "tapado" (protección anti-clickjacking) si
           algún ancestro del iframe tiene un transform aplicado, aunque
           sea uno que no cambia nada visible. Antes esto usaba
-          framer-motion (transform: translateX). Ver lessons.md. */}
+          framer-motion (transform: translateX). Ver lessons.md.
+
+          top-0 en mobile, md:top-16 en desktop — antes era top-24 fijo
+          para los dos, calibrado a la navbar vieja de dos pisos (barra
+          de aviso + barra principal). Bug real encontrado por Seba
+          (13-09-2026): al sacar la barra de aviso y achicar la altura
+          de la navbar, ese offset quedó de más y el chat se veía
+          descuadrado arriba. En mobile no hace falta ningún offset —
+          la navegación ya no vive arriba del todo, se mudó a la tab
+          bar de abajo (ver MobileTabBar.tsx). */}
       <div
-        className="fixed top-24 h-[calc(100%-6rem)] w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
+        className="fixed top-0 h-full md:top-16 md:h-[calc(100%-4rem)] w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
         style={{ right: open ? 0 : "-100%" }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-tdf-line shrink-0">
