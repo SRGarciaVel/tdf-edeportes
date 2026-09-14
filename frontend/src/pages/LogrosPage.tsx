@@ -119,7 +119,7 @@ export default function LogrosPage() {
       )}
 
       {!loading && entries.length > 0 && (
-        <div className="hud-frame bg-tdf-charcoal divide-y divide-tdf-line max-w-3xl">
+        <div className="hud-frame bg-tdf-charcoal divide-y divide-tdf-line">
           {entries.map((entry, i) => (
             <LeaderboardRow
               key={entry.cfn_id}
