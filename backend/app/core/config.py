@@ -21,6 +21,12 @@ class Settings(BaseSettings):
 
     discord_webhook_url: str = ""
 
+    # "" por default: si no está seteada, sync_startgg_tournaments.py se
+    # frena con un mensaje claro en vez de pegarle a la API sin auth
+    # (misma filosofía que deepl_api_key de acá abajo — apagado
+    # silencioso cuando no aplica, nunca un 401 crudo sin contexto)
+    startgg_api_token: str = ""
+
     # "" por default: si no está seteada, translation.py se apaga solo
     # y guarda el texto en inglés sin traducir (no rompe nada, ver
     # translate_to_spanish)

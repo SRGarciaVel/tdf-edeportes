@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -24,6 +24,17 @@ class Event(Base):
     external_url: Mapped[str | None] = mapped_column(String)  # link a start.gg, etc.
     # staff | publico
     visibility: Mapped[str] = mapped_column(String, nullable=False, default="staff")
+
+    # ambos solo se llenan para torneos sincronizados desde start.gg
+    # (ver sync_startgg_tournaments.py) — NULL para todo lo demás,
+    # incluidos torneos cargados a mano sin API
+    attendee_count: Mapped[int | None] = mapped_column(Integer)
+    # lista de {"placement": int, "gamertag": str} — top 3 del primer
+    # evento/bracket del torneo. Si un torneo tuvo más de un
+    # evento (ej. SF6 y Third Strike por separado), esto solo
+    # refleja el primero que devuelve la API, no los dos — ver
+    # comentario en services/startgg.py
+    standings: Mapped[list[dict] | None] = mapped_column(JSONB)
 
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False

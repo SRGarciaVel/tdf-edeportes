@@ -1,3 +1,4 @@
+import { Medal, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
@@ -88,29 +89,69 @@ function TournamentList({ items }: { items: EventItem[] }) {
       {items.map((t) => (
         <li
           key={t.id}
-          className="hud-frame bg-tdf-charcoal px-5 py-4 flex items-center justify-between flex-wrap gap-2"
+          className="hud-frame bg-tdf-charcoal px-5 py-4 flex flex-col gap-3"
         >
-          <div>
-            <p className="font-semibold">{t.title}</p>
-            <p className="font-mono text-xs text-tdf-muted">
-              {new Date(t.start_at).toLocaleDateString("es-CL", {
-                dateStyle: "long",
-              })}
-            </p>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <p className="font-semibold">{t.title}</p>
+              <div className="flex items-center gap-3 font-mono text-xs text-tdf-muted">
+                <span>
+                  {new Date(t.start_at).toLocaleDateString("es-CL", {
+                    dateStyle: "long",
+                  })}
+                </span>
+                {/* solo viene de la sincronización con start.gg — un
+                    torneo cargado a mano se queda sin este dato,
+                    nunca muestra "0 participantes" a falta de algo
+                    mejor */}
+                {t.attendee_count != null && (
+                  <span className="flex items-center gap-1">
+                    <Users size={12} />
+                    {t.attendee_count} participantes
+                  </span>
+                )}
+              </div>
+            </div>
+            {t.external_url ? (
+              <a
+                href={t.external_url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono text-xs uppercase text-tdf-magenta hover:text-white underline"
+              >
+                Ver bracket en start.gg →
+              </a>
+            ) : (
+              <span className="font-mono text-xs text-tdf-muted">
+                Sin bracket cargado
+              </span>
+            )}
           </div>
-          {t.external_url ? (
-            <a
-              href={t.external_url}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-xs uppercase text-tdf-magenta hover:text-white underline"
-            >
-              Ver bracket en start.gg →
-            </a>
-          ) : (
-            <span className="font-mono text-xs text-tdf-muted">
-              Sin bracket cargado
-            </span>
+
+          {/* podio — mismo criterio que /logros: solo se muestra si
+              hay datos reales, nunca un podio inventado o vacío */}
+          {t.standings && t.standings.length > 0 && (
+            <div className="flex flex-wrap gap-4 pt-3 border-t border-tdf-line">
+              {t.standings.map((s) => (
+                <div
+                  key={s.placement}
+                  className="flex items-center gap-1.5 font-mono text-xs"
+                >
+                  <Medal
+                    size={14}
+                    className={
+                      s.placement === 1
+                        ? "text-amber-400"
+                        : s.placement === 2
+                          ? "text-slate-300"
+                          : "text-orange-700"
+                    }
+                  />
+                  <span className="text-tdf-muted">{s.placement}°</span>
+                  <span className="text-white">{s.gamertag}</span>
+                </div>
+              ))}
+            </div>
           )}
         </li>
       ))}

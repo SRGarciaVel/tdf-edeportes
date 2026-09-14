@@ -22,6 +22,10 @@ export interface EventItem {
   created_by: string;
   created_at: string;
   updated_at: string;
+  // ambos solo vienen de la sincronización con start.gg — null para
+  // el resto de los eventos, incluidos torneos cargados a mano
+  attendee_count: number | null;
+  standings: { placement: number; gamertag: string }[] | null;
 }
 
 export interface EventFormValues {

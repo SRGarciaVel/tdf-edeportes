@@ -60,6 +60,11 @@ class EventRead(EventBase):
     created_by: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    # ambos solo vienen de la sincronización con start.gg (ver
+    # sync_startgg_tournaments.py) — None para el resto de los
+    # eventos, incluidos torneos cargados a mano en el formulario
+    attendee_count: int | None = None
+    standings: list[dict] | None = None
 
 
 class EventReadWithCreator(EventRead):
