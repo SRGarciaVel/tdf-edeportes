@@ -6,9 +6,11 @@ import {
   LayoutGrid,
   Radio,
   Search,
+  Trophy,
   Users,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
 import { listCfnPlayers, listEvents, listTierLists } from "../lib/api";
 import {
@@ -223,9 +225,23 @@ function IconButton({
  * tres ya existían para otras páginas). Con una comunidad de este
  * tamaño no hace falta un endpoint de búsqueda en el backend, sería
  * sobre-ingeniería (conversación de diseño, 21-08-2026). */
+/** Búsqueda tipo "command palette" — antes era un dropdown chico
+ * anclado al ícono de lupa, que se sentía poco natural (pedido de
+ * Seba, 13-09-2026, con referencia visual de un buscador centrado
+ * tipo Spotlight/Cmd+K). La lógica de filtrado es la misma de
+ * siempre (client-side, ver comentario de 21-08-2026 sobre por qué),
+ * lo que cambia es solo la presentación.
+ *
+ * Se saca del flujo normal del DOM con un Portal a `document.body` a
+ * propósito: la barra principal es un `motion.div` animado (la
+ * cápsula reactiva al scroll), y un overlay `fixed` adentro de un
+ * ancestro con ciertas animaciones de Framer Motion puede terminar
+ * fijo respecto a ESE ancestro en vez de la ventana completa, no a la
+ * ventana — un Portal lo evita de raíz, sin tener que auditar cada
+ * animación de los padres para confirmar que ninguna cree ese
+ * problema. */
 function SearchPanel({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
-  const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [players, setPlayers] = useState<CFNPlayer[]>([]);
@@ -246,13 +262,11 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
   }, []);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   const q = query.trim().toLowerCase();
@@ -296,109 +310,131 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
-  return (
+  return createPortal(
     <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: -6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
-      transition={PANEL_TRANSITION}
-      className="absolute top-full right-0 mt-2 w-80 z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      onClick={onClose}
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-start justify-center px-4 pt-[12vh]"
     >
-      <div className="hud-frame bg-tdf-charcoal border border-tdf-line p-3">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar jugadores, torneos, tier lists..."
-          className="w-full bg-tdf-dark border border-tdf-line px-3 py-2 text-sm font-body mb-2"
-        />
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: -12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -12, scale: 0.98 }}
+        transition={PANEL_TRANSITION}
+        className="hud-frame bg-tdf-charcoal border border-tdf-line w-full max-w-xl max-h-[70vh] flex flex-col"
+      >
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-tdf-line shrink-0">
+          <Search size={18} className="text-tdf-muted shrink-0" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar jugadores, torneos, tier lists..."
+            className="w-full bg-transparent text-base font-body outline-none placeholder:text-tdf-muted"
+          />
+          <kbd className="hidden sm:block font-mono text-[10px] text-tdf-muted border border-tdf-line px-1.5 py-0.5 rounded shrink-0">
+            ESC
+          </kbd>
+        </div>
 
-        {q.length >= 2 && !hasResults && (
-          <p className="font-body text-xs text-tdf-muted py-2">
-            Sin resultados para "{query}".
-          </p>
-        )}
-
-        {matchedPlayers.length > 0 && (
-          <div className="mb-2">
-            <p className="font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 mt-2 mb-1">
-              Jugadores
+        <div className="overflow-y-auto p-3">
+          {q.length < 2 && (
+            <p className="font-body text-sm text-tdf-muted text-center py-10">
+              Escribe al menos 2 letras para buscar.
             </p>
-            {matchedPlayers.map((p) => (
-              <button
-                key={p.cfn_id}
-                onClick={() => go(`/jugadores/${p.cfn_id}`)}
-                className="block w-full text-left px-2 py-1.5 font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
-              >
-                {p.display_name}
-                {p.character_name && (
+          )}
+
+          {q.length >= 2 && !hasResults && (
+            <p className="font-body text-sm text-tdf-muted text-center py-10">
+              Sin resultados para "{query}".
+            </p>
+          )}
+
+          {matchedPlayers.length > 0 && (
+            <div className="mb-2">
+              <p className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 px-2 mt-2 mb-1">
+                <Users size={11} /> Jugadores
+              </p>
+              {matchedPlayers.map((p) => (
+                <button
+                  key={p.cfn_id}
+                  onClick={() => go(`/jugadores/${p.cfn_id}`)}
+                  className="block w-full text-left px-3 py-2 rounded font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
+                >
+                  {p.display_name}
+                  {p.character_name && (
+                    <span className="text-xs opacity-70">
+                      {" "}
+                      · {p.character_name}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {matchedEvents.length > 0 && (
+            <div className="mb-2">
+              <p className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 px-2 mt-2 mb-1">
+                <Trophy size={11} /> Torneos
+              </p>
+              {matchedEvents.map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => go("/torneos")}
+                  className="block w-full text-left px-3 py-2 rounded font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
+                >
+                  {e.title}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {matchedTierLists.length > 0 && (
+            <div className="mb-2">
+              <p className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 px-2 mt-2 mb-1">
+                <LayoutGrid size={11} /> Tier Lists
+              </p>
+              {matchedTierLists.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => go(`/tierlist/${t.id}`)}
+                  className="block w-full text-left px-3 py-2 rounded font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
+                >
+                  {t.template_name ?? "Plantilla ya borrada"}
                   <span className="text-xs opacity-70">
                     {" "}
-                    · {p.character_name}
+                    · por {t.creator_name}
                   </span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {matchedEvents.length > 0 && (
-          <div className="mb-2">
-            <p className="font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 mt-2 mb-1">
-              Torneos
-            </p>
-            {matchedEvents.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => go("/torneos")}
-                className="block w-full text-left px-2 py-1.5 font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
-              >
-                {e.title}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {matchedTierLists.length > 0 && (
-          <div className="mb-2">
-            <p className="font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 mt-2 mb-1">
-              Tier Lists
-            </p>
-            {matchedTierLists.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => go(`/tierlist/${t.id}`)}
-                className="block w-full text-left px-2 py-1.5 font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
-              >
-                {t.template_name ?? "Plantilla ya borrada"}
-                <span className="text-xs opacity-70">
-                  {" "}
-                  · por {t.creator_name}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {matchedPages.length > 0 && (
-          <div>
-            <p className="font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 mt-2 mb-1">
-              Páginas
-            </p>
-            {matchedPages.map((p) => (
-              <button
-                key={p.to}
-                onClick={() => go(p.to)}
-                className="block w-full text-left px-2 py-1.5 font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </motion.div>
+          {matchedPages.length > 0 && (
+            <div>
+              <p className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider text-tdf-muted opacity-70 px-2 mt-2 mb-1">
+                <Home size={11} /> Páginas
+              </p>
+              {matchedPages.map((p) => (
+                <button
+                  key={p.to}
+                  onClick={() => go(p.to)}
+                  className="block w-full text-left px-3 py-2 rounded font-body text-sm text-tdf-muted hover:text-white hover:bg-tdf-magenta/10 transition-colors"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
 
