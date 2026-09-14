@@ -1,73 +1,30 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Award,
   Calendar,
-  Clapperboard,
-  FileText,
   Gamepad2,
   Home,
   Info,
-  LayoutGrid,
   Radio,
-  Scale,
   Search,
-  Star,
-  Swords,
-  Target,
-  Trophy,
   Users,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { listCfnPlayers, listEvents, listTierLists } from "../lib/api";
+import {
+  ACTIVIDAD_LINKS,
+  COMUNIDAD_LINKS,
+  DIRECT_LINKS,
+  JUGADORES_LINKS,
+  SEARCHABLE_PAGES,
+  SF6_LINKS,
+} from "../lib/navLinks";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 import type { CFNPlayer, EventItem, TierListSummaryData } from "../lib/types";
 import CommunityLinks from "./CommunityLinks";
 import LoginButton from "./LoginButton";
+import MobileTabBar from "./MobileTabBar";
 import NotificationBell from "./NotificationBell";
-
-// las más visitadas quedan sueltas y directas — el resto se agrupa en
-// desplegables para no saturar la barra (conversación de diseño,
-// 21-08-2026: 9 ítems sueltos era demasiado; segunda vuelta,
-// 13-09-2026: "Comunidad" solo había vuelto a crecer a 9 ítems
-// mezclando cosas sin mucho que ver entre sí — se separó por tema en
-// vez de por orden de creación, sin superar 4 ítems por desplegable)
-const DIRECT_LINKS = [{ to: "/", label: "Inicio", Icon: Home }];
-
-const JUGADORES_LINKS = [
-  { to: "/jugadores", label: "Jugadores", Icon: Users },
-  { to: "/personajes", label: "Personajes", Icon: Swords },
-  { to: "/logros", label: "Logros", Icon: Award },
-];
-
-const COMUNIDAD_LINKS = [
-  { to: "/nosotros", label: "Nosotros", Icon: Info },
-  { to: "/objetivos", label: "Objetivos", Icon: Target },
-  { to: "/foda", label: "FODA", Icon: Scale },
-  { to: "/puntos", label: "Puntos", Icon: Star },
-];
-
-const ACTIVIDAD_LINKS = [
-  { to: "/calendario", label: "Calendario", Icon: Calendar },
-  { to: "/torneos", label: "Torneos", Icon: Trophy },
-  { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
-  { to: "/recopilaciones", label: "Recopilaciones", Icon: Clapperboard },
-];
-
-const SF6_LINKS = [
-  { to: "/sf6/meta", label: "Meta actual", Icon: Gamepad2 },
-  { to: "/sf6/patch-notes", label: "Notas de parche", Icon: FileText },
-];
-
-// para el buscador de "Páginas" — destinos fijos del sitio, no datos
-// que haya que traer de ningún lado (ver SearchPanel más abajo)
-const SEARCHABLE_PAGES = [
-  ...DIRECT_LINKS,
-  ...JUGADORES_LINKS,
-  ...COMUNIDAD_LINKS,
-  ...ACTIVIDAD_LINKS,
-  ...SF6_LINKS,
-];
 
 // a partir de cuántos px de scroll la barra pasa a su versión
 // compacta — lo suficiente para que no "parpadee" con un scroll
@@ -446,7 +403,6 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
 }
 
 export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const liveStatus = useTwitchLiveStatus();
@@ -468,261 +424,144 @@ export default function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40">
-      <motion.div
-        animate={{
-          maxWidth: scrolled ? 880 : 1280,
-          borderRadius: scrolled ? 9999 : 0,
-          marginTop: scrolled ? 12 : 0,
-          paddingLeft: scrolled ? 20 : 24,
-          paddingRight: scrolled ? 20 : 24,
-        }}
-        transition={{ duration: 0.25, ease: "easeOut" }}
-        className="relative mx-auto flex items-center justify-between gap-4 bg-tdf-charcoal/90 backdrop-blur border border-tdf-line"
-        style={{
-          height: scrolled ? 56 : 64,
-          boxShadow: scrolled
-            ? "0 8px 30px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(196,20,122,0.15)"
-            : "0 4px 30px -12px rgba(196,20,122,0.35)",
-        }}
-      >
-        {/* logo integrado a la barra, ya no flotando arriba de un
+    <>
+      <header className="hidden md:block sticky top-0 z-40">
+        <motion.div
+          animate={{
+            maxWidth: scrolled ? 880 : 1280,
+            borderRadius: scrolled ? 9999 : 0,
+            marginTop: scrolled ? 12 : 0,
+            paddingLeft: scrolled ? 20 : 24,
+            paddingRight: scrolled ? 20 : 24,
+          }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="relative mx-auto flex items-center justify-between gap-4 bg-tdf-charcoal/90 backdrop-blur border border-tdf-line"
+          style={{
+            height: scrolled ? 56 : 64,
+            boxShadow: scrolled
+              ? "0 8px 30px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(196,20,122,0.15)"
+              : "0 4px 30px -12px rgba(196,20,122,0.35)",
+          }}
+        >
+          {/* logo integrado a la barra, ya no flotando arriba de un
             borde que no existe más — mismo criterio que la Dirección
             C conversada con Seba (13-09-2026), adaptado a la barra
             reactiva: se achica junto con el resto en vez de vivir
             aparte */}
-        <NavLink to="/" className="flex items-center gap-2 shrink-0">
-          <motion.img
-            src="/brand/logo-wordmark.webp"
-            alt="TDF"
-            animate={{ height: scrolled ? 28 : 36 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="w-auto"
-            style={{
-              filter:
-                "drop-shadow(0 0 5px rgba(196,20,122,0.85)) drop-shadow(0 0 12px rgba(196,20,122,0.4))",
-            }}
-          />
-        </NavLink>
-
-        <nav className="hidden md:flex items-center gap-6">
-          {DIRECT_LINKS.map((link) => (
-            <AnimatedNavLink key={link.to} {...link} compact={scrolled} />
-          ))}
-          <NavDropdown
-            label="Jugadores"
-            groupIcon={Users}
-            links={JUGADORES_LINKS}
-            compact={scrolled}
-          />
-          <NavDropdown
-            label="Actividad"
-            groupIcon={Calendar}
-            links={ACTIVIDAD_LINKS}
-            compact={scrolled}
-          />
-          <NavDropdown
-            label="Comunidad"
-            groupIcon={Info}
-            links={COMUNIDAD_LINKS}
-            compact={scrolled}
-          />
-        </nav>
-
-        <div className="hidden md:flex items-center gap-3 shrink-0">
-          <NavDropdown
-            label="SF6"
-            groupIcon={Gamepad2}
-            links={SF6_LINKS}
-            bordered
-            compact={scrolled}
-          />
-
-          <CommunityLinks className="hidden lg:flex" />
-
-          {liveStatus?.is_live ? (
-            <motion.a
-              href="https://www.twitch.tv/tdfedeportes"
-              target="_blank"
-              rel="noreferrer"
-              title={scrolled ? "En vivo" : undefined}
-              animate={{
-                boxShadow: [
-                  "0 4px 20px -6px rgba(196,20,122,0.5)",
-                  "0 4px 26px -4px rgba(196,20,122,0.85)",
-                  "0 4px 20px -6px rgba(196,20,122,0.5)",
-                ],
-              }}
-              transition={{
-                duration: 2.2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-1.5 font-mono text-[11px] uppercase font-semibold text-white px-4 py-2.5"
+          <NavLink to="/" className="flex items-center gap-2 shrink-0">
+            <motion.img
+              src="/brand/logo-wordmark.webp"
+              alt="TDF"
+              animate={{ height: scrolled ? 28 : 36 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="w-auto"
               style={{
-                background: "linear-gradient(135deg, #C4147A, #5B2A86)",
-                clipPath:
-                  "polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
+                filter:
+                  "drop-shadow(0 0 5px rgba(196,20,122,0.85)) drop-shadow(0 0 12px rgba(196,20,122,0.4))",
               }}
-            >
-              <Radio size={13} />
-              {!scrolled && "En vivo"}
-            </motion.a>
-          ) : (
-            <a
-              href="https://www.twitch.tv/tdfedeportes"
-              target="_blank"
-              rel="noreferrer"
-              title={scrolled ? "Ver stream" : undefined}
-              className="flex items-center gap-1.5 font-mono text-[11px] uppercase text-tdf-muted border border-tdf-line hover:border-tdf-magenta hover:text-white transition-colors px-4 py-2.5"
-            >
-              <Radio size={13} />
-              {!scrolled && "Ver stream"}
-            </a>
-          )}
+            />
+          </NavLink>
 
-          <div className="relative">
-            <IconButton
-              onClick={() => setSearchOpen((v) => !v)}
-              active={searchOpen}
-              label="Buscar"
-            >
-              <Search size={16} />
-            </IconButton>
-            <AnimatePresence>
-              {searchOpen && (
-                <SearchPanel onClose={() => setSearchOpen(false)} />
-              )}
-            </AnimatePresence>
-          </div>
+          <nav className="hidden md:flex items-center gap-6">
+            {DIRECT_LINKS.map((link) => (
+              <AnimatedNavLink key={link.to} {...link} compact={scrolled} />
+            ))}
+            <NavDropdown
+              label="Jugadores"
+              groupIcon={Users}
+              links={JUGADORES_LINKS}
+              compact={scrolled}
+            />
+            <NavDropdown
+              label="Actividad"
+              groupIcon={Calendar}
+              links={ACTIVIDAD_LINKS}
+              compact={scrolled}
+            />
+            <NavDropdown
+              label="Comunidad"
+              groupIcon={Info}
+              links={COMUNIDAD_LINKS}
+              compact={scrolled}
+            />
+          </nav>
 
-          <NotificationBell />
-          <LoginButton />
-        </div>
+          <div className="hidden md:flex items-center gap-3 shrink-0">
+            <NavDropdown
+              label="SF6"
+              groupIcon={Gamepad2}
+              links={SF6_LINKS}
+              bordered
+              compact={scrolled}
+            />
 
-        <button
-          className="md:hidden text-white"
-          onClick={() => setMobileOpen((v) => !v)}
-          aria-label="Abrir menú"
-        >
-          {mobileOpen ? "✕" : "☰"}
-        </button>
-      </motion.div>
+            <CommunityLinks className="hidden lg:flex" />
 
-      {/* drawer mobile — logo centrado, menú completo, y las mismas
-          acciones de la barra de escritorio abajo del todo. Siempre
-          con texto completo (no aplica el modo compacto de íconos —
-          en mobile no hace falta, ya es un panel propio, no una barra
-          angosta compitiendo por espacio horizontal) */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.nav
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="md:hidden bg-tdf-charcoal border-t border-tdf-line overflow-hidden"
-          >
-            <div className="px-4 py-4 flex flex-col gap-4 font-mono text-sm uppercase">
-              {DIRECT_LINKS.map(({ to, label, Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
-                  }
-                >
-                  <Icon size={16} />
-                  {label}
-                </NavLink>
-              ))}
-              <div className="pt-2 border-t border-tdf-line">
-                <p className="text-tdf-muted mb-2">Jugadores</p>
-                {JUGADORES_LINKS.map(({ to, label, Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
-                    }
-                  >
-                    <Icon size={14} />
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-              <div className="pt-2 border-t border-tdf-line">
-                <p className="text-tdf-muted mb-2">Actividad</p>
-                {ACTIVIDAD_LINKS.map(({ to, label, Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
-                    }
-                  >
-                    <Icon size={14} />
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-              <div className="pt-2 border-t border-tdf-line">
-                <p className="text-tdf-muted mb-2">Comunidad</p>
-                {COMUNIDAD_LINKS.map(({ to, label, Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
-                    }
-                  >
-                    <Icon size={14} />
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-              <div className="pt-2 border-t border-tdf-line">
-                <p className="text-tdf-muted mb-2">SF6</p>
-                {SF6_LINKS.map(({ to, label, Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 pl-3 py-1 ${isActive ? "text-tdf-magenta" : "text-tdf-muted"}`
-                    }
-                  >
-                    <Icon size={14} />
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
+            {liveStatus?.is_live ? (
+              <motion.a
+                href="https://www.twitch.tv/tdfedeportes"
+                target="_blank"
+                rel="noreferrer"
+                title={scrolled ? "En vivo" : undefined}
+                animate={{
+                  boxShadow: [
+                    "0 4px 20px -6px rgba(196,20,122,0.5)",
+                    "0 4px 26px -4px rgba(196,20,122,0.85)",
+                    "0 4px 20px -6px rgba(196,20,122,0.5)",
+                  ],
+                }}
+                transition={{
+                  duration: 2.2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center gap-1.5 font-mono text-[11px] uppercase font-semibold text-white px-4 py-2.5"
+                style={{
+                  background: "linear-gradient(135deg, #C4147A, #5B2A86)",
+                  clipPath:
+                    "polygon(0 8px, 8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%)",
+                }}
+              >
+                <Radio size={13} />
+                {!scrolled && "En vivo"}
+              </motion.a>
+            ) : (
               <a
                 href="https://www.twitch.tv/tdfedeportes"
                 target="_blank"
                 rel="noreferrer"
-                className={`flex items-center gap-2 ${liveStatus?.is_live ? "text-tdf-magenta" : "text-tdf-muted"}`}
+                title={scrolled ? "Ver stream" : undefined}
+                className="flex items-center gap-1.5 font-mono text-[11px] uppercase text-tdf-muted border border-tdf-line hover:border-tdf-magenta hover:text-white transition-colors px-4 py-2.5"
               >
-                <Radio size={14} />
-                {liveStatus?.is_live ? "En vivo ↗" : "Ver stream ↗"}
+                <Radio size={13} />
+                {!scrolled && "Ver stream"}
               </a>
-              <div className="pt-2 border-t border-tdf-line flex flex-col gap-3">
-                <CommunityLinks />
-                <div className="flex items-center gap-3">
-                  <NotificationBell />
-                  <LoginButton variant="inline" />
-                </div>
-              </div>
+            )}
+
+            <div className="relative">
+              <IconButton
+                onClick={() => setSearchOpen((v) => !v)}
+                active={searchOpen}
+                label="Buscar"
+              >
+                <Search size={16} />
+              </IconButton>
+              <AnimatePresence>
+                {searchOpen && (
+                  <SearchPanel onClose={() => setSearchOpen(false)} />
+                )}
+              </AnimatePresence>
             </div>
-          </motion.nav>
-        )}
-      </AnimatePresence>
-    </header>
+
+            <NotificationBell />
+            <LoginButton />
+          </div>
+        </motion.div>
+      </header>
+
+      <MobileTabBar />
+    </>
   );
 }
