@@ -21,16 +21,14 @@ import {
   SEARCHABLE_PAGES,
   SF6_LINKS,
 } from "../lib/navLinks";
+// valor compartido con TwitchChatPanel.tsx (ver lib/navbarMetrics.ts)
+// — antes vivía solo acá, duplicado a ojo en el otro archivo
+import { SCROLL_COMPACT_THRESHOLD } from "../lib/navbarMetrics";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 import type { CFNPlayer, EventItem, TierListSummaryData } from "../lib/types";
 import LoginButton from "./LoginButton";
 import MobileTabBar from "./MobileTabBar";
 import NotificationBell from "./NotificationBell";
-
-// a partir de cuántos px de scroll la barra pasa a su versión
-// compacta — lo suficiente para que no "parpadee" con un scroll
-// mínimo sin querer, pero sin tardar en reaccionar
-const SCROLL_COMPACT_THRESHOLD = 40;
 
 type NavDropdownLink = { to: string; label: string; Icon: typeof Home };
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useFriendsLiveStatus } from "../lib/useFriendsLiveStatus";
+import { useNavbarHeight } from "../lib/navbarMetrics";
 
 const TDF_CHANNEL = "tdfedeportes";
 
@@ -26,6 +27,10 @@ export default function TwitchChatPanel() {
   // mismo motivo que en TwitchEmbed: el parent tiene que matchear el
   // dominio real que sirve la página, sin importar el entorno
   const parent = window.location.hostname;
+  // alto real de la navbar en este momento (0 en mobile, donde no
+  // hay navbar arriba) — reemplaza al "top-16" fijo que se
+  // desincronizaba cada vez que la navbar cambiaba de tamaño
+  const navbarHeight = useNavbarHeight();
 
   return (
     <>
@@ -53,17 +58,24 @@ export default function TwitchChatPanel() {
           sea uno que no cambia nada visible. Antes esto usaba
           framer-motion (transform: translateX). Ver lessons.md.
 
-          top-0 en mobile, md:top-16 en desktop — antes era top-24 fijo
-          para los dos, calibrado a la navbar vieja de dos pisos (barra
-          de aviso + barra principal). Bug real encontrado por Seba
-          (13-09-2026): al sacar la barra de aviso y achicar la altura
-          de la navbar, ese offset quedó de más y el chat se veía
-          descuadrado arriba. En mobile no hace falta ningún offset —
-          la navegación ya no vive arriba del todo, se mudó a la tab
-          bar de abajo (ver MobileTabBar.tsx). */}
+          top/height calculados en vivo con useNavbarHeight (0 en
+          mobile, donde no hay navbar arriba — la navegación se mudó a
+          la tab bar de abajo, ver MobileTabBar.tsx). Antes esto era un
+          top-24 fijo calibrado a la navbar vieja de dos pisos, y
+          después un intento con clases estáticas (top-0/md:top-16) que
+          solo cubría UNA de las dos alturas reales de la navbar
+          reactiva al scroll (64px arriba, 68px comprimida) — bug real
+          encontrado por Seba dos veces (13-09-2026): cada vez que la
+          navbar cambia de tamaño, un número adivinado se desincroniza.
+          Medir la altura real en vez de adivinarla resuelve esto de
+          raíz, no solo para el estado actual de la navbar. */}
       <div
-        className="fixed top-0 h-full md:top-16 md:h-[calc(100%-4rem)] w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
-        style={{ right: open ? 0 : "-100%" }}
+        className="fixed w-full sm:w-[350px] z-40 bg-black border-l border-tdf-line flex flex-col transition-[right] duration-300 ease-out"
+        style={{
+          right: open ? 0 : "-100%",
+          top: navbarHeight,
+          height: `calc(100% - ${navbarHeight}px)`,
+        }}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b border-tdf-line shrink-0">
           <div className="flex items-center gap-1 overflow-x-auto">
