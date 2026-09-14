@@ -470,7 +470,17 @@ export default function Navbar() {
             paddingRight: scrolled ? 20 : 24,
           }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="relative mx-auto flex items-center justify-between gap-4 bg-tdf-charcoal/90 backdrop-blur border border-tdf-line"
+          // antes era justify-between con 3 grupos (logo, nav,
+          // acciones) — eso reparte el espacio EN PARTES IGUALES
+          // entre los tres, así que al achicarse la cápsula
+          // (13-09-2026), el grupo de nav (chico, 4 íconos) quedaba
+          // flotando solo en un hueco grande en el medio, en vez de
+          // pegado al logo (bug real encontrado por Seba). Ahora
+          // logo+nav quedan agrupados a la izquierda con gap normal,
+          // y el `ml-auto` del div de acciones (más abajo) es lo que
+          // empuja ESE grupo al extremo derecho — un solo elemento
+          // "estirado", no los tres repartidos parejo.
+          className="relative mx-auto flex items-center gap-4 bg-tdf-charcoal/90 backdrop-blur border border-tdf-line"
           style={{
             height: scrolled ? 56 : 64,
             boxShadow: scrolled
@@ -521,7 +531,7 @@ export default function Navbar() {
             />
           </nav>
 
-          <div className="hidden md:flex items-center gap-3 shrink-0">
+          <div className="hidden md:flex items-center gap-3 shrink-0 ml-auto">
             <NavDropdown
               label="SF6"
               groupIcon={Gamepad2}
