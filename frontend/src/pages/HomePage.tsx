@@ -1,5 +1,5 @@
 import { Radio } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AnimatedNumber from "../components/AnimatedNumber";
 import InitialsAvatar from "../components/InitialsAvatar";
@@ -37,6 +37,81 @@ function relativeTime(iso: string): string {
   if (hours < 24) return `hace ${hours} h`;
   const days = Math.floor(hours / 24);
   return `hace ${days} d`;
+}
+
+// mismo ritmo que SectionLabel, por consistencia
+const HERO_TITLE_MS_PER_CHAR = 18;
+
+// "Streams, 33" / salto de línea / "y " + "malo 6" (en degradado) —
+// mismo texto y estructura que ya tenía el h1, solo se agrega el
+// tipeo letra por letra encima
+const HERO_TITLE_SEGMENTS = [
+  { text: "Streams, 33", gradient: false, breakAfter: true },
+  { text: "y ", gradient: false, breakAfter: false },
+  { text: "malo 6", gradient: true, breakAfter: false },
+];
+const HERO_TITLE_TOTAL_CHARS = HERO_TITLE_SEGMENTS.reduce(
+  (sum, s) => sum + s.text.length,
+  0,
+);
+
+/** Título del hero escribiéndose letra por letra, mismo efecto que
+ * SectionLabel (pedido de Seba, 13-09-2026) — pero a propósito NO el
+ * párrafo de abajo: a 18ms por letra, un párrafo de ~150 caracteres
+ * tarda casi 3 segundos en aparecer completo, y es el texto que
+ * explica qué es TDF — obligar a esperar para leer eso en cada
+ * visita se siente como una traba, no como vida (evaluado junto con
+ * Seba, se descartó a propósito). El título sí es corto (19
+ * caracteres, ~340ms en total) y es lo primero que se ve, ahí el
+ * efecto suma sin estorbar. */
+function HeroTitleTypewriter() {
+  const [typedCount, setTypedCount] = useState(0);
+
+  useEffect(() => {
+    setTypedCount(0);
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setTypedCount(i);
+      if (i >= HERO_TITLE_TOTAL_CHARS) clearInterval(interval);
+    }, HERO_TITLE_MS_PER_CHAR);
+    return () => clearInterval(interval);
+  }, []);
+
+  let consumed = 0;
+
+  return (
+    <h1 className="font-display font-bold uppercase text-4xl sm:text-5xl lg:text-6xl leading-[1.02]">
+      {HERO_TITLE_SEGMENTS.map((segment, i) => {
+        const start = consumed;
+        consumed += segment.text.length;
+        const visible = segment.text.slice(
+          0,
+          Math.max(0, Math.min(segment.text.length, typedCount - start)),
+        );
+        return (
+          <span key={i}>
+            {segment.gradient ? (
+              <span
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: "linear-gradient(90deg, #C4147A, #5B2A86)",
+                }}
+              >
+                {visible}
+              </span>
+            ) : (
+              visible
+            )}
+            {segment.breakAfter && <br />}
+          </span>
+        );
+      })}
+      {typedCount < HERO_TITLE_TOTAL_CHARS && (
+        <span className="inline-block w-[0.4em] animate-pulse">▌</span>
+      )}
+    </h1>
+  );
 }
 
 export default function HomePage() {
@@ -154,18 +229,7 @@ export default function HomePage() {
                 </a>
               )}
 
-              <h1 className="font-display font-bold uppercase text-4xl sm:text-5xl lg:text-6xl leading-[1.02]">
-                Streams, 33
-                <br />y{" "}
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: "linear-gradient(90deg, #C4147A, #5B2A86)",
-                  }}
-                >
-                  malo 6
-                </span>
-              </h1>
+              <HeroTitleTypewriter />
               <p className="text-lg text-tdf-muted font-body">
                 Salas abiertas de Third Strike y retro, torneos, streams de cada
                 uno de nosotros. No importa si es tu primera vez con fighting
