@@ -130,6 +130,22 @@ export interface CharacterStats {
   tier: string | null;
 }
 
+export interface CharacterSummary {
+  character_name: string;
+  player_count: number;
+  top_master_rating: number | null;
+}
+
+export interface CharacterPlayerRow {
+  cfn_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  matches_played: number | null;
+  win_rate: number | null;
+  master_rating: number | null;
+  tier: string | null;
+}
+
 export interface RoleRead {
   id: string;
   name: string;

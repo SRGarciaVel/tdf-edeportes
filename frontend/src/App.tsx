@@ -5,6 +5,7 @@ import AuthCallbackPage from "./pages/AuthCallbackPage";
 import CalendarioPage from "./pages/CalendarioPage";
 import HomePage from "./pages/HomePage";
 import JugadoresPage from "./pages/JugadoresPage";
+import PersonajesPage from "./pages/PersonajesPage";
 import NosotrosPage from "./pages/NosotrosPage";
 import ObjetivosPage from "./pages/ObjetivosPage";
 import PerfilPage from "./pages/PerfilPage";
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/torneos" element={<TorneosPage />} />
           <Route path="/jugadores" element={<JugadoresPage />} />
           <Route path="/jugadores/:cfnId" element={<PlayerProfilePage />} />
+          <Route path="/personajes" element={<PersonajesPage />} />
           <Route path="/perfil" element={<PerfilPage />} />
           <Route path="/sf6/meta" element={<Sf6MetaPage />} />
           <Route path="/sf6/patch-notes" element={<Sf6PatchNotesPage />} />

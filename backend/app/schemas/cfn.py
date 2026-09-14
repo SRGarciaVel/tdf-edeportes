@@ -295,6 +295,33 @@ class CharacterStatsRead(BaseModel):
     tier: str | None
 
 
+class CharacterSummary(BaseModel):
+    """Un personaje del "roster interno" de TDF — cuántos miembros lo
+    juegan y quién es el más alto en MR con él. Para /personajes
+    (pedido de Seba, 12-09-2026: leaderboard por personaje + "quién
+    más juega tal personaje", la misma consulta sirve para las dos
+    cosas — un leaderboard ES la lista de quién lo juega, ordenada)."""
+
+    character_name: str
+    player_count: int
+    top_master_rating: int | None
+
+
+class CharacterPlayerRow(BaseModel):
+    """Una fila del roster de UN personaje puntual — reusa
+    CharacterStatsRead + los datos de identidad del jugador (nombre,
+    avatar) que esa tabla no tiene, para no obligar al frontend a
+    cruzar dos listas distintas él mismo."""
+
+    cfn_id: str
+    display_name: str
+    avatar_url: str | None
+    matches_played: int | None
+    win_rate: float | None
+    master_rating: int | None
+    tier: str | None
+
+
 class CFNMatchStats(BaseModel):
     """Agregado de partidas de un jugador en una ventana de días — no
     devuelve las partidas en sí, solo el resumen (win rate, personajes

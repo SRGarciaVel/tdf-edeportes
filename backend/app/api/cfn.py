@@ -27,7 +27,9 @@ from app.schemas.cfn import (
     CFNRegistrationDecision,
     CFNRegistrationPending,
     CFNRegistrationRead,
+    CharacterPlayerRow,
     CharacterStatsRead,
+    CharacterSummary,
     EncounterRead,
     LinkAccountRequest,
     MyProfileUpdate,
@@ -223,6 +225,76 @@ def get_player_character_stats(
         )
         .all()
     )
+
+
+@router.get("/characters", response_model=list[CharacterSummary])
+def list_characters(
+    db: Annotated[Session, Depends(get_db)],
+) -> list[CharacterSummary]:
+    """Resumen por personaje de TODO el roster de TDF — cuántos
+    miembros lo jugaron alguna vez y quién tiene el MR más alto con
+    él. Para /personajes (pedido de Seba, 12-09-2026). Público, sin
+    auth. Ordenado por cantidad de jugadores descendente (los
+    personajes más "populares" en TDF primero)."""
+    rows = (
+        db.query(
+            CFNCharacterStats.character_name,
+            func.count(CFNCharacterStats.id),
+            func.max(CFNCharacterStats.master_rating),
+        )
+        # mismo JOIN que get_character_players — sin esto, una fila de
+        # cfn_character_stats sin un registro real detrás (no debería
+        # pasar en producción, pero sí puede quedar suelta en pruebas)
+        # infla el conteo acá sin aparecer en el roster de abajo
+        .join(CFNRegistration, CFNRegistration.cfn_id == CFNCharacterStats.cfn_id)
+        .group_by(CFNCharacterStats.character_name)
+        .all()
+    )
+    summaries = [
+        CharacterSummary(
+            character_name=name, player_count=count, top_master_rating=top_mr
+        )
+        for name, count, top_mr in rows
+    ]
+    summaries.sort(key=lambda c: c.player_count, reverse=True)
+    return summaries
+
+
+@router.get(
+    "/characters/{character_name}/players", response_model=list[CharacterPlayerRow]
+)
+def get_character_players(
+    character_name: str, db: Annotated[Session, Depends(get_db)]
+) -> list[CharacterPlayerRow]:
+    """El roster de gente de TDF que jugó ESTE personaje puntual —
+    sirve como leaderboard (ordenado por MR) y como "quién más juega
+    esto" para encontrar sparring, es la misma consulta vista desde
+    los dos ángulos. Público, sin auth. Match sin distinguir
+    mayúsculas/minúsculas — el frontend puede mandar el nombre tal
+    cual lo mostró list_characters."""
+    rows = (
+        db.query(CFNCharacterStats, CFNRegistration, User)
+        .join(CFNRegistration, CFNRegistration.cfn_id == CFNCharacterStats.cfn_id)
+        .outerjoin(User, User.id == CFNRegistration.user_id)
+        .filter(func.lower(CFNCharacterStats.character_name) == character_name.lower())
+        .order_by(
+            CFNCharacterStats.master_rating.desc().nullslast(),
+            CFNCharacterStats.win_rate.desc().nullslast(),
+        )
+        .all()
+    )
+    return [
+        CharacterPlayerRow(
+            cfn_id=stats.cfn_id,
+            display_name=reg.display_name,
+            avatar_url=reg.avatar_override or (user.avatar_url if user else None),
+            matches_played=stats.matches_played,
+            win_rate=stats.win_rate,
+            master_rating=stats.master_rating,
+            tier=stats.tier,
+        )
+        for stats, reg, user in rows
+    ]
 
 
 @router.get("/players/{cfn_id}/matches", response_model=CFNMatchStats)

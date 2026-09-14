@@ -10,6 +10,8 @@ import type {
   UserSearchResult,
   CFNMatchStats,
   CharacterStats,
+  CharacterSummary,
+  CharacterPlayerRow,
   CFNMatchRead,
   EncounterData,
   TierListData,
@@ -618,6 +620,22 @@ export async function getCharacterStats(
 ): Promise<CharacterStats[]> {
   const res = await fetch(`${API_URL}/cfn/players/${cfnId}/character-stats`);
   return parseOrThrow<CharacterStats[]>(res);
+}
+
+// /personajes — leaderboard y "quién más juega esto" por personaje,
+// la misma consulta vista desde los dos ángulos
+export async function listCharacters(): Promise<CharacterSummary[]> {
+  const res = await fetch(`${API_URL}/cfn/characters`);
+  return parseOrThrow<CharacterSummary[]>(res);
+}
+
+export async function getCharacterPlayers(
+  characterName: string,
+): Promise<CharacterPlayerRow[]> {
+  const res = await fetch(
+    `${API_URL}/cfn/characters/${encodeURIComponent(characterName)}/players`,
+  );
+  return parseOrThrow<CharacterPlayerRow[]>(res);
 }
 
 export async function getRecentMatches(

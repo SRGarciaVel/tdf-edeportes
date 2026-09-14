@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Award,
   Calendar,
   Clapperboard,
   FileText,
@@ -11,10 +12,10 @@ import {
   Scale,
   Search,
   Star,
+  Swords,
   Target,
   Trophy,
   Users,
-  Award,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
@@ -43,6 +44,7 @@ const COMUNIDAD_LINKS = [
   { to: "/recopilaciones", label: "Recopilaciones", Icon: Clapperboard },
   { to: "/foda", label: "FODA", Icon: Scale },
   { to: "/logros", label: "Logros", Icon: Award },
+  { to: "/personajes", label: "Personajes", Icon: Swords },
 ];
 
 const SF6_LINKS = [
