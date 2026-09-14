@@ -11,6 +11,7 @@ import TwitchEmbed from "../components/TwitchEmbed";
 import {
   getRecentComments,
   listCfnPlayers,
+  listCharacters,
   listEvents,
   listHighlights,
 } from "../lib/api";
@@ -41,6 +42,13 @@ export default function HomePage() {
   const liveStatus = useTwitchLiveStatus();
   const friendsLive = useFriendsLiveStatus();
 
+  // quién de la comunidad está en vivo ahora mismo (TDF o algún
+  // amigo destacado) — para el indicador chico del hero, pedido de
+  // Seba (13-09-2026): "el hero se siente vacío", uno de los 3
+  // cambios para llenarlo con contenido real, no decoración
+  const liveFriend = friendsLive.find((f) => f.is_live);
+  const someoneIsLive = Boolean(liveStatus?.is_live) || Boolean(liveFriend);
+
   const { data: eventsData, loading: loadingEvent } = useCachedData(
     "events-public",
     () => listEvents(null),
@@ -51,12 +59,27 @@ export default function HomePage() {
       .sort((a, b) => a.start_at.localeCompare(b.start_at));
     return upcoming[0] ?? null;
   }, [eventsData]);
+  // total histórico, no solo los próximos — para la franja de stats
+  // del hero (mismo eventsData que ya se trae para nextEvent, sin
+  // fetch nuevo)
+  const torneosCount = useMemo(
+    () => (eventsData ?? []).filter((e) => e.type === "torneo").length,
+    [eventsData],
+  );
 
   // mismo key "cfn-players" que usa /jugadores — visitar cualquiera de
   // las dos páginas calienta el caché para la otra también, gratis
   const { data: playersData, loading: loadingPlayers } = useCachedData(
     "cfn-players",
     listCfnPlayers,
+  );
+
+  // mismo key "characters-summary" que usa /personajes — para la
+  // franja de stats del hero (cuántos personajes distintos juega la
+  // comunidad en total)
+  const { data: charactersData } = useCachedData(
+    "characters-summary",
+    listCharacters,
   );
   const communityPreview = useMemo(() => {
     // los mejores rankeados primero (MR más alto arriba) — sin MR (sin
@@ -85,7 +108,7 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <section className="relative spray-bg py-16">
+      <section className="relative spray-bg py-10">
         <div className="relative z-10 flex flex-col gap-8">
           <SectionLabel index="01">Comunidad de fighting games</SectionLabel>
 
@@ -99,6 +122,37 @@ export default function HomePage() {
               direction="left"
               className="flex flex-col gap-6 max-w-xl"
             >
+              {/* indicador chico de "algo pasa ahora" — pedido de
+                  Seba (13-09-2026), uno de los 3 cambios contra el
+                  hero vacío. Distinto de la sección "En Vivo" de más
+                  abajo (que tiene el embed completo): esto es solo un
+                  aviso rápido antes de bajar hasta ahí. TDF real
+                  siempre gana sobre un amigo si los dos están en
+                  vivo a la vez — es el canal principal del club. */}
+              {someoneIsLive && (
+                <a
+                  href={
+                    liveStatus?.is_live
+                      ? "https://www.twitch.tv/tdfedeportes"
+                      : `https://www.twitch.tv/${liveFriend?.channel}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 self-start font-mono text-[11px] uppercase text-tdf-magenta border border-tdf-magenta/40 bg-tdf-magenta/10 px-3 py-1.5 hover:bg-tdf-magenta/20 transition-colors"
+                >
+                  <span
+                    className="relative flex h-1.5 w-1.5"
+                    aria-hidden="true"
+                  >
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tdf-magenta opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-tdf-magenta" />
+                  </span>
+                  {liveStatus?.is_live
+                    ? "TDF está en vivo ahora"
+                    : `${liveFriend?.channel} está en vivo ahora`}
+                </a>
+              )}
+
               <h1 className="font-display font-bold uppercase text-4xl sm:text-5xl lg:text-6xl leading-[1.02]">
                 Streams, 33
                 <br />y{" "}
@@ -131,6 +185,41 @@ export default function HomePage() {
                 >
                   Ver calendario
                 </Link>
+              </div>
+
+              {/* franja de stats reales — segundo de los 3 cambios
+                  contra el hero vacío. Nada inventado: roster real
+                  (mismo cache que /jugadores), personajes trackeados
+                  (mismo cache que /personajes), torneos del
+                  calendario (mismo eventsData que ya se trae arriba
+                  para nextEvent). Si algún dato todavía no cargó, esa
+                  celda puntual muestra "N/D" en vez de tirar toda la
+                  franja o mostrar un 0 que no es real. */}
+              <div className="flex gap-6 pt-2 font-mono">
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {playersData?.length ?? "N/D"}
+                  </p>
+                  <p className="text-[10px] uppercase text-tdf-muted">
+                    Miembros
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {charactersData?.length ?? "N/D"}
+                  </p>
+                  <p className="text-[10px] uppercase text-tdf-muted">
+                    Personajes
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">
+                    {eventsData ? torneosCount : "N/D"}
+                  </p>
+                  <p className="text-[10px] uppercase text-tdf-muted">
+                    Torneos
+                  </p>
+                </div>
               </div>
             </RevealOnScroll>
 
