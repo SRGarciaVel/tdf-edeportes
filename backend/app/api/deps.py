@@ -74,3 +74,21 @@ def require_admin(
             detail="Requiere ser administrador del sitio",
         )
     return user
+
+
+def require_ackermanfg(
+    user: Annotated[User | None, Depends(get_current_user)],
+) -> User:
+    """Más angosto que require_admin a propósito — pedido explícito de
+    Seba (12-09-2026) para el fan art de personajes en /personajes:
+    "Solo AckermanFG", no "Staff" ni "Admin" (que incluiría también a
+    bazthyfreeman). Hardcodeado por username en vez de una tabla de
+    permisos nueva — es una sola persona, para un solo feature chico,
+    no amerita más estructura que esta (ver CODESTYLE.md: no
+    sobre-ingenierizar)."""
+    if user is None or user.twitch_username.lower() != "ackermanfg":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Esta acción está restringida",
+        )
+    return user

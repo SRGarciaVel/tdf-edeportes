@@ -322,6 +322,25 @@ class CharacterPlayerRow(BaseModel):
     tier: str | None
 
 
+class CharacterFanartUpdate(BaseModel):
+    """Fan art de un personaje para /personajes — mismo pipeline de
+    validación que avatar/banner (ver PROFILE_IMAGE_DATA_URL_RE),
+    nunca un link externo. Límite generoso (MAX_ANIMATABLE_DATA_URL_LEN)
+    porque esto es arte, no un avatar chico — puede pesar más."""
+
+    image_data_url: str = Field(max_length=MAX_ANIMATABLE_DATA_URL_LEN)
+
+    @field_validator("image_data_url")
+    @classmethod
+    def validate_image(cls, v: str) -> str:
+        return _validate_profile_image(v)
+
+
+class CharacterFanartRead(BaseModel):
+    character_name: str
+    image_url: str
+
+
 class CFNMatchStats(BaseModel):
     """Agregado de partidas de un jugador en una ventana de días — no
     devuelve las partidas en sí, solo el resumen (win rate, personajes

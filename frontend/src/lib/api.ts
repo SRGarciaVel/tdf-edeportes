@@ -638,6 +638,40 @@ export async function getCharacterPlayers(
   return parseOrThrow<CharacterPlayerRow[]>(res);
 }
 
+// fan art de personajes en /personajes — subida restringida a una
+// sola cuenta (ver require_ackermanfg en el backend)
+export async function getCharacterFanartMap(): Promise<Record<string, string>> {
+  const res = await fetch(`${API_URL}/cfn/characters/fanart`);
+  return parseOrThrow<Record<string, string>>(res);
+}
+
+export async function setCharacterFanart(
+  token: string,
+  characterName: string,
+  imageDataUrl: string,
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/cfn/characters/${encodeURIComponent(characterName)}/fanart`,
+    {
+      method: "PUT",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ image_data_url: imageDataUrl }),
+    },
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
+export async function deleteCharacterFanart(
+  token: string,
+  characterName: string,
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/cfn/characters/${encodeURIComponent(characterName)}/fanart`,
+    { method: "DELETE", headers: authHeaders(token) },
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+}
+
 export async function getRecentMatches(
   cfnId: string,
   days: number,

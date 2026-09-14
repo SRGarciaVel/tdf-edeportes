@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_authenticated, require_staff
+from app.api.deps import require_ackermanfg, require_authenticated, require_staff
 from app.core.database import get_db
 from app.core.limiter import limiter
 from app.models import (
@@ -15,6 +15,7 @@ from app.models import (
     CFNMatch,
     CFNProfile,
     CFNRegistration,
+    CharacterFanart,
     ProfileComment,
     User,
 )
@@ -27,6 +28,8 @@ from app.schemas.cfn import (
     CFNRegistrationDecision,
     CFNRegistrationPending,
     CFNRegistrationRead,
+    CharacterFanartRead,
+    CharacterFanartUpdate,
     CharacterPlayerRow,
     CharacterStatsRead,
     CharacterSummary,
@@ -295,6 +298,57 @@ def get_character_players(
         )
         for stats, reg, user in rows
     ]
+
+
+@router.get("/characters/fanart", response_model=dict[str, str])
+def list_character_fanart(
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, str]:
+    """Todos los fan art puestos, character_name -> imagen — un solo
+    fetch para toda la grilla de /personajes, en vez de una consulta
+    por tarjeta. Público, sin auth."""
+    rows = db.query(CharacterFanart).all()
+    return {row.character_name: row.image_data_url for row in rows}
+
+
+@router.put("/characters/{character_name}/fanart", response_model=CharacterFanartRead)
+def set_character_fanart(
+    character_name: str,
+    payload: CharacterFanartUpdate,
+    user: Annotated[User, Depends(require_ackermanfg)],
+    db: Annotated[Session, Depends(get_db)],
+) -> CharacterFanartRead:
+    """Subir o reemplazar el fan art de un personaje — restringido a
+    una sola cuenta (ver require_ackermanfg). Un solo fan art por
+    personaje: si ya había uno, se pisa, no se guarda historial."""
+    row = (
+        db.query(CharacterFanart)
+        .filter(CharacterFanart.character_name == character_name)
+        .first()
+    )
+    if row is None:
+        row = CharacterFanart(character_name=character_name)
+        db.add(row)
+    row.image_data_url = payload.image_data_url
+    row.uploaded_by = user.id
+    db.commit()
+    return CharacterFanartRead(
+        character_name=character_name, image_url=row.image_data_url
+    )
+
+
+@router.delete("/characters/{character_name}/fanart", status_code=204)
+def delete_character_fanart(
+    character_name: str,
+    _user: Annotated[User, Depends(require_ackermanfg)],
+    db: Annotated[Session, Depends(get_db)],
+) -> None:
+    """Sacar el fan art de un personaje (vuelve al placeholder por
+    default) — misma restricción que subirlo."""
+    db.query(CharacterFanart).filter(
+        CharacterFanart.character_name == character_name
+    ).delete()
+    db.commit()
 
 
 @router.get("/players/{cfn_id}/matches", response_model=CFNMatchStats)
