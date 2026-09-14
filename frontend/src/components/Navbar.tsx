@@ -69,6 +69,11 @@ const SEARCHABLE_PAGES = [
   ...SF6_LINKS,
 ];
 
+// a partir de cuántos px de scroll la barra pasa a su versión
+// compacta — lo suficiente para que no "parpadee" con un scroll
+// mínimo sin querer, pero sin tardar en reaccionar
+const SCROLL_COMPACT_THRESHOLD = 40;
+
 type NavDropdownLink = { to: string; label: string; Icon: typeof Home };
 
 // mismas curvas/tiempos en todos los paneles del navbar, para que se
@@ -78,20 +83,29 @@ const PANEL_TRANSITION = { duration: 0.18, ease: "easeOut" as const };
 
 /** Link con ícono y una línea animada abajo — Framer Motion en vez de
  * CSS puro a pedido de Seba (21-08-2026): "le daría más vida a la
- * página que tenga efectos mejores". */
+ * página que tenga efectos mejores". `compact` (13-09-2026, navbar
+ * reactiva al scroll) esconde el texto y deja solo el ícono, para la
+ * versión achicada de la barra. */
 function AnimatedNavLink({
   to,
   label,
   Icon,
+  compact,
   onClick,
 }: {
   to: string;
   label: string;
   Icon: typeof Home;
+  compact?: boolean;
   onClick?: () => void;
 }) {
   return (
-    <NavLink to={to} onClick={onClick} className="relative group py-2">
+    <NavLink
+      to={to}
+      onClick={onClick}
+      className="relative group py-2"
+      title={compact ? label : undefined}
+    >
       {({ isActive }) => (
         <>
           <span
@@ -102,7 +116,7 @@ function AnimatedNavLink({
             }`}
           >
             <Icon size={14} />
-            {label}
+            {!compact && label}
           </span>
           <motion.span
             className="absolute left-0 -bottom-0.5 h-[2px] bg-tdf-magenta"
@@ -118,19 +132,31 @@ function AnimatedNavLink({
 }
 
 /** Desplegable por click, reutilizado para cualquier grupo del navbar
- * (Comunidad, SF6). El posicionamiento absoluto y el estilo hud-frame
- * van en DOS divs separados a propósito — si van en el mismo elemento,
- * el `position: relative` que trae hud-frame le termina ganando a
- * `absolute` según el orden interno de la hoja de estilos, y el panel
- * queda desarmado (bug real encontrado y arreglado 21-08-2026). */
+ * (Jugadores, Actividad, Comunidad, SF6). El posicionamiento absoluto
+ * y el estilo hud-frame van en DOS divs separados a propósito — si
+ * van en el mismo elemento, el `position: relative` que trae
+ * hud-frame le termina ganando a `absolute` según el orden interno de
+ * la hoja de estilos, y el panel queda desarmado (bug real encontrado
+ * y arreglado 21-08-2026).
+ *
+ * `groupIcon` + `compact` (13-09-2026, navbar reactiva al scroll): en
+ * la versión achicada de la barra el botón muestra solo groupIcon, sin
+ * el nombre del grupo — el panel desplegado en sí SIEMPRE muestra el
+ * texto completo de cada link, compact solo afecta al botón que lo
+ * abre, no a las opciones de adentro (si no, no se podría ni leer qué
+ * estás por elegir). */
 function NavDropdown({
   label,
+  groupIcon: GroupIcon,
   links,
   bordered = false,
+  compact = false,
 }: {
   label: string;
+  groupIcon: typeof Home;
   links: NavDropdownLink[];
   bordered?: boolean;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -149,6 +175,7 @@ function NavDropdown({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        title={compact ? label : undefined}
         className={`font-mono text-xs uppercase tracking-wide transition-colors flex items-center gap-1 ${
           bordered ? "border px-3 py-2" : ""
         } ${
@@ -161,7 +188,8 @@ function NavDropdown({
               : "text-tdf-muted hover:text-tdf-magenta"
         }`}
       >
-        {label}
+        <GroupIcon size={14} />
+        {!compact && label}
         <motion.span
           className="text-[9px]"
           animate={{ rotate: open ? 180 : 0 }}
@@ -420,103 +448,104 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const liveStatus = useTwitchLiveStatus();
 
+  // navbar reactiva al scroll (pedido de Seba, 13-09-2026, referencias
+  // de sitios modernos 2026: la barra arranca completa arriba de la
+  // página y se achica a una cápsula compacta al bajar). De paso, esto
+  // reemplaza la barra de aviso fija de arriba (sacada del todo — ya
+  // pasó tiempo de sobra desde que se lanzó el aviso de Tier List) y
+  // el viejo truco de "el logo cruza el borde entre dos barras", que
+  // dejó de tener sentido sin una segunda barra que cruzar.
+  useEffect(() => {
+    function handleScroll() {
+      setScrolled(window.scrollY > SCROLL_COMPACT_THRESHOLD);
+    }
+    handleScroll(); // por si la página ya carga scrolleada (ej. al volver con el botón atrás)
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header
-      className="sticky top-0 z-40 bg-tdf-charcoal/85 backdrop-blur"
-      style={{
-        borderBottom: "1px solid rgba(196,20,122,0.25)",
-        boxShadow: "0 4px 30px -12px rgba(196,20,122,0.35)",
-      }}
-    >
-      {/* barra superior angosta — antes era el AnnouncementBar suelto
-          solo en Home, ahora vive fusionado acá arriba y se ve en todo
-          el sitio (conversación de diseño, 21-08-2026). Sin botón de
-          cerrar a propósito: un click sin querer lo perdía para
-          siempre en ese navegador sin forma de recuperarlo (bug real
-          encontrado por Seba el mismo día que se lanzó esto). */}
-      <div className="h-8 border-b border-tdf-line flex items-center justify-between px-4 sm:px-6 font-mono text-[11px]">
-        <p className="text-tdf-muted truncate flex items-center gap-1.5 min-w-0">
-          <span
-            className="relative flex h-1.5 w-1.5 shrink-0"
-            aria-hidden="true"
-          >
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-tdf-magenta opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-tdf-magenta" />
-          </span>
-          <span className="hidden sm:inline">NUEVO:</span>
-          <span className="truncate">
-            Ya puedes armar tu Tier List de personajes con la comunidad.
-          </span>
-          <NavLink
-            to="/tierlist"
-            className="text-tdf-magenta hover:text-white underline shrink-0"
-          >
-            Probarla →
-          </NavLink>
-        </p>
-        <div className="flex items-center gap-3 shrink-0 ml-3">
-          <CommunityLinks className="hidden sm:flex" />
-        </div>
-      </div>
-
-      {/* barra principal — el logo "atraviesa" el borde entre las dos
-          barras, mismo truco visual que se probó en el teaser, con la
-          esquina cortada de siempre en vez de un óvalo genérico */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <div className="absolute left-1/2 -top-6 -translate-x-1/2 z-10 hidden md:flex">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            transition={{ duration: 0.2 }}
-            className="relative w-20 h-20 flex items-center justify-center bg-tdf-charcoal border border-tdf-line hud-frame"
-          >
-            <div
-              className="absolute -inset-5 -z-10"
-              style={{
-                background:
-                  "radial-gradient(circle, rgba(196,20,122,0.4) 0%, transparent 70%)",
-              }}
-            />
-            <NavLink to="/">
-              <img
-                src="/brand/logo-wordmark.webp"
-                alt="TDF"
-                className="w-14 h-auto"
-                style={{
-                  filter:
-                    "drop-shadow(0 0 6px rgba(196,20,122,0.9)) drop-shadow(0 0 16px rgba(196,20,122,0.5))",
-                }}
-              />
-            </NavLink>
-          </motion.div>
-        </div>
-
-        <NavLink to="/" className="flex items-center gap-2 shrink-0 md:hidden">
-          <img
+    <header className="sticky top-0 z-40">
+      <motion.div
+        animate={{
+          maxWidth: scrolled ? 880 : 1280,
+          borderRadius: scrolled ? 9999 : 0,
+          marginTop: scrolled ? 12 : 0,
+          paddingLeft: scrolled ? 20 : 24,
+          paddingRight: scrolled ? 20 : 24,
+        }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="relative mx-auto flex items-center justify-between gap-4 bg-tdf-charcoal/90 backdrop-blur border border-tdf-line"
+        style={{
+          height: scrolled ? 56 : 64,
+          boxShadow: scrolled
+            ? "0 8px 30px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(196,20,122,0.15)"
+            : "0 4px 30px -12px rgba(196,20,122,0.35)",
+        }}
+      >
+        {/* logo integrado a la barra, ya no flotando arriba de un
+            borde que no existe más — mismo criterio que la Dirección
+            C conversada con Seba (13-09-2026), adaptado a la barra
+            reactiva: se achica junto con el resto en vez de vivir
+            aparte */}
+        <NavLink to="/" className="flex items-center gap-2 shrink-0">
+          <motion.img
             src="/brand/logo-wordmark.webp"
             alt="TDF"
-            className="h-7 w-auto"
+            animate={{ height: scrolled ? 28 : 36 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="w-auto"
+            style={{
+              filter:
+                "drop-shadow(0 0 5px rgba(196,20,122,0.85)) drop-shadow(0 0 12px rgba(196,20,122,0.4))",
+            }}
           />
         </NavLink>
 
         <nav className="hidden md:flex items-center gap-6">
           {DIRECT_LINKS.map((link) => (
-            <AnimatedNavLink key={link.to} {...link} />
+            <AnimatedNavLink key={link.to} {...link} compact={scrolled} />
           ))}
-          <NavDropdown label="Jugadores" links={JUGADORES_LINKS} />
-          <NavDropdown label="Actividad" links={ACTIVIDAD_LINKS} />
-          <NavDropdown label="Comunidad" links={COMUNIDAD_LINKS} />
+          <NavDropdown
+            label="Jugadores"
+            groupIcon={Users}
+            links={JUGADORES_LINKS}
+            compact={scrolled}
+          />
+          <NavDropdown
+            label="Actividad"
+            groupIcon={Calendar}
+            links={ACTIVIDAD_LINKS}
+            compact={scrolled}
+          />
+          <NavDropdown
+            label="Comunidad"
+            groupIcon={Info}
+            links={COMUNIDAD_LINKS}
+            compact={scrolled}
+          />
         </nav>
 
         <div className="hidden md:flex items-center gap-3 shrink-0">
-          <NavDropdown label="SF6" links={SF6_LINKS} bordered />
+          <NavDropdown
+            label="SF6"
+            groupIcon={Gamepad2}
+            links={SF6_LINKS}
+            bordered
+            compact={scrolled}
+          />
+
+          <CommunityLinks className="hidden lg:flex" />
 
           {liveStatus?.is_live ? (
             <motion.a
               href="https://www.twitch.tv/tdfedeportes"
               target="_blank"
               rel="noreferrer"
+              title={scrolled ? "En vivo" : undefined}
               animate={{
                 boxShadow: [
                   "0 4px 20px -6px rgba(196,20,122,0.5)",
@@ -539,17 +568,18 @@ export default function Navbar() {
               }}
             >
               <Radio size={13} />
-              En vivo
+              {!scrolled && "En vivo"}
             </motion.a>
           ) : (
             <a
               href="https://www.twitch.tv/tdfedeportes"
               target="_blank"
               rel="noreferrer"
+              title={scrolled ? "Ver stream" : undefined}
               className="flex items-center gap-1.5 font-mono text-[11px] uppercase text-tdf-muted border border-tdf-line hover:border-tdf-magenta hover:text-white transition-colors px-4 py-2.5"
             >
               <Radio size={13} />
-              Ver stream
+              {!scrolled && "Ver stream"}
             </a>
           )}
 
@@ -579,10 +609,13 @@ export default function Navbar() {
         >
           {mobileOpen ? "✕" : "☰"}
         </button>
-      </div>
+      </motion.div>
 
       {/* drawer mobile — logo centrado, menú completo, y las mismas
-          acciones de la barra de escritorio abajo del todo */}
+          acciones de la barra de escritorio abajo del todo. Siempre
+          con texto completo (no aplica el modo compacto de íconos —
+          en mobile no hace falta, ya es un panel propio, no una barra
+          angosta compitiendo por espacio horizontal) */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.nav
@@ -590,7 +623,7 @@ export default function Navbar() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="md:hidden border-t border-tdf-line overflow-hidden"
+            className="md:hidden bg-tdf-charcoal border-t border-tdf-line overflow-hidden"
           >
             <div className="px-4 py-4 flex flex-col gap-4 font-mono text-sm uppercase">
               {DIRECT_LINKS.map(({ to, label, Icon }) => (
