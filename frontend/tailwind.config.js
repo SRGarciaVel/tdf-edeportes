@@ -32,8 +32,10 @@ export default {
         // el contraste de color estuviera bien (conversación 20-08-2026:
         // "sigue pareciendo IA genérica"). JetBrains Mono se reserva para
         // la convención "// XX: SECCIÓN" y poco más, no para todo lo
-        // secundario como se venía usando.
-        body: ["IBM Plex Sans", "sans-serif"],
+        // secundario como se venía usando. Era IBM Plex Sans hasta el
+        // 13-09-2026, cambiada a Barlow (pedido de Seba: "es la fuente
+        // en general la que no me gusta, cambiala en todo el sitio").
+        body: ["Barlow", "sans-serif"],
         // acento tipo "spray" — solo para el wordmark hero, no para uso
         // general (una fuente de impacto se usa poco, o pierde impacto)
         graffiti: ["Rubik Wet Paint", "cursive"],
