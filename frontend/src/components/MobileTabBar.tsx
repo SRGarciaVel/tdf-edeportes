@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Calendar, Home, Info, User, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import MobileBottomSheet from "./MobileBottomSheet";
 import LoginButton from "./LoginButton";
 import NotificationBell from "./NotificationBell";
@@ -147,14 +147,25 @@ function PerfilSheetContent({ onNavigate }: { onNavigate: () => void }) {
  * una capa separada sin el filtro, encima, para que se vean nítidos. */
 export default function MobileTabBar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [openSheet, setOpenSheet] = useState<TabKey | null>(null);
 
-  const activeTab = activeTabFromPath(location.pathname);
+  // mientras hay un panel abierto, el blob sigue a ESE panel, no a la
+  // URL actual (bug real encontrado por Seba, 13-09-2026: abrir
+  // "Jugadores" no movía el blob para nada, porque abrir el panel no
+  // navega a ningún lado — la ruta actual no cambia solo por abrir la
+  // hoja deslizable)
+  const routeTab = activeTabFromPath(location.pathname);
+  const activeTab = openSheet ?? routeTab;
   const activeIndex = TABS.findIndex((t) => t.key === activeTab);
 
   function handleTabClick(key: TabKey) {
     if (key === "inicio") {
+      // bug real encontrado por Seba, 13-09-2026: este botón cerraba
+      // el panel abierto pero nunca navegaba a "/" — se comportaba
+      // como si tocar "Inicio" no hiciera nada
       setOpenSheet(null);
+      navigate("/");
       return;
     }
     setOpenSheet((current) => (current === key ? null : key));
