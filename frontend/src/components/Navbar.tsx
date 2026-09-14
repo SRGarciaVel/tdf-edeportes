@@ -21,8 +21,9 @@ import {
   SEARCHABLE_PAGES,
   SF6_LINKS,
 } from "../lib/navLinks";
-// valor compartido con TwitchChatPanel.tsx (ver lib/navbarMetrics.ts)
-// — antes vivía solo acá, duplicado a ojo en el otro archivo
+// umbral compartido — antes vivía duplicado a mano en dos archivos
+// (acá y en el panel de chat de Twitch, ya sacado del sitio por
+// ahora, ver lib/navbarMetrics.ts)
 import { SCROLL_COMPACT_THRESHOLD } from "../lib/navbarMetrics";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 import type { CFNPlayer, EventItem, TierListSummaryData } from "../lib/types";
