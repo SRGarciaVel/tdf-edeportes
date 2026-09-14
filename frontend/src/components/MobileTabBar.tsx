@@ -6,6 +6,7 @@ import MobileBottomSheet from "./MobileBottomSheet";
 import LoginButton from "./LoginButton";
 import NotificationBell from "./NotificationBell";
 import { listCfnPlayers } from "../lib/api";
+import { staggerContainer, staggerItem } from "../lib/motionVariants";
 import {
   ACTIVIDAD_LINKS,
   COMUNIDAD_LINKS,
@@ -59,20 +60,6 @@ function activeTabFromPath(pathname: string): TabKey {
 }
 
 const TAB_SLOT = 56; // px por ícono, el blob se mueve en múltiplos de esto
-
-// animación de entrada escalonada para el contenido de los paneles —
-// referencia: developer.motion.dev, ejemplo real "Sheet Modal"
-// ("animaciones de contenido escalonadas"), 13-09-2026. Antes todo el
-// contenido de un panel aparecía junto de golpe al abrirse; con esto,
-// cada fila/ítem entra un poco después del anterior.
-const staggerContainer = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.04 } },
-};
-const staggerItem = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0 },
-};
 const TOTAL_SLOTS = TABS.length + 1; // +1 = el hamburguesa, fuera del blob
 
 function LinkList({

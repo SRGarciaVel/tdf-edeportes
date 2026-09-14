@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
 import { listCfnPlayers, listEvents, listTierLists } from "../lib/api";
+import { staggerContainer, staggerItem } from "../lib/motionVariants";
 import {
   ACTIVIDAD_LINKS,
   COMUNIDAD_LINKS,
@@ -35,14 +36,34 @@ type NavDropdownLink = { to: string; label: string; Icon: typeof Home };
 
 // mismas curvas/tiempos en todos los paneles del navbar, para que se
 // sientan parte del mismo sistema en vez de animaciones sueltas cada
-// una a su manera
-const PANEL_TRANSITION = { duration: 0.18, ease: "easeOut" as const };
+// una a su manera. Resorte, no duration fija — referencia:
+// developer.motion.dev, ejemplo real "Mega Menu" ("spring-driven
+// dropdown"), 13-09-2026.
+const PANEL_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 420,
+  damping: 32,
+};
+
+// mismo resorte para el indicador que desliza entre ítems del navbar
+// al pasar el mouse — un poco más rígido, se siente mejor para algo
+// que se mueve horizontal y rápido que para un panel que se despliega
+const INDICATOR_TRANSITION = {
+  type: "spring" as const,
+  stiffness: 500,
+  damping: 35,
+};
 
 /** Link con ícono y una línea animada abajo — Framer Motion en vez de
  * CSS puro a pedido de Seba (21-08-2026): "le daría más vida a la
  * página que tenga efectos mejores". `compact` (13-09-2026, navbar
  * reactiva al scroll) esconde el texto y deja solo el ícono, para la
- * versión achicada de la barra. */
+ * versión achicada de la barra. La línea de acá abajo solo marca la
+ * ruta ACTIVA — el subrayado al pasar el mouse se sacó de acá
+ * (13-09-2026): ahora es un indicador compartido con `layoutId` que
+ * vive un nivel más arriba (ver hoveredNav en Navbar()), para que se
+ * deslice de un ítem a otro en vez de que cada uno tenga el suyo
+ * propio apareciendo por separado. */
 function AnimatedNavLink({
   to,
   label,
@@ -79,7 +100,6 @@ function AnimatedNavLink({
             className="absolute left-0 -bottom-0.5 h-[2px] bg-tdf-magenta"
             initial={false}
             animate={{ width: isActive ? "100%" : "0%" }}
-            whileHover={{ width: "100%" }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           />
         </>
@@ -165,21 +185,28 @@ function NavDropdown({
             className="absolute top-full left-0 mt-2 w-44 z-50"
           >
             <div className="hud-frame bg-tdf-charcoal border border-tdf-line py-1">
-              {links.map(({ to, label: linkLabel, Icon }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  onClick={() => setOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase hover:text-tdf-magenta hover:bg-tdf-dark/60 transition-colors ${
-                      isActive ? "text-tdf-magenta" : "text-tdf-muted"
-                    }`
-                  }
-                >
-                  <Icon size={14} />
-                  {linkLabel}
-                </NavLink>
-              ))}
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {links.map(({ to, label: linkLabel, Icon }) => (
+                  <motion.div key={to} variants={staggerItem}>
+                    <NavLink
+                      to={to}
+                      onClick={() => setOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase hover:text-tdf-magenta hover:bg-tdf-dark/60 transition-colors ${
+                          isActive ? "text-tdf-magenta" : "text-tdf-muted"
+                        }`
+                      }
+                    >
+                      <Icon size={14} />
+                      {linkLabel}
+                    </NavLink>
+                  </motion.div>
+                ))}
+              </motion.div>
             </div>
           </motion.div>
         )}
@@ -439,6 +466,14 @@ function SearchPanel({ onClose }: { onClose: () => void }) {
 export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  // qué ítem del nivel superior tiene el mouse encima ahora — el
+  // indicador deslizante de abajo (INDICATOR_TRANSITION) se renderiza
+  // bajo ESE ítem nada más, y como los 4 comparten el mismo layoutId,
+  // Framer Motion anima solo el que se mueve entre uno y otro en vez
+  // de que cada ítem tenga su propia línea independiente (referencia:
+  // developer.motion.dev, ejemplo real "Mega Menu", "sliding
+  // indicator", 13-09-2026)
+  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const liveStatus = useTwitchLiveStatus();
 
   // navbar reactiva al scroll (pedido de Seba, 13-09-2026, referencias
@@ -506,28 +541,79 @@ export default function Navbar() {
             />
           </NavLink>
 
-          <nav className="hidden md:flex items-center gap-6">
-            {DIRECT_LINKS.map((link) => (
-              <AnimatedNavLink key={link.to} {...link} compact={scrolled} />
-            ))}
-            <NavDropdown
-              label="Jugadores"
-              groupIcon={Users}
-              links={JUGADORES_LINKS}
-              compact={scrolled}
-            />
-            <NavDropdown
-              label="Actividad"
-              groupIcon={LayoutGrid}
-              links={ACTIVIDAD_LINKS}
-              compact={scrolled}
-            />
-            <NavDropdown
-              label="Comunidad"
-              groupIcon={Info}
-              links={COMUNIDAD_LINKS}
-              compact={scrolled}
-            />
+          <nav
+            className="hidden md:flex items-center gap-6"
+            onMouseLeave={() => setHoveredNav(null)}
+          >
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredNav("inicio")}
+            >
+              {DIRECT_LINKS.map((link) => (
+                <AnimatedNavLink key={link.to} {...link} compact={scrolled} />
+              ))}
+              {hoveredNav === "inicio" && (
+                <motion.div
+                  layoutId="nav-hover-indicator"
+                  className="absolute left-0 right-0 -bottom-0.5 h-[2px] bg-tdf-magenta"
+                  transition={INDICATOR_TRANSITION}
+                />
+              )}
+            </div>
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredNav("jugadores")}
+            >
+              <NavDropdown
+                label="Jugadores"
+                groupIcon={Users}
+                links={JUGADORES_LINKS}
+                compact={scrolled}
+              />
+              {hoveredNav === "jugadores" && (
+                <motion.div
+                  layoutId="nav-hover-indicator"
+                  className="absolute left-0 right-0 -bottom-0.5 h-[2px] bg-tdf-magenta"
+                  transition={INDICATOR_TRANSITION}
+                />
+              )}
+            </div>
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredNav("actividad")}
+            >
+              <NavDropdown
+                label="Actividad"
+                groupIcon={LayoutGrid}
+                links={ACTIVIDAD_LINKS}
+                compact={scrolled}
+              />
+              {hoveredNav === "actividad" && (
+                <motion.div
+                  layoutId="nav-hover-indicator"
+                  className="absolute left-0 right-0 -bottom-0.5 h-[2px] bg-tdf-magenta"
+                  transition={INDICATOR_TRANSITION}
+                />
+              )}
+            </div>
+            <div
+              className="relative"
+              onMouseEnter={() => setHoveredNav("comunidad")}
+            >
+              <NavDropdown
+                label="Comunidad"
+                groupIcon={Info}
+                links={COMUNIDAD_LINKS}
+                compact={scrolled}
+              />
+              {hoveredNav === "comunidad" && (
+                <motion.div
+                  layoutId="nav-hover-indicator"
+                  className="absolute left-0 right-0 -bottom-0.5 h-[2px] bg-tdf-magenta"
+                  transition={INDICATOR_TRANSITION}
+                />
+              )}
+            </div>
           </nav>
 
           <div className="hidden md:flex items-center gap-3 shrink-0 ml-auto">
