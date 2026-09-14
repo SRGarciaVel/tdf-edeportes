@@ -1,6 +1,7 @@
 import { Radio } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import AnimatedNumber from "../components/AnimatedNumber";
 import InitialsAvatar from "../components/InitialsAvatar";
 import InstagramEmbed from "../components/InstagramEmbed";
 import Layout from "../components/Layout";
@@ -192,13 +193,16 @@ export default function HomePage() {
                   (mismo cache que /jugadores), personajes trackeados
                   (mismo cache que /personajes), torneos del
                   calendario (mismo eventsData que ya se trae arriba
-                  para nextEvent). Si algún dato todavía no cargó, esa
-                  celda puntual muestra "N/D" en vez de tirar toda la
-                  franja o mostrar un 0 que no es real. */}
+                  para nextEvent). Mientras el dato real no llegó,
+                  AnimatedNumber se queda en 0 — no "N/D" — y cuando
+                  llega, cuenta hacia arriba en vez de aparecer de
+                  golpe (pedido de Seba, 13-09-2026: "N/D" en la
+                  primera carga se sentía como mala primera
+                  impresión). */}
               <div className="flex gap-6 pt-2 font-mono">
                 <div>
                   <p className="text-2xl font-bold text-white">
-                    {playersData?.length ?? "N/D"}
+                    <AnimatedNumber value={playersData?.length ?? null} />
                   </p>
                   <p className="text-[10px] uppercase text-tdf-muted">
                     Miembros
@@ -206,7 +210,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">
-                    {charactersData?.length ?? "N/D"}
+                    <AnimatedNumber value={charactersData?.length ?? null} />
                   </p>
                   <p className="text-[10px] uppercase text-tdf-muted">
                     Personajes
@@ -214,7 +218,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">
-                    {eventsData ? torneosCount : "N/D"}
+                    <AnimatedNumber value={eventsData ? torneosCount : null} />
                   </p>
                   <p className="text-[10px] uppercase text-tdf-muted">
                     Torneos

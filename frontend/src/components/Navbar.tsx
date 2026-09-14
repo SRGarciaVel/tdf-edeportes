@@ -23,7 +23,6 @@ import {
 } from "../lib/navLinks";
 import { useTwitchLiveStatus } from "../lib/useTwitchLiveStatus";
 import type { CFNPlayer, EventItem, TierListSummaryData } from "../lib/types";
-import CommunityLinks from "./CommunityLinks";
 import LoginButton from "./LoginButton";
 import MobileTabBar from "./MobileTabBar";
 import NotificationBell from "./NotificationBell";
@@ -530,8 +529,6 @@ export default function Navbar() {
               bordered
               compact={scrolled}
             />
-
-            <CommunityLinks className="hidden lg:flex" />
 
             {liveStatus?.is_live ? (
               <motion.a
