@@ -1,9 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Calendar,
   Gamepad2,
   Home,
   Info,
+  LayoutGrid,
   Radio,
   Search,
   Users,
@@ -474,7 +474,7 @@ export default function Navbar() {
             />
             <NavDropdown
               label="Actividad"
-              groupIcon={Calendar}
+              groupIcon={LayoutGrid}
               links={ACTIVIDAD_LINKS}
               compact={scrolled}
             />
