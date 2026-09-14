@@ -217,20 +217,26 @@ function PerfilSheetContent({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
-/** Tab bar flotante para mobile, con blob "liquid" que fluye entre
- * pestañas (referencias de Seba, 13-09-2026 — patrón de apps 2026).
- * El efecto liquid es el truco clásico de SVG (blur fuerte +
- * feColorMatrix que sube el contraste de la transparencia) aplicado
- * SOLO a la capa del blob — los íconos van en una capa separada sin
- * el filtro, encima, para que se vean nítidos.
+/** Tab bar flotante para mobile, con un resaltado que se desliza
+ * entre pestañas usando `layoutId` de Framer Motion (referencia real:
+ * developer.motion.dev, "Shared layout animation", 13-09-2026).
+ * Versión anterior (mismo día): un blob con efecto "liquid" via
+ * filtro SVG, con la posición calculada a mano en píxeles — se
+ * cambió a pedido de Seba porque `layoutId` mide la posición real
+ * sola, sin depender de que TAB_SLOT siga siendo exacto para
+ * siempre. El costo: el efecto liquid no se pudo mantener (necesita
+ * una capa separada sin los íconos, que ya no aplica con el
+ * resaltado viviendo dentro de cada botón) — ahora es un resaltado
+ * sólido, no liquid.
  *
  * Segunda vuelta (13-09-2026): Jugadores y Comunidad pasaron a
- * navegar directo (antes abrían sub-menú) para que el blob siempre
- * represente una página real en la que estás, nunca un menú que
- * abriste. Actividad y Perfil siguen abriendo su propio panel (una
- * grilla tipo carpeta de Android, y el panel rico de siempre,
+ * navegar directo (antes abrían sub-menú) para que el resaltado
+ * siempre represente una página real en la que estás, nunca un menú
+ * que abriste. Actividad y Perfil siguen abriendo su propio panel
+ * (una grilla tipo carpeta de Android, y el panel rico de siempre,
  * respectivamente) — el hamburguesa nuevo, aparte del set que
- * trackea el blob, junta todo lo que se quedó sin tab directo. */
+ * trackea el resaltado, junta todo lo que se quedó sin tab
+ * directo. */
 export default function MobileTabBar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -240,7 +246,6 @@ export default function MobileTabBar() {
   // el hamburguesa ("menu") nunca mueve el blob — no representa
   // ninguna de las 5 posiciones que trackea
   const activeTab = openPanel && openPanel !== "menu" ? openPanel : routeTab;
-  const activeIndex = TABS.findIndex((t) => t.key === activeTab);
 
   function handleTabClick(key: TabKey) {
     if (key === "inicio") {
@@ -268,21 +273,6 @@ export default function MobileTabBar() {
 
   return (
     <>
-      {/* el filtro no ocupa espacio visual, solo se define acá para
-          que la capa del blob lo referencie */}
-      <svg width="0" height="0" style={{ position: "absolute" }}>
-        <defs>
-          <filter id="tdf-tab-goo">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-            <feColorMatrix
-              in="blur"
-              mode="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -11"
-            />
-          </filter>
-        </defs>
-      </svg>
-
       <nav
         className="fixed bottom-4 inset-x-4 z-40 md:hidden mx-auto max-w-sm bg-tdf-charcoal/95 backdrop-blur border border-tdf-line rounded-full"
         style={{
@@ -292,70 +282,63 @@ export default function MobileTabBar() {
       >
         <div className="relative h-14 flex items-center justify-center">
           <div
-            className="relative"
+            className="relative flex items-center"
             style={{ width: TAB_SLOT * TOTAL_SLOTS, height: 56 }}
           >
-            {/* capa del blob — filtrada, va detrás de los íconos.
-                mismo ancho/contenedor que la fila de íconos a
-                propósito, para que sus coordenadas calcen exacto. El
-                hamburguesa queda afuera de este cálculo (nunca es
-                índice válido de TABS), el blob nunca se mueve ahí. */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ filter: "url(#tdf-tab-goo)" }}
-            >
-              <motion.div
-                className="absolute top-1/2 w-10 h-10 rounded-full"
-                style={{
-                  marginTop: -20,
-                  background:
-                    "radial-gradient(circle, #C4147A 0%, #5B2A86 100%)",
-                }}
-                animate={{
-                  left: activeIndex * TAB_SLOT + TAB_SLOT / 2 - 20,
-                  scaleX: [1, 1.5, 1],
-                }}
-                transition={{
-                  left: { type: "spring", stiffness: 300, damping: 22 },
-                  scaleX: { duration: 0.35, ease: "easeOut" },
-                }}
-              />
-            </div>
-
-            {/* capa de íconos — nítida, sin filtro. 5 tabs + el
-                hamburguesa al final, fuera del set que trackea el
-                blob */}
-            <div className="relative flex items-center">
-              {TABS.map(({ key, Icon, label }) => (
-                <button
-                  key={key}
-                  onClick={() => handleTabClick(key)}
-                  aria-label={label}
-                  className="flex items-center justify-center transition-colors"
-                  style={{ width: TAB_SLOT, height: 56 }}
-                >
-                  <Icon
-                    size={19}
-                    className={
-                      activeTab === key ? "text-white" : "text-tdf-muted"
-                    }
-                  />
-                </button>
-              ))}
+            {/* resaltado que se desliza entre pestañas con layoutId —
+                pedido de Seba (13-09-2026), referencia real:
+                developer.motion.dev "Shared layout animation". Antes
+                era un blob con efecto liquid (filtro SVG de blur +
+                contraste) que se movía con matemática de píxeles a
+                mano (activeIndex * TAB_SLOT). Se evaluó combinar las
+                dos cosas y no se pudo: layoutId necesita que el
+                elemento viva ADENTRO de cada botón activo para medir
+                su posición real, pero el filtro liquid necesitaba una
+                capa separada SIN los íconos (si no, el blur también
+                les pega a ellos) — las dos capas ya no se pueden
+                mantener juntas si el resaltado pasa a vivir dentro de
+                cada botón. Decisión de Seba: layoutId gana, se pierde
+                el efecto liquid a cambio de que la posición se mida
+                sola en vez de depender de que TAB_SLOT siga siendo
+                exacto para siempre. */}
+            {TABS.map(({ key, Icon, label }) => (
               <button
-                onClick={toggleMenu}
-                aria-label="Más páginas"
-                className="flex items-center justify-center transition-colors"
+                key={key}
+                onClick={() => handleTabClick(key)}
+                aria-label={label}
+                className="relative flex items-center justify-center transition-colors"
                 style={{ width: TAB_SLOT, height: 56 }}
               >
-                <Menu
+                {activeTab === key && (
+                  <motion.div
+                    layoutId="tab-highlight"
+                    className="absolute w-10 h-10 rounded-full"
+                    style={{
+                      background:
+                        "radial-gradient(circle, #C4147A 0%, #5B2A86 100%)",
+                    }}
+                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
+                  />
+                )}
+                <Icon
                   size={19}
-                  className={
-                    openPanel === "menu" ? "text-white" : "text-tdf-muted"
-                  }
+                  className={`relative ${activeTab === key ? "text-white" : "text-tdf-muted"}`}
                 />
               </button>
-            </div>
+            ))}
+            <button
+              onClick={toggleMenu}
+              aria-label="Más páginas"
+              className="flex items-center justify-center transition-colors"
+              style={{ width: TAB_SLOT, height: 56 }}
+            >
+              <Menu
+                size={19}
+                className={
+                  openPanel === "menu" ? "text-white" : "text-tdf-muted"
+                }
+              />
+            </button>
           </div>
         </div>
       </nav>
