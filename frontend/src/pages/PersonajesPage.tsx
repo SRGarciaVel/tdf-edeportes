@@ -33,6 +33,61 @@ function normalizeCharacterName(name: string): string {
   return name.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+/** Orden de lanzamiento real de cada personaje en SF6 — plantel base
+ * (2 de junio de 2023) primero, después cada DLC en el orden real en
+ * que salió (confirmado con fuentes reales, 12-09-2026, incluido
+ * Arjun que sale recién el 13 de octubre de 2026 — todavía no hay
+ * nadie de TDF que lo juegue, pero queda listo para cuando lo haya).
+ * Comparación siempre normalizada (ver normalizeCharacterName) porque
+ * nuestro propio .title() en Python da resultados raros para algunos
+ * nombres (ej. "JP" queda guardado como "Jp", no "JP") — comparar en
+ * mayúsculas sin puntuación evita depender de acertarle a ese detalle. */
+const CHARACTER_RELEASE_ORDER = [
+  "Ryu",
+  "Chun-Li",
+  "Luke",
+  "Jamie",
+  "Ken",
+  "Guile",
+  "Kimberly",
+  "Juri",
+  "Blanka",
+  "Dhalsim",
+  "E. Honda",
+  "Dee Jay",
+  "Manon",
+  "Marisa",
+  "JP",
+  "Zangief",
+  "Lily",
+  "Cammy",
+  "Rashid",
+  "A.K.I.",
+  "Ed",
+  "Akuma",
+  "M. Bison",
+  "Terry",
+  "Mai",
+  "Elena",
+  "Sagat",
+  "C. Viper",
+  "Alex",
+  "Ingrid",
+  "Yasmine",
+  "Arjun",
+].map(normalizeCharacterName);
+
+/** Índice de lanzamiento de un personaje — los que no están en la
+ * lista (nombre nuevo que todavía no agregamos acá, o un typo real de
+ * la fuente que scrapeamos) van al final, ordenados alfabéticamente
+ * entre ellos en vez de desaparecer o romper el orden de los demás. */
+function releaseOrderIndex(characterName: string): number {
+  const idx = CHARACTER_RELEASE_ORDER.indexOf(
+    normalizeCharacterName(characterName),
+  );
+  return idx === -1 ? CHARACTER_RELEASE_ORDER.length : idx;
+}
+
 function CharacterCard({
   character,
   fanartUrl,
@@ -257,10 +312,17 @@ export default function PersonajesPage() {
 
   const rows = useMemo(
     () =>
-      characters.map((c) => ({
-        ...c,
-        globalRate: globalUsage.get(normalizeCharacterName(c.character_name)),
-      })),
+      characters
+        .map((c) => ({
+          ...c,
+          globalRate: globalUsage.get(normalizeCharacterName(c.character_name)),
+        }))
+        .sort(
+          (a, b) =>
+            releaseOrderIndex(a.character_name) -
+              releaseOrderIndex(b.character_name) ||
+            a.character_name.localeCompare(b.character_name),
+        ),
     [characters, globalUsage],
   );
 

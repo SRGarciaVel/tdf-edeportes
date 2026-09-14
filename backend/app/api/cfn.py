@@ -237,8 +237,11 @@ def list_characters(
     """Resumen por personaje de TODO el roster de TDF — cuántos
     miembros lo jugaron alguna vez y quién tiene el MR más alto con
     él. Para /personajes (pedido de Seba, 12-09-2026). Público, sin
-    auth. Ordenado por cantidad de jugadores descendente (los
-    personajes más "populares" en TDF primero)."""
+    auth. Orden de esta respuesta: por cantidad de jugadores
+    descendente — el frontend lo vuelve a ordenar por orden real de
+    lanzamiento del personaje en el juego (pedido de Seba, 12-09-2026,
+    ver CHARACTER_RELEASE_ORDER en PersonajesPage.tsx), así que este
+    orden acá no es el que termina viendo la persona."""
     rows = (
         db.query(
             CFNCharacterStats.character_name,
