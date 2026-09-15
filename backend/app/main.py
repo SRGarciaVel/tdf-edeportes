@@ -17,6 +17,7 @@ from app.api import (
     highlights,
     notifications,
     sf6,
+    sf_personality,
     tier_lists,
     twitch,
     users,
@@ -78,6 +79,7 @@ app.include_router(tier_lists.router)
 app.include_router(users.router)
 app.include_router(sf6.router)
 app.include_router(twitch.router)
+app.include_router(sf_personality.router)
 
 
 @app.get("/")

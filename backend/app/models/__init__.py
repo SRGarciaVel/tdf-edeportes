@@ -1,9 +1,9 @@
-from app.models.character_fanart import CharacterFanart
 from app.models.cfn_character_mr_history import CFNCharacterMRHistory
 from app.models.cfn_character_stats import CFNCharacterStats
 from app.models.cfn_match import CFNMatch
 from app.models.cfn_profile import CFNProfile
 from app.models.cfn_registration import CFNRegistration
+from app.models.character_fanart import CharacterFanart
 from app.models.event import Event
 from app.models.event_comment import EventComment
 from app.models.foda_entry import FodaEntry
@@ -14,17 +14,18 @@ from app.models.quarterly_goal import QuarterlyGoal
 from app.models.role import Role, user_roles
 from app.models.sf6_meta_snapshot import SF6MetaSnapshot
 from app.models.sf6_patch_note import SF6PatchNote
+from app.models.sf_personality_result import SFPersonalityResult
 from app.models.tier_list import TierList
 from app.models.tier_list_template import TierListTemplate
 from app.models.user import User
 
 __all__ = [
-    "CharacterFanart",
     "CFNCharacterMRHistory",
     "CFNCharacterStats",
     "CFNMatch",
     "CFNProfile",
     "CFNRegistration",
+    "CharacterFanart",
     "Event",
     "EventComment",
     "FodaEntry",
@@ -35,6 +36,7 @@ __all__ = [
     "Role",
     "SF6MetaSnapshot",
     "SF6PatchNote",
+    "SFPersonalityResult",
     "TierList",
     "TierListTemplate",
     "User",
