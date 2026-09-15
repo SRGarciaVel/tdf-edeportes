@@ -24,6 +24,7 @@ from app.schemas.cfn import (
     CFNMatchRead,
     CFNMatchStats,
     CFNPlayerRead,
+    CFNRegistrationApproved,
     CFNRegistrationCreate,
     CFNRegistrationDecision,
     CFNRegistrationPending,
@@ -669,6 +670,91 @@ def reject_registration(
     db.commit()
     db.refresh(registration)
     return registration
+
+
+@router.get("/registrations/approved", response_model=list[CFNRegistrationApproved])
+def list_approved_registrations(
+    db: Annotated[Session, Depends(get_db)],
+    _staff: Annotated[User, Depends(require_staff)],
+) -> list[dict]:
+    """Para editar is_tdf/display_name/liquipedia_url DESPUÉS de
+    aprobado — approve_registration() solo deja tocar estos campos en
+    el momento de aprobar una solicitud nueva, nunca hubo forma de
+    corregirlos más adelante (bug real reportado por Seba, 14-09-2026:
+    "necesito poder eliminar la badge de TDF de un usuario en
+    específico, pero desde el panel de administración no me deja").
+
+    LEFT JOIN, no INNER como en list_pending_registrations — el roster
+    original migrado nunca tuvo cuenta de Twitch vinculada (user_id
+    NULL), así que exigir el join los sacaría de esta lista por
+    completo."""
+    rows = (
+        db.query(CFNRegistration, User)
+        .outerjoin(User, User.id == CFNRegistration.user_id)
+        .filter(CFNRegistration.status == "approved")
+        .order_by(CFNRegistration.display_name.asc())
+        .all()
+    )
+    return [
+        {
+            "id": reg.id,
+            "cfn_id": reg.cfn_id,
+            "display_name": reg.display_name,
+            "is_tdf": reg.is_tdf,
+            "liquipedia_url": reg.liquipedia_url,
+            "twitch_username": u.twitch_username if u else None,
+            "twitch_display_name": u.display_name if u else None,
+            "twitch_avatar_url": u.avatar_url if u else None,
+        }
+        for reg, u in rows
+    ]
+
+
+@router.patch(
+    "/registrations/{registration_id}", response_model=CFNRegistrationApproved
+)
+def update_approved_registration(
+    registration_id: str,
+    payload: CFNRegistrationDecision,
+    db: Annotated[Session, Depends(get_db)],
+    _staff: Annotated[User, Depends(require_staff)],
+) -> dict:
+    """Editar un registro YA aprobado — reusa el mismo body que
+    approve_registration() (mismos 3 campos), pero acá no cambia el
+    status ni pisa reviewed_at/reviewed_by, porque no es una nueva
+    decisión de aprobación, es una corrección sobre una que ya
+    existe."""
+    try:
+        reg_uuid = uuid.UUID(registration_id)
+    except ValueError:
+        raise HTTPException(404, "Registro no encontrado") from None
+
+    registration = db.get(CFNRegistration, reg_uuid)
+    if registration is None or registration.status != "approved":
+        raise HTTPException(404, "Registro no encontrado")
+
+    if payload.display_name:
+        registration.display_name = payload.display_name
+    registration.is_tdf = payload.is_tdf
+    registration.liquipedia_url = payload.liquipedia_url
+    db.commit()
+    db.refresh(registration)
+
+    user = (
+        db.query(User).filter(User.id == registration.user_id).first()
+        if registration.user_id
+        else None
+    )
+    return {
+        "id": registration.id,
+        "cfn_id": registration.cfn_id,
+        "display_name": registration.display_name,
+        "is_tdf": registration.is_tdf,
+        "liquipedia_url": registration.liquipedia_url,
+        "twitch_username": user.twitch_username if user else None,
+        "twitch_display_name": user.display_name if user else None,
+        "twitch_avatar_url": user.avatar_url if user else None,
+    }
 
 
 @router.patch("/register/me/background", response_model=CFNRegistrationRead)

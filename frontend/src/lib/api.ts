@@ -5,6 +5,7 @@ import type {
   User,
   CFNPlayer,
   CFNRegistration,
+  CFNRegistrationApproved,
   CFNRegistrationPending,
   UnlinkedRegistration,
   UserSearchResult,
@@ -542,6 +543,32 @@ export async function listPendingCfnRegistrations(
     headers: authHeaders(token),
   });
   return parseOrThrow<CFNRegistrationPending[]>(res);
+}
+
+// para editar is_tdf/display_name/liquipedia_url DESPUÉS de aprobado
+// — bug real reportado por Seba (14-09-2026): el panel solo dejaba
+// tocar estos campos al aprobar una solicitud nueva, nunca hubo forma
+// de corregirlos más adelante
+export async function listApprovedCfnRegistrations(
+  token: string,
+): Promise<CFNRegistrationApproved[]> {
+  const res = await fetch(`${API_URL}/cfn/registrations/approved`, {
+    headers: authHeaders(token),
+  });
+  return parseOrThrow<CFNRegistrationApproved[]>(res);
+}
+
+export async function updateApprovedCfnRegistration(
+  token: string,
+  id: string,
+  decision: { display_name?: string; is_tdf: boolean; liquipedia_url?: string },
+): Promise<CFNRegistrationApproved> {
+  const res = await fetch(`${API_URL}/cfn/registrations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify(decision),
+  });
+  return parseOrThrow<CFNRegistrationApproved>(res);
 }
 
 // roster viejo (migrado antes del auto-registro) sin cuenta de Twitch

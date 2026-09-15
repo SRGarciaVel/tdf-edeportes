@@ -6,13 +6,16 @@ import Skeleton from "../components/Skeleton";
 import {
   approveCfnRegistration,
   linkAccount,
+  listApprovedCfnRegistrations,
   listPendingCfnRegistrations,
   listUnlinkedRegistrations,
   rejectCfnRegistration,
   searchUsers,
+  updateApprovedCfnRegistration,
 } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import type {
+  CFNRegistrationApproved,
   CFNRegistrationPending,
   UnlinkedRegistration,
   UserSearchResult,
@@ -115,6 +118,119 @@ function ApproveModal({
             className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-[11px] uppercase text-white disabled:opacity-50"
           >
             {submitting ? "Aprobando..." : "Aprobar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Editar un registro YA aprobado — mismo formulario que ApproveModal
+ * (mismos 3 campos), pero llama a update_approved_registration en vez
+ * de approve_registration. Existe porque antes no había NINGUNA forma
+ * de corregir is_tdf/display_name/liquipedia_url una vez aprobado —
+ * bug real reportado por Seba (14-09-2026): "necesito poder eliminar
+ * la badge de TDF de un usuario en específico, pero desde el panel de
+ * administración no me deja". */
+function EditApprovedModal({
+  registration,
+  onClose,
+  onSaved,
+}: {
+  registration: CFNRegistrationApproved;
+  onClose: () => void;
+  onSaved: (updated: CFNRegistrationApproved) => void;
+}) {
+  const { token } = useAuth();
+  const [displayName, setDisplayName] = useState(registration.display_name);
+  const [isTdf, setIsTdf] = useState(registration.is_tdf);
+  const [liquipediaUrl, setLiquipediaUrl] = useState(
+    registration.liquipedia_url ?? "",
+  );
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSave() {
+    if (!token) return;
+    setSubmitting(true);
+    try {
+      const updated = await updateApprovedCfnRegistration(
+        token,
+        registration.id,
+        {
+          display_name: displayName.trim() || undefined,
+          is_tdf: isTdf,
+          liquipedia_url: liquipediaUrl.trim() || undefined,
+        },
+      );
+      onSaved(updated);
+    } catch {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="hud-frame bg-tdf-charcoal border border-tdf-line w-full max-w-sm p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-mono text-xs uppercase text-tdf-magenta">
+            Editar {registration.cfn_id}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-tdf-muted hover:text-white text-sm"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <p className="font-mono text-[10px] uppercase text-tdf-muted mb-2">
+          Nombre a mostrar
+        </p>
+        <input
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          className="w-full bg-tdf-dark border border-tdf-line px-3 py-2 text-sm font-mono mb-4"
+        />
+
+        <label className="flex items-center gap-2 mb-4 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isTdf}
+            onChange={(e) => setIsTdf(e.target.checked)}
+          />
+          <span className="text-sm text-gray-300">Marcar como TDF</span>
+        </label>
+
+        <p className="font-mono text-[10px] uppercase text-tdf-muted mb-2">
+          Link de Liquipedia (opcional)
+        </p>
+        <input
+          value={liquipediaUrl}
+          onChange={(e) => setLiquipediaUrl(e.target.value)}
+          placeholder="https://liquipedia.net/fighters/..."
+          className="w-full bg-tdf-dark border border-tdf-line px-3 py-2 text-sm font-mono mb-5"
+        />
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="border border-tdf-line hover:border-white transition-colors px-4 py-2 font-mono text-[11px] uppercase"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={submitting}
+            className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-[11px] uppercase text-white disabled:opacity-50"
+          >
+            {submitting ? "Guardando..." : "Guardar"}
           </button>
         </div>
       </div>
@@ -254,6 +370,11 @@ export default function StaffCfnPage() {
   const [searchingFor, setSearchingFor] = useState<UnlinkedRegistration | null>(
     null,
   );
+  const [approved, setApproved] = useState<CFNRegistrationApproved[]>([]);
+  const [approvedLoading, setApprovedLoading] = useState(true);
+  const [editingApproved, setEditingApproved] =
+    useState<CFNRegistrationApproved | null>(null);
+  const [approvedSearch, setApprovedSearch] = useState("");
 
   function load() {
     if (!token) return;
@@ -273,8 +394,28 @@ export default function StaffCfnPage() {
       .finally(() => setUnlinkedLoading(false));
   }
 
+  function loadApproved() {
+    if (!token) return;
+    setApprovedLoading(true);
+    listApprovedCfnRegistrations(token)
+      .then(setApproved)
+      .catch(() => {})
+      .finally(() => setApprovedLoading(false));
+  }
+
   useEffect(load, [token]);
   useEffect(loadUnlinked, [token]);
+  useEffect(loadApproved, [token]);
+
+  const filteredApproved = approved.filter((r) => {
+    const q = approvedSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      r.display_name.toLowerCase().includes(q) ||
+      r.cfn_id.toLowerCase().includes(q) ||
+      (r.twitch_username?.toLowerCase().includes(q) ?? false)
+    );
+  });
 
   async function handleLinkCandidate(cfnId: string, userId: string) {
     if (!token) return;
@@ -388,7 +529,7 @@ export default function StaffCfnPage() {
         <h2 className="text-2xl font-bold mb-2">Vincular cuentas de Twitch</h2>
         <p className="text-tdf-muted mb-6 max-w-xl font-body">
           Jugadores del roster original (de antes del auto-registro) sin cuenta
-          de Twitch asociada — por eso no tienen avatar real ni pueden
+          de Twitch asociada, por eso no tienen avatar real ni pueden
           personalizar su propia card. Se sugiere una cuenta solo cuando el
           nombre calza exacto; para el resto, hay que buscarla a mano.
         </p>
@@ -467,6 +608,72 @@ export default function StaffCfnPage() {
         )}
       </div>
 
+      <div className="mt-12">
+        <p className="font-mono text-xs uppercase text-tdf-magenta mb-3">
+          Jugadores aprobados
+        </p>
+        <input
+          value={approvedSearch}
+          onChange={(e) => setApprovedSearch(e.target.value)}
+          placeholder="Buscar por nombre, CFN ID o @ de Twitch..."
+          className="w-full bg-tdf-dark border border-tdf-line px-3 py-2 text-sm font-mono mb-4"
+        />
+        {approvedLoading ? (
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        ) : filteredApproved.length === 0 ? (
+          <p className="font-body text-sm text-tdf-muted">
+            {approvedSearch
+              ? "Nadie calza con esa búsqueda."
+              : "Todavía no hay jugadores aprobados."}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {filteredApproved.map((r) => (
+              <div
+                key={r.id}
+                className="hud-frame bg-tdf-charcoal border border-tdf-line p-3 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {r.twitch_avatar_url ? (
+                    <img
+                      src={r.twitch_avatar_url}
+                      alt=""
+                      className="w-9 h-9 rounded-full shrink-0"
+                    />
+                  ) : (
+                    <InitialsAvatar seed={r.display_name} size={9} />
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-body text-sm truncate">
+                      {r.display_name}{" "}
+                      {r.is_tdf && (
+                        <span className="font-mono text-[10px] uppercase text-tdf-magenta">
+                          TDF
+                        </span>
+                      )}
+                    </p>
+                    <p className="font-mono text-[11px] text-tdf-muted truncate">
+                      {r.cfn_id}
+                      {r.twitch_username && ` · @${r.twitch_username}`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEditingApproved(r)}
+                  className="border border-tdf-line hover:border-tdf-magenta transition-colors px-3 py-1.5 font-mono text-[11px] uppercase text-tdf-muted hover:text-white shrink-0"
+                >
+                  Editar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {approving && (
         <ApproveModal
           registration={approving}
@@ -487,6 +694,19 @@ export default function StaffCfnPage() {
               prev.filter((r) => r.cfn_id !== searchingFor.cfn_id),
             );
             setSearchingFor(null);
+          }}
+        />
+      )}
+
+      {editingApproved && (
+        <EditApprovedModal
+          registration={editingApproved}
+          onClose={() => setEditingApproved(null)}
+          onSaved={(updated) => {
+            setApproved((prev) =>
+              prev.map((r) => (r.id === updated.id ? updated : r)),
+            );
+            setEditingApproved(null);
           }}
         />
       )}

@@ -242,6 +242,20 @@ export interface CFNRegistrationPending {
   twitch_avatar_url: string | null;
 }
 
+// para la sección "editar aprobados" del panel de staff — a
+// diferencia de CFNRegistrationPending, los datos de Twitch son
+// opcionales (el roster original migrado nunca tuvo cuenta vinculada)
+export interface CFNRegistrationApproved {
+  id: string;
+  cfn_id: string;
+  display_name: string;
+  is_tdf: boolean;
+  liquipedia_url: string | null;
+  twitch_username: string | null;
+  twitch_display_name: string | null;
+  twitch_avatar_url: string | null;
+}
+
 export interface UnlinkedCandidate {
   user_id: string;
   twitch_username: string;

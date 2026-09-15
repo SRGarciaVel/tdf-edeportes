@@ -196,6 +196,25 @@ class CFNRegistrationPending(BaseModel):
     twitch_avatar_url: str | None
 
 
+class CFNRegistrationApproved(BaseModel):
+    """Para la sección "editar aprobados" del panel de staff — a
+    diferencia de CFNRegistrationPending, los datos de Twitch son
+    opcionales: el roster original (migrado directo con
+    status="approved") nunca tuvo una cuenta vinculada, así que no
+    todos los registros aprobados tienen usuario detrás."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    cfn_id: str
+    display_name: str
+    is_tdf: bool
+    liquipedia_url: str | None
+    twitch_username: str | None = None
+    twitch_display_name: str | None = None
+    twitch_avatar_url: str | None = None
+
+
 class CFNRegistrationDecision(BaseModel):
     """Body de POST .../approve — deja que staff ajuste el nombre final,
     la etiqueta TDF y el link de Liquipedia antes de publicar, en vez de
