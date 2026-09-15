@@ -24,6 +24,12 @@ import type {
   PatchNote,
   TwitchLiveStatus,
   ChannelLiveStatus,
+  SFQuestionsResponse,
+  SFResolveFamilyResponse,
+  SFResolveSubfamilyResponse,
+  SFResolveCharacterResponse,
+  SFResolveEraResponse,
+  SFStatsResponse,
   SkillAxis,
   SocialLink,
   ProfileComment,
@@ -851,4 +857,67 @@ export async function getTwitchLiveStatus(): Promise<TwitchLiveStatus> {
 export async function getFriendsLiveStatus(): Promise<ChannelLiveStatus[]> {
   const res = await fetch(`${API_URL}/twitch/friends-live-status`);
   return parseOrThrow<ChannelLiveStatus[]>(res);
+}
+
+// --- Test de personalidad SF ---------------------------------------
+// El resultado solo se guarda en el backend si viene un token — el
+// test funciona igual para invitados, simplemente no queda registrado
+// para las estadísticas de la comunidad (ver SFPersonalityResult).
+
+export async function getSfPersonalityQuestions(): Promise<SFQuestionsResponse> {
+  const res = await fetch(`${API_URL}/sf-personality/questions`);
+  return parseOrThrow<SFQuestionsResponse>(res);
+}
+
+export async function resolveSfFamily(
+  answers: number[],
+): Promise<SFResolveFamilyResponse> {
+  const res = await fetch(`${API_URL}/sf-personality/resolve-family`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ answers }),
+  });
+  return parseOrThrow<SFResolveFamilyResponse>(res);
+}
+
+export async function resolveSfSubfamily(
+  answer: number,
+): Promise<SFResolveSubfamilyResponse> {
+  const res = await fetch(`${API_URL}/sf-personality/resolve-subfamily`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ answer }),
+  });
+  return parseOrThrow<SFResolveSubfamilyResponse>(res);
+}
+
+export async function resolveSfCharacter(
+  token: string | null,
+  familyKey: string,
+  answers: number[],
+): Promise<SFResolveCharacterResponse> {
+  const res = await fetch(`${API_URL}/sf-personality/resolve-character`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ family_key: familyKey, answers }),
+  });
+  return parseOrThrow<SFResolveCharacterResponse>(res);
+}
+
+export async function resolveSfEra(
+  token: string | null,
+  character: string,
+  answers: number[],
+): Promise<SFResolveEraResponse> {
+  const res = await fetch(`${API_URL}/sf-personality/resolve-era`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ character, answers }),
+  });
+  return parseOrThrow<SFResolveEraResponse>(res);
+}
+
+export async function getSfPersonalityStats(): Promise<SFStatsResponse> {
+  const res = await fetch(`${API_URL}/sf-personality/stats`);
+  return parseOrThrow<SFStatsResponse>(res);
 }

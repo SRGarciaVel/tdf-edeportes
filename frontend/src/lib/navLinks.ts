@@ -8,6 +8,7 @@ import {
   Info,
   LayoutGrid,
   Scale,
+  Sparkles,
   Star,
   Swords,
   Target,
@@ -33,6 +34,7 @@ export const COMUNIDAD_LINKS = [
   { to: "/objetivos", label: "Objetivos", Icon: Target },
   { to: "/foda", label: "FODA", Icon: Scale },
   { to: "/puntos", label: "Puntos", Icon: Star },
+  { to: "/test-personalidad", label: "Test de personalidad", Icon: Sparkles },
 ];
 
 export const ACTIVIDAD_LINKS = [

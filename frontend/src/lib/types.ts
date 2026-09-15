@@ -455,3 +455,48 @@ export interface TwitchLiveStatus {
 export interface ChannelLiveStatus extends TwitchLiveStatus {
   channel: string;
 }
+
+// --- Test de personalidad SF ---------------------------------------
+
+export interface SFQuestion {
+  texto: string;
+  opciones: string[];
+}
+
+export interface SFQuestionsResponse {
+  nivel1: SFQuestion[];
+  nivel1_5: SFQuestion;
+  nivel2_por_familia: Record<string, SFQuestion[]>;
+  era_generica: SFQuestion[];
+  era_ken: SFQuestion;
+}
+
+export interface SFResolveFamilyResponse {
+  family: string;
+  needs_subfamily_split: boolean;
+}
+
+export interface SFResolveSubfamilyResponse {
+  subfamily: string;
+}
+
+export interface SFResolveCharacterResponse {
+  character: string;
+  needs_era: boolean;
+  final_result: string | null;
+}
+
+export interface SFResolveEraResponse {
+  final_result: string;
+}
+
+export interface SFCharacterStat {
+  character_name: string;
+  count: number;
+  percentage: number;
+}
+
+export interface SFStatsResponse {
+  total_results: number;
+  by_character: SFCharacterStat[];
+}

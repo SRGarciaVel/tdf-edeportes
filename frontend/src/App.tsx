@@ -18,6 +18,7 @@ import RecopilacionesPage from "./pages/RecopilacionesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Sf6MetaPage from "./pages/Sf6MetaPage";
 import Sf6PatchNotesPage from "./pages/Sf6PatchNotesPage";
+import PersonalityTestSfPage from "./pages/PersonalityTestSfPage";
 import StaffCfnPage from "./pages/StaffCfnPage";
 import TierListGalleryPage from "./pages/TierListGalleryPage";
 import TierListPage from "./pages/TierListPage";
@@ -50,6 +51,10 @@ export default function App() {
           <Route path="/nosotros" element={<NosotrosPage />} />
           <Route path="/puntos" element={<PuntosPage />} />
           <Route path="/recopilaciones" element={<RecopilacionesPage />} />
+          <Route
+            path="/test-personalidad"
+            element={<PersonalityTestSfPage />}
+          />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/foda" element={<FodaPage />} />
           <Route path="/logros" element={<LogrosPage />} />
