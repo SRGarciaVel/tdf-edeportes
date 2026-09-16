@@ -34,7 +34,6 @@ export const COMUNIDAD_LINKS = [
   { to: "/objetivos", label: "Objetivos", Icon: Target },
   { to: "/foda", label: "FODA", Icon: Scale },
   { to: "/puntos", label: "Puntos", Icon: Star },
-  { to: "/test-personalidad", label: "Test de personalidad", Icon: Sparkles },
 ];
 
 export const ACTIVIDAD_LINKS = [
@@ -42,6 +41,7 @@ export const ACTIVIDAD_LINKS = [
   { to: "/torneos", label: "Torneos", Icon: Trophy },
   { to: "/tierlist", label: "Tier List", Icon: LayoutGrid },
   { to: "/recopilaciones", label: "Recopilaciones", Icon: Clapperboard },
+  { to: "/test-personalidad", label: "Test de personalidad", Icon: Sparkles },
 ];
 
 export const SF6_LINKS = [

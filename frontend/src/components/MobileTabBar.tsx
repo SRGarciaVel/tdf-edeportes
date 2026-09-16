@@ -353,7 +353,7 @@ export default function MobileTabBar() {
                     dos posiciones funciona bien (referencia real:
                     developer.motion.dev "iOS App Folder", 13-09-2026). */}
                 {key === "actividad" && openPanel !== "actividad" ? (
-                  <div className="relative grid grid-cols-2 gap-0.5 w-5 h-5">
+                  <div className="relative grid grid-cols-3 gap-0.5 w-6 h-5">
                     {ACTIVIDAD_LINKS.map((link) => (
                       <motion.div
                         key={link.to}
@@ -361,7 +361,7 @@ export default function MobileTabBar() {
                         className="flex items-center justify-center"
                       >
                         <link.Icon
-                          size={7}
+                          size={6}
                           className={
                             activeTab === key ? "text-white" : "text-tdf-muted"
                           }

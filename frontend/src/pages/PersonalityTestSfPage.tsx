@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
@@ -17,6 +18,30 @@ import type {
   SFQuestionsResponse,
   SFStatsResponse,
 } from "../lib/types";
+
+const FAMILY_LABELS: Record<string, string> = {
+  disciplinados: "Los Disciplinados en Paz",
+  atormentados: "Los Atormentados",
+  protectores: "Los Protectores Modernos",
+  ambiciosos: "Los Ambiciosos Calculadores",
+  libres_cercanos: "Los Libres: Los Cercanos",
+  libres_solitarios: "Los Libres: Los Solitarios",
+};
+
+const FAMILY_DESCRIPTIONS: Record<string, string> = {
+  disciplinados:
+    "Ya hiciste las paces con tu pasado. Tu fuerza viene de la calma, no de la furia.",
+  atormentados:
+    "Cargas con algo que todavía no resolviste del todo, y eso te empuja a seguir peleando.",
+  protectores:
+    "No peleas solo por ti. Tu gente es la razón real detrás de cada decisión.",
+  ambiciosos:
+    "El poder y el control pesan más que cualquier otra cosa en tu forma de ver el mundo.",
+  libres_cercanos:
+    "Vives a tu manera, sin mucha jerarquía, pero siempre con tu gente cerca.",
+  libres_solitarios:
+    "Vives a tu manera, sin mucha jerarquía, y prefieres manejarte por tu cuenta.",
+};
 
 type Step = "nivel1" | "nivel1_5" | "nivel2" | "era" | "resultado";
 
@@ -50,6 +75,7 @@ export default function PersonalityTestSfPage() {
   const [eraAnswers, setEraAnswers] = useState<number[]>([]);
   const [finalResult, setFinalResult] = useState<string | null>(null);
   const [stats, setStats] = useState<SFStatsResponse | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     getSfPersonalityQuestions()
@@ -77,6 +103,35 @@ export default function PersonalityTestSfPage() {
     setEraAnswers([]);
     setFinalResult(null);
     setSubmitError(null);
+  }
+
+  async function handleShare() {
+    if (!finalResult) return;
+    const texto = `Saqué a ${finalResult} en el test de personalidad de TDF e-deportes. Descubrí el tuyo:`;
+    const url = window.location.origin + "/test-personalidad";
+
+    // Web Share API primero (funciona mejor en mobile, abre el menú
+    // nativo de compartir) -- si no está disponible, se copia el
+    // texto al portapapeles como respaldo
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: texto, url });
+        return;
+      } catch {
+        // el usuario cerró el selector de compartir sin elegir nada
+        // -- no es un error real, no hace falta mostrar nada
+        return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${texto} ${url}`);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch {
+      // clipboard tampoco disponible -- caso raro, se deja pasar
+      // en silencio en vez de mostrar un error que no ayuda en nada
+    }
   }
 
   async function handleNivel1Answer(idx: number) {
@@ -287,9 +342,19 @@ export default function PersonalityTestSfPage() {
               <p className="font-mono text-xs uppercase text-tdf-muted mb-2">
                 Tu resultado
               </p>
-              <p className="font-display font-bold uppercase text-4xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-4">
+              <p className="font-display font-bold uppercase text-4xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-2">
                 {finalResult}
               </p>
+              {familyKey && FAMILY_LABELS[familyKey] && (
+                <p className="font-mono text-[11px] uppercase text-tdf-muted mb-2">
+                  {FAMILY_LABELS[familyKey]}
+                </p>
+              )}
+              {familyKey && FAMILY_DESCRIPTIONS[familyKey] && (
+                <p className="font-body text-sm text-tdf-muted max-w-sm mx-auto mb-4">
+                  {FAMILY_DESCRIPTIONS[familyKey]}
+                </p>
+              )}
 
               {stats && stats.total_results > 0 && (
                 <p className="font-mono text-xs text-tdf-muted mb-6">
@@ -307,12 +372,27 @@ export default function PersonalityTestSfPage() {
                 </p>
               )}
 
-              <button
-                onClick={restart}
-                className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white"
+              <div className="flex flex-wrap justify-center gap-3 mb-4">
+                <button
+                  onClick={restart}
+                  className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white"
+                >
+                  Repetir el test
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase text-tdf-muted hover:text-white"
+                >
+                  {shareCopied ? "¡Copiado!" : "Compartir"}
+                </button>
+              </div>
+
+              <Link
+                to="/test-personalidad/ranking"
+                className="font-mono text-[11px] uppercase text-tdf-purple hover:text-tdf-magenta transition-colors"
               >
-                Repetir el test
-              </button>
+                Ver el ranking de la comunidad →
+              </Link>
             </motion.div>
           )}
         </AnimatePresence>
