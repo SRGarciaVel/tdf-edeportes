@@ -290,9 +290,17 @@ export default function PersonalityTestSfPage() {
     <Layout>
       <div className="max-w-2xl mx-auto px-4 py-16">
         <SectionLabel index="01">Test de personalidad SF</SectionLabel>
-        <h1 className="font-display font-bold uppercase text-3xl mb-8">
-          ¿Qué personaje sos según tu forma de pelear la vida?
-        </h1>
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <h1 className="font-display font-bold uppercase text-3xl">
+            ¿Qué personaje eres según tu forma de pelear la vida?
+          </h1>
+          <Link
+            to="/test-personalidad/ranking"
+            className="shrink-0 font-mono text-[11px] uppercase text-tdf-purple hover:text-tdf-magenta transition-colors whitespace-nowrap"
+          >
+            Ver ranking →
+          </Link>
+        </div>
 
         {submitError && (
           <p className="font-mono text-xs text-tdf-magenta mb-4">
