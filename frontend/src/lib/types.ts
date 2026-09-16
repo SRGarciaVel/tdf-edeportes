@@ -510,6 +510,7 @@ export interface SFCharacterStat {
   character_name: string;
   count: number;
   percentage: number;
+  family_key: string | null;
 }
 
 export interface SFStatsResponse {

@@ -76,6 +76,7 @@ class CharacterStat(BaseModel):
     character_name: str
     count: int
     percentage: float
+    family_key: str | None = None
 
 
 class StatsResponse(BaseModel):

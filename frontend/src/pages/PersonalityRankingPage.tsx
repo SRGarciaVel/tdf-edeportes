@@ -1,13 +1,99 @@
+import { Medal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import InitialsAvatar from "../components/InitialsAvatar";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
-import { getCharacterImage } from "../lib/characterImages";
 import { getSfPersonalityStats } from "../lib/api";
-import type { SFStatsResponse } from "../lib/types";
+import { getCharacterImage } from "../lib/characterImages";
+import { FAMILY_LABELS } from "../lib/personalityFamilies";
+import type { SFCharacterStat, SFStatsResponse } from "../lib/types";
 
-/** Ranking de resultados del test de personalidad SF — solo cuenta a
+// oro / plata / bronce -- mismo patrón que el leaderboard de Logros
+// (LogrosPage.tsx), reusado acá para no inventar un lenguaje visual
+// nuevo para lo mismo (podio de un ranking)
+const PODIUM_STYLES: Record<number, { text: string; ring: string }> = {
+  1: { text: "text-amber-400", ring: "ring-amber-400/50" },
+  2: { text: "text-slate-300", ring: "ring-slate-300/40" },
+  3: { text: "text-orange-700", ring: "ring-orange-700/50" },
+};
+
+function RankingRow({
+  entry,
+  rank,
+  failedImages,
+  onImageError,
+}: {
+  entry: SFCharacterStat;
+  rank: number;
+  failedImages: Set<string>;
+  onImageError: (name: string) => void;
+}) {
+  const podium = PODIUM_STYLES[rank];
+  const image = getCharacterImage(entry.character_name);
+  const showImage = image && !failedImages.has(entry.character_name);
+
+  return (
+    <div
+      className={`hud-frame bg-tdf-charcoal border p-3.5 flex items-center gap-4 ${
+        podium ? "border-tdf-magenta" : "border-tdf-line"
+      }`}
+    >
+      <div className="w-7 shrink-0 flex justify-center">
+        {podium ? (
+          <Medal size={20} className={podium.text} />
+        ) : (
+          <span className="font-mono text-sm text-tdf-muted">{rank}</span>
+        )}
+      </div>
+
+      <div
+        className={`shrink-0 overflow-hidden bg-tdf-dark flex items-center justify-center ${
+          podium ? `w-14 h-14 ring-2 ${podium.ring}` : "w-10 h-10"
+        }`}
+      >
+        {showImage ? (
+          <img
+            src={image ?? undefined}
+            alt=""
+            onError={() => onImageError(entry.character_name)}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <InitialsAvatar seed={entry.character_name} size={podium ? 14 : 10} />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p
+          className={`truncate ${podium ? `font-semibold ${podium.text}` : "text-sm font-semibold"}`}
+        >
+          {entry.character_name}
+        </p>
+        {entry.family_key && FAMILY_LABELS[entry.family_key] && (
+          <p className="font-mono text-[10px] uppercase text-tdf-muted truncate">
+            {FAMILY_LABELS[entry.family_key]}
+          </p>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="w-12 sm:w-24 h-1.5 bg-tdf-line overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-tdf-magenta to-tdf-purple"
+            style={{ width: `${entry.percentage}%` }}
+          />
+        </div>
+        <span className="font-mono text-xs text-tdf-muted w-12 text-right">
+          {entry.percentage}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Ranking de resultados del test de personalidad SF -- solo cuenta a
  * quienes hicieron el test logueados (ver SFPersonalityResult en el
  * backend), así que el total puede ser más chico que la cantidad real
  * de gente que probó el test como invitado. */
@@ -21,6 +107,10 @@ export default function PersonalityRankingPage() {
       .then(setStats)
       .catch(() => setError(true));
   }, []);
+
+  function handleImageError(name: string) {
+    setFailedImages((prev) => new Set(prev).add(name));
+  }
 
   return (
     <Layout>
@@ -44,7 +134,7 @@ export default function PersonalityRankingPage() {
         {!stats && !error && (
           <div className="flex flex-col gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         )}
@@ -71,41 +161,13 @@ export default function PersonalityRankingPage() {
             </p>
             <div className="flex flex-col gap-2">
               {stats.by_character.map((s, i) => (
-                <div
+                <RankingRow
                   key={s.character_name}
-                  className="hud-frame bg-tdf-charcoal border border-tdf-line p-3 flex items-center gap-4"
-                >
-                  <span className="font-mono text-xs text-tdf-muted w-6 text-right shrink-0">
-                    {i + 1}
-                  </span>
-                  {!failedImages.has(s.character_name) &&
-                    getCharacterImage(s.character_name) && (
-                      <img
-                        src={getCharacterImage(s.character_name) ?? undefined}
-                        alt=""
-                        onError={() =>
-                          setFailedImages((prev) =>
-                            new Set(prev).add(s.character_name),
-                          )
-                        }
-                        className="w-8 h-8 object-cover shrink-0"
-                      />
-                    )}
-                  <span className="font-body text-sm flex-1 truncate">
-                    {s.character_name}
-                  </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="w-24 h-1.5 bg-tdf-line overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-tdf-magenta to-tdf-purple"
-                        style={{ width: `${s.percentage}%` }}
-                      />
-                    </div>
-                    <span className="font-mono text-xs text-tdf-muted w-12 text-right">
-                      {s.percentage}%
-                    </span>
-                  </div>
-                </div>
+                  entry={s}
+                  rank={i + 1}
+                  failedImages={failedImages}
+                  onImageError={handleImageError}
+                />
               ))}
             </div>
           </>

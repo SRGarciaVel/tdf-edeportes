@@ -252,6 +252,20 @@ ERA_SPLITS: dict[str, tuple[str, str]] = {
     "Karin": ("Karin (Alpha 3)", "Karin (SFV)"),
 }
 
+# mapeo inverso personaje -> clave de familia, derivado de FAMILIES --
+# para el ranking de la comunidad, que muestra el arquetipo de cada
+# resultado como subtítulo (pedido de Seba, 15-09-2026: "dale más
+# personalidad, se ve muy aburrido"). Los de "libres" se pisan con su
+# subfamilia real (cercanos/solitarios) -- FAMILIES["libres"] es el
+# pool completo de 28 antes de dividir, no sirve como etiqueta final.
+CHARACTER_TO_FAMILY: dict[str, str] = {
+    name: family_key for family_key, miembros in FAMILIES.items() for name in miembros
+}
+for _name in LIBRES_CERCANOS:
+    CHARACTER_TO_FAMILY[_name] = "libres_cercanos"
+for _name in LIBRES_SOLITARIOS:
+    CHARACTER_TO_FAMILY[_name] = "libres_solitarios"
+
 # --- Preguntas -----------------------------------------------------------
 # Cada pregunta es una lista de opciones; cada opción es (texto, delta).
 # El delta se suma al vector acumulado del usuario cuando elige esa

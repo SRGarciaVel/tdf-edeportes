@@ -20,30 +20,7 @@ import type {
   SFQuestionsResponse,
   SFStatsResponse,
 } from "../lib/types";
-
-const FAMILY_LABELS: Record<string, string> = {
-  disciplinados: "Los Disciplinados en Paz",
-  atormentados: "Los Atormentados",
-  protectores: "Los Protectores Modernos",
-  ambiciosos: "Los Ambiciosos Calculadores",
-  libres_cercanos: "Los Libres: Los Cercanos",
-  libres_solitarios: "Los Libres: Los Solitarios",
-};
-
-const FAMILY_DESCRIPTIONS: Record<string, string> = {
-  disciplinados:
-    "Ya hiciste las paces con tu pasado. Tu fuerza viene de la calma, no de la furia.",
-  atormentados:
-    "Cargas con algo que todavía no resolviste del todo, y eso te empuja a seguir peleando.",
-  protectores:
-    "No peleas solo por ti. Tu gente es la razón real detrás de cada decisión.",
-  ambiciosos:
-    "El poder y el control pesan más que cualquier otra cosa en tu forma de ver el mundo.",
-  libres_cercanos:
-    "Vives a tu manera, sin mucha jerarquía, pero siempre con tu gente cerca.",
-  libres_solitarios:
-    "Vives a tu manera, sin mucha jerarquía, y prefieres manejarte por tu cuenta.",
-};
+import { FAMILY_DESCRIPTIONS, FAMILY_LABELS } from "../lib/personalityFamilies";
 
 type Step = "nivel1" | "nivel1_5" | "nivel2" | "era" | "resultado";
 

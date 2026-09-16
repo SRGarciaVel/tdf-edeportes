@@ -23,6 +23,7 @@ from app.schemas.sf_personality import (
     StatsResponse,
 )
 from app.services.sf_personality_data import (
+    CHARACTER_TO_FAMILY,
     ERA_QUESTIONS_GENERIC,
     KEN_ERA_QUESTION,
     NIVEL1_5_QUESTION,
@@ -178,6 +179,7 @@ def get_stats(db: Annotated[Session, Depends(get_db)]) -> StatsResponse:
                 character_name=name,
                 count=count,
                 percentage=round(100 * count / total, 1) if total else 0.0,
+                family_key=CHARACTER_TO_FAMILY.get(name),
             )
             for name, count in rows
         ],
