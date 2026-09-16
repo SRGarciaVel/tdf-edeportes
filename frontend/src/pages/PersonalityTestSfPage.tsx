@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { toBlob } from "html-to-image";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
@@ -75,9 +76,12 @@ export default function PersonalityTestSfPage() {
   const [character, setCharacter] = useState<string | null>(null);
   const [eraAnswers, setEraAnswers] = useState<number[]>([]);
   const [finalResult, setFinalResult] = useState<string | null>(null);
+  const [neighbors, setNeighbors] = useState<string[]>([]);
   const [stats, setStats] = useState<SFStatsResponse | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getSfPersonalityQuestions()
@@ -111,36 +115,67 @@ export default function PersonalityTestSfPage() {
     setCharacter(null);
     setEraAnswers([]);
     setFinalResult(null);
+    setNeighbors([]);
     setSubmitError(null);
   }
 
+  /** Genera la tarjeta de resultado como imagen real (retrato +
+   * texto, referencia de Seba: una tarjeta de un foro de fans de
+   * Kingdom Hearts, 14-09-2026) en vez de solo mandar el link pelado
+   * — eso no decía nada de a quién le tocó. 3 niveles de respaldo:
+   * compartir nativo con el archivo adjunto (lo mejor en el celular,
+   * abre el selector con la imagen ya puesta), copiar la imagen al
+   * portapapeles (funciona bien en desktop), y descarga directa como
+   * último recurso universal. */
   async function handleShare() {
-    if (!finalResult) return;
+    if (!cardRef.current || !finalResult) return;
+    setShareError(null);
+
+    let blob: Blob | null;
+    try {
+      blob = await toBlob(cardRef.current, {
+        backgroundColor: "#0D0710",
+        pixelRatio: 2,
+      });
+    } catch {
+      setShareError("No se pudo generar la imagen en este navegador.");
+      return;
+    }
+    if (!blob) {
+      setShareError("No se pudo generar la imagen en este navegador.");
+      return;
+    }
+
+    const file = new File([blob], "resultado-tdf.png", { type: "image/png" });
     const texto = `Saqué a ${finalResult} en el test de personalidad de TDF e-deportes. Descubrí el tuyo:`;
     const url = window.location.origin + "/test-personalidad";
 
-    // Web Share API primero (funciona mejor en mobile, abre el menú
-    // nativo de compartir) -- si no está disponible, se copia el
-    // texto al portapapeles como respaldo
-    if (navigator.share) {
+    if (navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ text: texto, url });
+        await navigator.share({ files: [file], text: texto, url });
         return;
       } catch {
-        // el usuario cerró el selector de compartir sin elegir nada
-        // -- no es un error real, no hace falta mostrar nada
+        // el usuario cerró el selector sin elegir nada -- no es un
+        // error real, no hace falta mostrar nada
         return;
       }
     }
 
     try {
-      await navigator.clipboard.writeText(`${texto} ${url}`);
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2500);
+      return;
     } catch {
-      // clipboard tampoco disponible -- caso raro, se deja pasar
-      // en silencio en vez de mostrar un error que no ayuda en nada
+      // sigue al respaldo de descarga
     }
+
+    const link = document.createElement("a");
+    link.download = "resultado-tdf.png";
+    link.href = URL.createObjectURL(blob);
+    link.click();
   }
 
   async function handleNivel1Answer(idx: number) {
@@ -208,6 +243,7 @@ export default function PersonalityTestSfPage() {
         setQuestionIndex(0);
       } else {
         setFinalResult(res.final_result);
+        setNeighbors(res.neighbors);
         setStep("resultado");
       }
     } catch (e) {
@@ -234,6 +270,7 @@ export default function PersonalityTestSfPage() {
     try {
       const res = await resolveSfEra(token, character, answers);
       setFinalResult(res.final_result);
+      setNeighbors(res.neighbors);
       setStep("resultado");
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "Error inesperado");
@@ -381,6 +418,15 @@ export default function PersonalityTestSfPage() {
                 </p>
               )}
 
+              {neighbors.length > 0 && (
+                <p className="font-mono text-[11px] text-tdf-muted mb-6">
+                  También te pareces a{" "}
+                  <span className="text-tdf-purple">
+                    {neighbors.join(" y ")}
+                  </span>
+                </p>
+              )}
+
               {stats && stats.total_results > 0 && (
                 <p className="font-mono text-xs text-tdf-muted mb-6">
                   {stats.by_character.find(
@@ -411,6 +457,11 @@ export default function PersonalityTestSfPage() {
                   {shareCopied ? "¡Copiado!" : "Compartir"}
                 </button>
               </div>
+              {shareError && (
+                <p className="font-mono text-[11px] text-tdf-magenta mb-4">
+                  {shareError}
+                </p>
+              )}
 
               <Link
                 to="/test-personalidad/ranking"
@@ -421,6 +472,54 @@ export default function PersonalityTestSfPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* tarjeta oculta usada solo para generar la imagen de
+            "compartir" (html-to-image necesita el elemento presente
+            en el DOM, aunque sea fuera de la pantalla) -- nunca se ve
+            en la página en sí, solo existe para toBlob() */}
+        {finalResult && (
+          <div className="fixed -left-[9999px] top-0" aria-hidden="true">
+            <div
+              ref={cardRef}
+              className="w-[560px] h-[280px] bg-tdf-dark flex items-stretch"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, #0D0710 0%, #1a0f22 100%)",
+              }}
+            >
+              <div className="w-[200px] shrink-0 flex items-center justify-center border-r-2 border-tdf-magenta bg-tdf-charcoal">
+                {getCharacterImage(finalResult) ? (
+                  <img
+                    src={getCharacterImage(finalResult) ?? undefined}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <span className="font-display font-bold text-6xl text-tdf-magenta/40">
+                    TDF
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 flex flex-col justify-center px-8 py-6">
+                <p className="font-mono text-[10px] uppercase text-tdf-muted mb-1">
+                  Soy
+                </p>
+                <p className="font-display font-bold uppercase text-3xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-3 leading-tight">
+                  {finalResult}
+                </p>
+                {familyKey && FAMILY_DESCRIPTIONS[familyKey] && (
+                  <p className="font-body text-sm text-tdf-muted leading-snug">
+                    {FAMILY_DESCRIPTIONS[familyKey]}
+                  </p>
+                )}
+                <p className="font-mono text-[10px] uppercase text-tdf-magenta mt-4">
+                  tdf-edeportes-gamma.vercel.app
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

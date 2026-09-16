@@ -55,6 +55,11 @@ class ResolveCharacterResponse(BaseModel):
     # solo viene con valor si needs_era es False -- el resultado ya
     # está cerrado en este paso y quedó guardado (si había sesión)
     final_result: str | None = None
+    # "también te pareces a..." -- los 2 personajes más cercanos del
+    # roster completo (82), sin contar al ganador ni su otra era si
+    # tiene split. Vacío mientras needs_era sea True, porque recién
+    # ahí se sabe el vector final de verdad (ver resolve-era)
+    neighbors: list[str] = []
 
 
 class ResolveEraRequest(BaseModel):
@@ -64,6 +69,7 @@ class ResolveEraRequest(BaseModel):
 
 class ResolveEraResponse(BaseModel):
     final_result: str
+    neighbors: list[str] = []
 
 
 class CharacterStat(BaseModel):

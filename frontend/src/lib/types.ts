@@ -498,10 +498,12 @@ export interface SFResolveCharacterResponse {
   character: string;
   needs_era: boolean;
   final_result: string | null;
+  neighbors: string[];
 }
 
 export interface SFResolveEraResponse {
   final_result: string;
+  neighbors: string[];
 }
 
 export interface SFCharacterStat {

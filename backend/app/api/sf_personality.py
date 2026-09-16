@@ -114,7 +114,7 @@ def post_resolve_character(
     user: Annotated[User | None, Depends(get_current_user)],
 ) -> ResolveCharacterResponse:
     try:
-        character = resolve_character(payload.family_key, payload.answers)
+        character, neighbors = resolve_character(payload.family_key, payload.answers)
     except (PersonalityTestError, KeyError) as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
@@ -128,7 +128,13 @@ def post_resolve_character(
             _save_result(db, user, final_result)
 
     return ResolveCharacterResponse(
-        character=character, needs_era=needs_era, final_result=final_result
+        character=character,
+        needs_era=needs_era,
+        final_result=final_result,
+        # todavía no se sabe el vector final si falta resolver la era
+        # -- mostrar vecinos acá sería del personaje base, no del
+        # resultado real que la persona va a terminar viendo
+        neighbors=[] if needs_era else neighbors,
     )
 
 
@@ -141,14 +147,14 @@ def post_resolve_era(
     user: Annotated[User | None, Depends(get_current_user)],
 ) -> ResolveEraResponse:
     try:
-        final_result = resolve_era(payload.character, payload.answers)
+        final_result, neighbors = resolve_era(payload.character, payload.answers)
     except (PersonalityTestError, KeyError) as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
     if user is not None:
         _save_result(db, user, final_result)
 
-    return ResolveEraResponse(final_result=final_result)
+    return ResolveEraResponse(final_result=final_result, neighbors=neighbors)
 
 
 @router.get("/stats", response_model=StatsResponse)

@@ -94,10 +94,24 @@ def resolve_libres_subfamily(nivel1_5_answer: int) -> str:
     return "libres_solitarios"
 
 
-def resolve_character(family_key: str, nivel2_answers: list[int]) -> str:
-    """Nivel 2 — devuelve el nombre del personaje base (sin era, ej.
-    "Ryu" en vez de "Ryu (SF6)") dentro de la familia/subfamilia ya
-    resuelta. Resultado de validación por familia documentado en
+def _find_neighbors(vector: Vector, exclude: set[str], top_n: int = 2) -> list[str]:
+    """Los personajes más parecidos al vector del usuario, comparando
+    contra los 82 completos (no solo la familia resuelta) — para "también
+    te pareces a...", pedido de Seba (14-09-2026). Nunca incluye al
+    ganador ni a su otra era (si tiene split) — no tiene sentido decirle
+    a alguien que "también se parece" a la otra versión de sí mismo."""
+    candidatos = [name for name in CHARACTERS if name not in exclude]
+    ordenados = sorted(candidatos, key=lambda name: _distance(vector, CHARACTERS[name]))
+    return ordenados[:top_n]
+
+
+def resolve_character(
+    family_key: str, nivel2_answers: list[int]
+) -> tuple[str, list[str]]:
+    """Nivel 2 — devuelve (personaje base sin era, vecinos más
+    parecidos). El nombre viene sin era (ej. "Ryu" en vez de "Ryu
+    (SF6)") dentro de la familia/subfamilia ya resuelta. Resultado de
+    validación por familia documentado en
     sf_personality_data.NIVEL2_QUESTIONS."""
     questions = NIVEL2_QUESTIONS[family_key]
     vector = _accumulate(questions, nivel2_answers)
@@ -110,21 +124,28 @@ def resolve_character(family_key: str, nivel2_answers: list[int]) -> str:
         candidates = FAMILIES[family_key]
 
     winner = min(candidates, key=lambda name: _distance(vector, CHARACTERS[name]))
+    exclude = {winner}
     # si el ganador es una de las dos eras de un split, devolver el
     # nombre BASE (sin era) -- la era se resuelve aparte en Nivel 3
+    base_name = winner
     for base, (temprana, tardia) in ERA_SPLITS.items():
         if winner in (temprana, tardia):
-            return base
-    return winner
+            base_name = base
+            exclude = {temprana, tardia}
+            break
+
+    neighbors = _find_neighbors(vector, exclude)
+    return base_name, neighbors
 
 
-def resolve_era(base_character: str, era_answers: list[int]) -> str:
+def resolve_era(base_character: str, era_answers: list[int]) -> tuple[str, list[str]]:
     """Nivel 3 — solo se llama si `resolve_character` devolvió uno de
-    los 5 personajes con split (ver ERA_SPLITS). Devuelve el nombre
-    completo con era (ej. "Ryu (SF6)"). Ken usa mapeo directo (2/2 por
-    diseño, 1 sola pregunta → `era_answers` con 1 elemento), los otros
-    4 comparten las 2 preguntas genéricas de vectores (8/8 validado →
-    `era_answers` con 2 elementos, una respuesta real por pregunta)."""
+    los 5 personajes con split (ver ERA_SPLITS). Devuelve (nombre
+    completo con era, ej. "Ryu (SF6)", vecinos más parecidos). Ken usa
+    mapeo directo (2/2 por diseño, 1 sola pregunta → `era_answers` con
+    1 elemento), los otros 4 comparten las 2 preguntas genéricas de
+    vectores (8/8 validado → `era_answers` con 2 elementos, una
+    respuesta real por pregunta)."""
     temprana, tardia = ERA_SPLITS[base_character]
 
     if base_character == "Ken":
@@ -133,14 +154,24 @@ def resolve_era(base_character: str, era_answers: list[int]) -> str:
                 f"La era de Ken usa 1 sola pregunta, llegaron {len(era_answers)} respuestas"
             )
         _, era_key = KEN_ERA_QUESTION["opciones"][era_answers[0]]
-        return temprana if era_key == "temprana" else tardia
+        final = temprana if era_key == "temprana" else tardia
+        # Ken no pasa por vectores para la era -- para los vecinos, se
+        # usa el vector de la era que gano (es lo mas parecido a un
+        # "vector real" que tenemos en este caso puntual)
+        neighbors = _find_neighbors(CHARACTERS[final], {temprana, tardia})
+        return final, neighbors
 
     # Ryu/Chun-Li/Sagat/Karin: 2 preguntas genericas, cada una con su
     # propia respuesta real (no la misma respuesta repetida dos veces)
     vector = _accumulate(ERA_QUESTIONS_GENERIC, era_answers)
-    if _distance(vector, CHARACTERS[temprana]) <= _distance(vector, CHARACTERS[tardia]):
-        return temprana
-    return tardia
+    final = (
+        temprana
+        if _distance(vector, CHARACTERS[temprana])
+        <= _distance(vector, CHARACTERS[tardia])
+        else tardia
+    )
+    neighbors = _find_neighbors(vector, {temprana, tardia})
+    return final, neighbors
 
 
 def needs_era_question(base_character: str) -> bool:
