@@ -243,7 +243,7 @@ export default function PersonalityTestSfPage() {
         setQuestionIndex(0);
       } else {
         setFinalResult(res.final_result);
-        setNeighbors(res.neighbors);
+        setNeighbors(res.neighbors ?? []);
         setStep("resultado");
       }
     } catch (e) {
@@ -270,7 +270,7 @@ export default function PersonalityTestSfPage() {
     try {
       const res = await resolveSfEra(token, character, answers);
       setFinalResult(res.final_result);
-      setNeighbors(res.neighbors);
+      setNeighbors(res.neighbors ?? []);
       setStep("resultado");
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : "Error inesperado");
