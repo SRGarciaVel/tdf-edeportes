@@ -391,141 +391,117 @@ export default function PersonalityTestSfPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className="hud-frame bg-tdf-charcoal border border-tdf-magenta p-8 text-center"
+              className="hud-frame border border-tdf-magenta overflow-hidden"
             >
-              <p className="font-mono text-xs uppercase text-tdf-muted mb-2">
-                Tu resultado
-              </p>
-              {!imageFailed && getCharacterImage(finalResult) ? (
-                <img
-                  src={getCharacterImage(finalResult) ?? undefined}
-                  alt={finalResult}
-                  onError={() => setImageFailed(true)}
-                  className="w-32 h-32 object-cover mx-auto mb-4 border-2 border-tdf-magenta"
-                />
-              ) : (
-                <div className="w-32 h-32 flex items-center justify-center mx-auto mb-4 border-2 border-tdf-magenta bg-tdf-charcoal">
-                  <span className="font-display font-bold text-3xl text-tdf-magenta/40">
-                    TDF
-                  </span>
-                </div>
-              )}
-              <p className="font-display font-bold uppercase text-4xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-2">
-                {finalResult}
-              </p>
-              {familyKey && FAMILY_LABELS[familyKey] && (
-                <p className="font-mono text-[11px] uppercase text-tdf-muted mb-2">
-                  {FAMILY_LABELS[familyKey]}
-                </p>
-              )}
-              {familyKey && FAMILY_DESCRIPTIONS[familyKey] && (
-                <p className="font-body text-sm text-tdf-muted max-w-sm mx-auto mb-4">
-                  {FAMILY_DESCRIPTIONS[familyKey]}
-                </p>
-              )}
-
-              {neighbors.length > 0 && (
-                <p className="font-mono text-[11px] text-tdf-muted mb-6">
-                  También te pareces a{" "}
-                  <span className="text-tdf-purple">
-                    {neighbors.join(" y ")}
-                  </span>
-                </p>
-              )}
-
-              {stats && stats.total_results > 0 && (
-                <p className="font-mono text-xs text-tdf-muted mb-6">
-                  {stats.by_character.find(
-                    (s) => s.character_name === finalResult,
-                  )?.percentage ?? 0}
-                  % de la comunidad de TDF sacó este mismo resultado
-                </p>
-              )}
-
-              {!token && (
-                <p className="font-mono text-[11px] text-tdf-muted mb-6">
-                  Iniciá sesión para que tu resultado quede guardado y
-                  contribuya a las estadísticas de la comunidad.
-                </p>
-              )}
-
-              <div className="flex flex-wrap justify-center gap-3 mb-4">
-                <button
-                  onClick={restart}
-                  className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white"
-                >
-                  Repetir el test
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase text-tdf-muted hover:text-white"
-                >
-                  {shareCopied ? "¡Copiado!" : "Compartir"}
-                </button>
-              </div>
-              {shareError && (
-                <p className="font-mono text-[11px] text-tdf-magenta mb-4">
-                  {shareError}
-                </p>
-              )}
-
-              <Link
-                to="/test-personalidad/ranking"
-                className="font-mono text-[11px] uppercase text-tdf-purple hover:text-tdf-magenta transition-colors"
+              {/* la tarjeta en sí -- es lo que se comparte tal cual
+                  se ve, referenciada directo por cardRef en vez de
+                  mantener una copia oculta aparte solo para exportar
+                  (como estaba antes) */}
+              <div
+                ref={cardRef}
+                className="flex items-stretch bg-tdf-dark"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, #0D0710 0%, #1a0f22 100%)",
+                }}
               >
-                Ver el ranking de la comunidad →
-              </Link>
+                <div className="w-28 sm:w-44 shrink-0 flex items-center justify-center border-r-2 border-tdf-magenta bg-tdf-charcoal">
+                  {!imageFailed && getCharacterImage(finalResult) ? (
+                    <img
+                      src={getCharacterImage(finalResult) ?? undefined}
+                      alt={finalResult}
+                      onError={() => setImageFailed(true)}
+                      crossOrigin="anonymous"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="font-display font-bold text-4xl sm:text-6xl text-tdf-magenta/40">
+                      TDF
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 flex flex-col justify-center px-5 sm:px-8 py-5 sm:py-6 text-left min-w-0">
+                  <p className="font-mono text-[10px] uppercase text-tdf-muted mb-1">
+                    Soy
+                  </p>
+                  <p className="font-display font-bold uppercase text-2xl sm:text-3xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-2 sm:mb-3 leading-tight">
+                    {finalResult}
+                  </p>
+                  {familyKey && FAMILY_DESCRIPTIONS[familyKey] && (
+                    <p className="font-body text-xs sm:text-sm text-tdf-muted leading-snug">
+                      {FAMILY_DESCRIPTIONS[familyKey]}
+                    </p>
+                  )}
+                  <p className="font-mono text-[10px] uppercase text-tdf-magenta mt-3 sm:mt-4">
+                    tdf-edeportes-gamma.vercel.app
+                  </p>
+                </div>
+              </div>
+
+              {/* el resto -- fuera de cardRef, no forma parte de la
+                  imagen que se comparte */}
+              <div className="p-6 sm:p-8 text-center">
+                {familyKey && FAMILY_LABELS[familyKey] && (
+                  <p className="font-mono text-[11px] uppercase text-tdf-muted mb-4">
+                    {FAMILY_LABELS[familyKey]}
+                  </p>
+                )}
+
+                {neighbors.length > 0 && (
+                  <p className="font-mono text-[11px] text-tdf-muted mb-6">
+                    También te pareces a{" "}
+                    <span className="text-tdf-purple">
+                      {neighbors.join(" y ")}
+                    </span>
+                  </p>
+                )}
+
+                {stats && stats.total_results > 0 && (
+                  <p className="font-mono text-xs text-tdf-muted mb-6">
+                    {stats.by_character.find(
+                      (s) => s.character_name === finalResult,
+                    )?.percentage ?? 0}
+                    % de la comunidad de TDF sacó este mismo resultado
+                  </p>
+                )}
+
+                {!token && (
+                  <p className="font-mono text-[11px] text-tdf-muted mb-6">
+                    Iniciá sesión para que tu resultado quede guardado y
+                    contribuya a las estadísticas de la comunidad.
+                  </p>
+                )}
+
+                <div className="flex flex-wrap justify-center gap-3 mb-4">
+                  <button
+                    onClick={restart}
+                    className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white"
+                  >
+                    Repetir el test
+                  </button>
+                  <button
+                    onClick={handleShare}
+                    className="border border-tdf-line hover:border-tdf-magenta transition-colors px-4 py-2 font-mono text-xs uppercase text-tdf-muted hover:text-white"
+                  >
+                    {shareCopied ? "¡Copiado!" : "Compartir"}
+                  </button>
+                </div>
+                {shareError && (
+                  <p className="font-mono text-[11px] text-tdf-magenta mb-4">
+                    {shareError}
+                  </p>
+                )}
+
+                <Link
+                  to="/test-personalidad/ranking"
+                  className="font-mono text-[11px] uppercase text-tdf-purple hover:text-tdf-magenta transition-colors"
+                >
+                  Ver el ranking de la comunidad →
+                </Link>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* tarjeta oculta usada solo para generar la imagen de
-            "compartir" (html-to-image necesita el elemento presente
-            en el DOM, aunque sea fuera de la pantalla) -- nunca se ve
-            en la página en sí, solo existe para toBlob() */}
-        {finalResult && (
-          <div className="fixed -left-[9999px] top-0" aria-hidden="true">
-            <div
-              ref={cardRef}
-              className="w-[560px] h-[280px] bg-tdf-dark flex items-stretch"
-              style={{
-                backgroundImage:
-                  "linear-gradient(135deg, #0D0710 0%, #1a0f22 100%)",
-              }}
-            >
-              <div className="w-[200px] shrink-0 flex items-center justify-center border-r-2 border-tdf-magenta bg-tdf-charcoal">
-                {getCharacterImage(finalResult) ? (
-                  <img
-                    src={getCharacterImage(finalResult) ?? undefined}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    crossOrigin="anonymous"
-                  />
-                ) : (
-                  <span className="font-display font-bold text-6xl text-tdf-magenta/40">
-                    TDF
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 flex flex-col justify-center px-8 py-6">
-                <p className="font-mono text-[10px] uppercase text-tdf-muted mb-1">
-                  Soy
-                </p>
-                <p className="font-display font-bold uppercase text-3xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-3 leading-tight">
-                  {finalResult}
-                </p>
-                {familyKey && FAMILY_DESCRIPTIONS[familyKey] && (
-                  <p className="font-body text-sm text-tdf-muted leading-snug">
-                    {FAMILY_DESCRIPTIONS[familyKey]}
-                  </p>
-                )}
-                <p className="font-mono text-[10px] uppercase text-tdf-magenta mt-4">
-                  tdf-edeportes-gamma.vercel.app
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   );
