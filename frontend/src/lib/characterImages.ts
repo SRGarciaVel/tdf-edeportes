@@ -43,7 +43,6 @@ export const CHARACTER_IMAGES: Record<string, string> = {
   Yun: "/characters/yun.webp",
   Yang: "/characters/yang.webp",
   Necalli: "/characters/necalli.webp",
-  Akira: "/characters/akira.webp",
   "E. Honda": "/characters/e-honda.webp",
   Akuma: "/characters/akuma.webp",
   Sean: "/characters/sean.webp",

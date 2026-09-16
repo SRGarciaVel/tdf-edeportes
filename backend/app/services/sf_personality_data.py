@@ -45,7 +45,6 @@ CHARACTERS: dict[str, Vector] = {
     "Yun": (2, 1, 1, 3, 2),
     "Yang": (3, 2, 2, 3, 3),
     "Necalli": (2, 0, 3, -1, -2),
-    "Akira": (3, 2, 1, 2, 3),
     "E. Honda": (2, 3, 3, 3, 3),
     "Dhalsim": (5, 1, 5, 3, 5),
     # Los Atormentados
@@ -132,7 +131,6 @@ FAMILIES: dict[str, list[str]] = {
         "Yun",
         "Yang",
         "Necalli",
-        "Akira",
         "E. Honda",
     ],
     "atormentados": [
