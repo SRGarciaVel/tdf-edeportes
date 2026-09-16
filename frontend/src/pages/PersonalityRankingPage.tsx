@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
+import { getCharacterImage } from "../lib/characterImages";
 import { getSfPersonalityStats } from "../lib/api";
 import type { SFStatsResponse } from "../lib/types";
 
@@ -13,6 +14,7 @@ import type { SFStatsResponse } from "../lib/types";
 export default function PersonalityRankingPage() {
   const [stats, setStats] = useState<SFStatsResponse | null>(null);
   const [error, setError] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     getSfPersonalityStats()
@@ -76,6 +78,19 @@ export default function PersonalityRankingPage() {
                   <span className="font-mono text-xs text-tdf-muted w-6 text-right shrink-0">
                     {i + 1}
                   </span>
+                  {!failedImages.has(s.character_name) &&
+                    getCharacterImage(s.character_name) && (
+                      <img
+                        src={getCharacterImage(s.character_name) ?? undefined}
+                        alt=""
+                        onError={() =>
+                          setFailedImages((prev) =>
+                            new Set(prev).add(s.character_name),
+                          )
+                        }
+                        className="w-8 h-8 object-cover shrink-0"
+                      />
+                    )}
                   <span className="font-body text-sm flex-1 truncate">
                     {s.character_name}
                   </span>

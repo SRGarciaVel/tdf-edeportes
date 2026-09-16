@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
+import { getCharacterImage } from "../lib/characterImages";
 import {
   getSfPersonalityQuestions,
   getSfPersonalityStats,
@@ -76,6 +77,7 @@ export default function PersonalityTestSfPage() {
   const [finalResult, setFinalResult] = useState<string | null>(null);
   const [stats, setStats] = useState<SFStatsResponse | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     getSfPersonalityQuestions()
@@ -92,6 +94,13 @@ export default function PersonalityTestSfPage() {
         });
     }
   }, [step]);
+
+  // se resetea cada vez que cambia el resultado -- si no, repetir el
+  // test y sacar un personaje CON imagen después de uno SIN imagen
+  // arrastraría el estado de error viejo y la escondería sin motivo
+  useEffect(() => {
+    setImageFailed(false);
+  }, [finalResult]);
 
   function restart() {
     setStep("nivel1");
@@ -350,6 +359,14 @@ export default function PersonalityTestSfPage() {
               <p className="font-mono text-xs uppercase text-tdf-muted mb-2">
                 Tu resultado
               </p>
+              {!imageFailed && getCharacterImage(finalResult) && (
+                <img
+                  src={getCharacterImage(finalResult) ?? undefined}
+                  alt={finalResult}
+                  onError={() => setImageFailed(true)}
+                  className="w-32 h-32 object-cover mx-auto mb-4 border-2 border-tdf-magenta"
+                />
+              )}
               <p className="font-display font-bold uppercase text-4xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-2">
                 {finalResult}
               </p>
