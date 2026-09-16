@@ -396,13 +396,19 @@ export default function PersonalityTestSfPage() {
               <p className="font-mono text-xs uppercase text-tdf-muted mb-2">
                 Tu resultado
               </p>
-              {!imageFailed && getCharacterImage(finalResult) && (
+              {!imageFailed && getCharacterImage(finalResult) ? (
                 <img
                   src={getCharacterImage(finalResult) ?? undefined}
                   alt={finalResult}
                   onError={() => setImageFailed(true)}
                   className="w-32 h-32 object-cover mx-auto mb-4 border-2 border-tdf-magenta"
                 />
+              ) : (
+                <div className="w-32 h-32 flex items-center justify-center mx-auto mb-4 border-2 border-tdf-magenta bg-tdf-charcoal">
+                  <span className="font-display font-bold text-3xl text-tdf-magenta/40">
+                    TDF
+                  </span>
+                </div>
               )}
               <p className="font-display font-bold uppercase text-4xl bg-clip-text text-transparent bg-gradient-to-r from-tdf-magenta to-tdf-purple mb-2">
                 {finalResult}
