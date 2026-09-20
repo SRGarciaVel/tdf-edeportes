@@ -166,6 +166,64 @@ def list_cfn_players(db: Annotated[Session, Depends(get_db)]) -> list[CFNPlayerR
     ]
 
 
+@router.get("/players/matches-batch", response_model=dict[str, CFNMatchStats])
+def get_match_stats_batch(
+    db: Annotated[Session, Depends(get_db)],
+    cfn_ids: Annotated[list[str], Query()],
+    days: Annotated[int, Query(ge=1, le=30)] = 3,
+) -> dict[str, CFNMatchStats]:
+    """Lo mismo que /players/{cfn_id}/matches, pero para varios
+    jugadores en UNA sola consulta a la base -- agregado el
+    16-09-2026 tras un incidente real: /jugadores llamaba a
+    getMatchStats() una vez por cada jugador trackeado (con
+    Promise.all, todas a la vez), y con ~17 jugadores eso son 17
+    conexiones simultáneas a Postgres. Supabase en el plan gratuito
+    limita a pool_size=15 en modo sesión -- la 16ta conexión fallaba
+    con "max clients reached", tumbaba el request, y el reinicio en
+    cascada que eso generaba en Render terminó agotando la banda ancha
+    mensual del workspace. Una sola consulta con `IN (...)` en vez de
+    N consultas resuelve el problema de raíz, no solo lo esconde.
+
+    IMPORTANTE: esta ruta tiene que estar registrada ANTES que
+    /players/{cfn_id} en este archivo. FastAPI prueba las rutas en el
+    orden en que están escritas, y {cfn_id} matchea CUALQUIER segmento
+    único -- incluida la palabra literal "matches-batch". Estuvo mal
+    ubicada (después de /players/{cfn_id}) desde que se creó, y esa
+    ruta se comía el pedido primero, devolviendo 404 de "jugador no
+    encontrado" en vez de llegar acá (bug real encontrado el
+    20-09-2026, ver tasks/lessons.md)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    matches = (
+        db.query(CFNMatch)
+        .filter(CFNMatch.cfn_id.in_(cfn_ids), CFNMatch.played_at >= cutoff)
+        .all()
+    )
+
+    by_player: dict[str, list[CFNMatch]] = {cfn_id: [] for cfn_id in cfn_ids}
+    for m in matches:
+        by_player.setdefault(m.cfn_id, []).append(m)
+
+    result: dict[str, CFNMatchStats] = {}
+    for cfn_id, player_matches in by_player.items():
+        wins = sum(1 for m in player_matches if m.won is True)
+        losses = sum(1 for m in player_matches if m.won is False)
+        total_decided = wins + losses
+        win_rate = wins / total_decided if total_decided > 0 else None
+        character_counts = Counter(
+            m.character_name for m in player_matches if m.character_name
+        )
+        result[cfn_id] = CFNMatchStats(
+            cfn_id=cfn_id,
+            days=days,
+            total_matches=len(player_matches),
+            wins=wins,
+            losses=losses,
+            win_rate=win_rate,
+            characters=dict(character_counts.most_common()),
+        )
+    return result
+
+
 @router.get("/players/{cfn_id}", response_model=CFNPlayerRead)
 def get_cfn_player(
     cfn_id: str, db: Annotated[Session, Depends(get_db)]
@@ -353,55 +411,6 @@ def delete_character_fanart(
         CharacterFanart.character_name == character_name
     ).delete()
     db.commit()
-
-
-@router.get("/players/matches-batch", response_model=dict[str, CFNMatchStats])
-def get_match_stats_batch(
-    db: Annotated[Session, Depends(get_db)],
-    cfn_ids: Annotated[list[str], Query()],
-    days: Annotated[int, Query(ge=1, le=30)] = 3,
-) -> dict[str, CFNMatchStats]:
-    """Lo mismo que /players/{cfn_id}/matches, pero para varios
-    jugadores en UNA sola consulta a la base -- agregado el
-    16-09-2026 tras un incidente real: /jugadores llamaba a
-    getMatchStats() una vez por cada jugador trackeado (con
-    Promise.all, todas a la vez), y con ~17 jugadores eso son 17
-    conexiones simultáneas a Postgres. Supabase en el plan gratuito
-    limita a pool_size=15 en modo sesión -- la 16ta conexión fallaba
-    con "max clients reached", tumbaba el request, y el reinicio en
-    cascada que eso generaba en Render terminó agotando la banda ancha
-    mensual del workspace. Una sola consulta con `IN (...)` en vez de
-    N consultas resuelve el problema de raíz, no solo lo esconde."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    matches = (
-        db.query(CFNMatch)
-        .filter(CFNMatch.cfn_id.in_(cfn_ids), CFNMatch.played_at >= cutoff)
-        .all()
-    )
-
-    by_player: dict[str, list[CFNMatch]] = {cfn_id: [] for cfn_id in cfn_ids}
-    for m in matches:
-        by_player.setdefault(m.cfn_id, []).append(m)
-
-    result: dict[str, CFNMatchStats] = {}
-    for cfn_id, player_matches in by_player.items():
-        wins = sum(1 for m in player_matches if m.won is True)
-        losses = sum(1 for m in player_matches if m.won is False)
-        total_decided = wins + losses
-        win_rate = wins / total_decided if total_decided > 0 else None
-        character_counts = Counter(
-            m.character_name for m in player_matches if m.character_name
-        )
-        result[cfn_id] = CFNMatchStats(
-            cfn_id=cfn_id,
-            days=days,
-            total_matches=len(player_matches),
-            wins=wins,
-            losses=losses,
-            win_rate=win_rate,
-            characters=dict(character_counts.most_common()),
-        )
-    return result
 
 
 @router.get("/players/{cfn_id}/matches", response_model=CFNMatchStats)
