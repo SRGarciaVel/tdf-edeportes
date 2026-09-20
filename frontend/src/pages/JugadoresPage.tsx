@@ -7,7 +7,7 @@ import PlayerCard, { PlayerAvatarRing } from "../components/PlayerCard";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import {
-  getMatchStats,
+  getMatchStatsBatch,
   getMyCfnRegistration,
   listCfnPlayers,
   registerCfn,
@@ -398,14 +398,15 @@ export default function JugadoresPage() {
   useEffect(() => {
     if (players.length === 0) return;
     setStatsLoading(true);
-    Promise.all(
-      players.map((p) => getMatchStats(p.cfn_id, days).catch(() => null)),
+    getMatchStatsBatch(
+      players.map((p) => p.cfn_id),
+      days,
     )
-      .then((results) => {
+      .then((byId) => {
         const map = new Map<string, CFNMatchStats>();
-        results.forEach((stats, i) => {
-          if (stats) map.set(players[i].cfn_id, stats);
-        });
+        for (const [cfnId, stats] of Object.entries(byId)) {
+          map.set(cfnId, stats);
+        }
         setMatchStats(map);
       })
       .catch(() => setMatchStats(new Map()))

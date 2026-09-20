@@ -646,6 +646,22 @@ export async function getMatchStats(
   return parseOrThrow<CFNMatchStats>(res);
 }
 
+// una sola consulta para todos los jugadores en vez de una por cada
+// uno -- agregado 16-09-2026 tras un incidente real: llamar a
+// getMatchStats() por separado para ~17 jugadores con Promise.all
+// disparaba 17 conexiones simultáneas a la base y agotaba el límite
+// de conexiones de Supabase (ver comentario del endpoint en el
+// backend, get_match_stats_batch)
+export async function getMatchStatsBatch(
+  cfnIds: string[],
+  days: number,
+): Promise<Record<string, CFNMatchStats>> {
+  const params = new URLSearchParams({ days: String(days) });
+  for (const id of cfnIds) params.append("cfn_ids", id);
+  const res = await fetch(`${API_URL}/cfn/players/matches-batch?${params}`);
+  return parseOrThrow<Record<string, CFNMatchStats>>(res);
+}
+
 // "También juega" en el perfil — todos los personajes que jugó
 // alguna vez, no solo el principal (SF6 rankea por personaje)
 export async function getCharacterStats(
