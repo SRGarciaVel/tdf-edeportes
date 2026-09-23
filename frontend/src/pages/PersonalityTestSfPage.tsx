@@ -124,7 +124,7 @@ export default function PersonalityTestSfPage() {
     }
 
     const file = new File([blob], "resultado-tdf.png", { type: "image/png" });
-    const texto = `Saqué a ${finalResult} en el test de personalidad de TDF e-deportes. Descubrí el tuyo:`;
+    const texto = `Saqué a ${finalResult} en el test de personalidad de TDF e-deportes. Descubre el tuyo:`;
     const url = window.location.origin + "/test-personalidad";
 
     if (navigator.canShare?.({ files: [file] })) {
@@ -262,7 +262,7 @@ export default function PersonalityTestSfPage() {
         <div className="max-w-2xl mx-auto px-4 py-16">
           <SectionLabel index="01">Test de personalidad</SectionLabel>
           <p className="text-tdf-muted">
-            No se pudo cargar el test ahora mismo. Probá recargando la página.
+            No se pudo cargar el test ahora mismo. Prueba recargando la página.
           </p>
         </div>
       </Layout>
@@ -483,8 +483,9 @@ export default function PersonalityTestSfPage() {
 
                 {!token && (
                   <p className="font-mono text-[11px] text-tdf-muted mb-6">
-                    Iniciá sesión para que tu resultado quede guardado y
-                    contribuya a las estadísticas de la comunidad.
+                    Tu resultado ya cuenta para las estadísticas de la
+                    comunidad. Inicia sesión para que quede asociado a tu
+                    perfil.
                   </p>
                 )}
 

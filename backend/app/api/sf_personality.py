@@ -90,10 +90,19 @@ def post_resolve_subfamily(
     return ResolveSubfamilyResponse(subfamily=subfamily)
 
 
-def _save_result(db: Session, user: User, character_name: str) -> None:
-    """Un usuario, un resultado -- si ya tenía uno (repitió el test),
-    se actualiza en vez de duplicar (ver comentario del modelo sobre
-    por qué esto importa para las estadísticas)."""
+def _save_result(db: Session, user: User | None, character_name: str) -> None:
+    """Guarda el resultado para CUALQUIERA que termine el test
+    (cambiado 22-09-2026 -- antes solo se guardaba logueado, ver
+    comentario del modelo). Logueado: un usuario, un resultado -- si
+    ya tenía uno, se actualiza en vez de duplicar. Invitado (user es
+    None): siempre una fila nueva -- no hay identidad estable entre
+    visitas anónimas, así que no existe "el resultado anterior de este
+    invitado" para actualizar."""
+    if user is None:
+        db.add(SFPersonalityResult(user_id=None, character_name=character_name))
+        db.commit()
+        return
+
     existing = (
         db.query(SFPersonalityResult)
         .filter(SFPersonalityResult.user_id == user.id)
@@ -123,10 +132,9 @@ def post_resolve_character(
     final_result = None
     if not needs_era:
         final_result = character
-        # solo se guarda para usuarios logueados -- pedido explícito
-        # de Seba (13-09-2026), ver modelo SFPersonalityResult
-        if user is not None:
-            _save_result(db, user, final_result)
+        # se guarda para cualquiera, logueado o invitado (ver
+        # _save_result) -- pedido de Seba, 22-09-2026
+        _save_result(db, user, final_result)
 
     return ResolveCharacterResponse(
         character=character,
@@ -152,8 +160,8 @@ def post_resolve_era(
     except (PersonalityTestError, KeyError) as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
-    if user is not None:
-        _save_result(db, user, final_result)
+    # se guarda para cualquiera, logueado o invitado (ver _save_result)
+    _save_result(db, user, final_result)
 
     return ResolveEraResponse(final_result=final_result, neighbors=neighbors)
 
@@ -161,10 +169,9 @@ def post_resolve_era(
 @router.get("/stats", response_model=StatsResponse)
 def get_stats(db: Annotated[Session, Depends(get_db)]) -> StatsResponse:
     """Público, sin auth -- para mostrar algo tipo "el 40% de TDF sacó
-    Ken" en la página del test. Nunca va a mostrar nada para alguien
-    que no haya iniciado sesión al hacer el test (ver
-    SFPersonalityResult), pero el conteo en sí es información pública
-    de la comunidad, no de una persona en particular."""
+    Ken" en la página del test. Cuenta a cualquiera que haya terminado
+    el test, logueado o no (ver SFPersonalityResult), así que el total
+    ya no depende de cuánta gente inicie sesión."""
     rows = (
         db.query(SFPersonalityResult.character_name, func.count().label("count"))
         .group_by(SFPersonalityResult.character_name)

@@ -126,7 +126,7 @@ export default function PersonalityRankingPage() {
 
         {error && (
           <p className="text-tdf-muted font-body">
-            No se pudo cargar el ranking ahora mismo. Probá recargando la
+            No se pudo cargar el ranking ahora mismo. Prueba recargando la
             página.
           </p>
         )}
