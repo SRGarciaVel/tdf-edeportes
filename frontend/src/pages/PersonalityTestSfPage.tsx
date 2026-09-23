@@ -33,10 +33,10 @@ type Step = "nivel1" | "nivel1_5" | "nivel2" | "era" | "resultado";
  * personaje es uno de los 5 con arco documentado: Ryu, Ken, Chun-Li,
  * Sagat, Karin).
  *
- * A propósito no muestra artwork de los personajes de Capcom — mismo
- * criterio que ya se aplicó en /tierlist (SPECS.md §16): el sitio no
- * reproduce el roster de Capcom como contenido propio, solo el
- * nombre del resultado. */
+ * Sí muestra el retrato del personaje (confirmado viable por fair use
+ * tras consultarlo aparte, 14-09-2026) cuando ya se subió esa imagen
+ * al roster (ver characterImages.ts) — si todavía no existe el
+ * archivo, cae en el respaldo con el logo de TDF, nunca se rompe. */
 export default function PersonalityTestSfPage() {
   const { token } = useAuth();
 
@@ -283,31 +283,35 @@ export default function PersonalityTestSfPage() {
 
   let currentQuestion: SFQuestion | null = null;
   let onAnswer: ((idx: number) => void) | null = null;
-  let progressLabel = "";
+  let progressPercent = 0;
+  let stageIndex = 1;
 
   if (step === "nivel1") {
     currentQuestion = questions.nivel1[questionIndex];
     onAnswer = handleNivel1Answer;
-    progressLabel = `Pregunta ${questionIndex + 1} de ${questions.nivel1.length}`;
+    progressPercent = ((questionIndex + 1) / questions.nivel1.length) * 100;
+    stageIndex = 1;
   } else if (step === "nivel1_5") {
     currentQuestion = questions.nivel1_5;
     onAnswer = handleNivel15Answer;
-    progressLabel = "Una pregunta más";
+    progressPercent = 100;
+    stageIndex = 1;
   } else if (step === "nivel2" && familyKey) {
     const tanda = questions.nivel2_por_familia[familyKey] ?? [];
     currentQuestion = tanda[questionIndex];
     onAnswer = handleNivel2Answer;
-    progressLabel = `Pregunta ${questionIndex + 1} de ${tanda.length}`;
+    progressPercent = ((questionIndex + 1) / tanda.length) * 100;
+    stageIndex = 2;
   } else if (step === "era" && character) {
     const tanda =
       character === "Ken" ? [questions.era_ken] : questions.era_generica;
     currentQuestion = tanda[questionIndex];
     onAnswer = handleEraAnswer;
-    progressLabel =
-      tanda.length > 1
-        ? `Última pregunta (${questionIndex + 1}/${tanda.length})`
-        : "Última pregunta";
+    progressPercent = ((questionIndex + 1) / tanda.length) * 100;
+    stageIndex = 3;
   }
+
+  const STAGES = ["Familia", "Personaje", "Era"];
 
   return (
     <Layout>
@@ -341,9 +345,37 @@ export default function PersonalityTestSfPage() {
               transition={{ duration: 0.2 }}
               className="hud-frame bg-tdf-charcoal border border-tdf-line p-6"
             >
-              <p className="font-mono text-[10px] uppercase text-tdf-muted mb-4">
-                {progressLabel}
-              </p>
+              <div className="flex items-center gap-2 mb-4">
+                {STAGES.map((stage, i) => {
+                  const n = i + 1;
+                  const active = n === stageIndex;
+                  const done = n < stageIndex;
+                  return (
+                    <span
+                      key={stage}
+                      className={`font-mono text-[10px] uppercase px-2 py-0.5 border ${
+                        active
+                          ? "border-tdf-magenta text-tdf-magenta"
+                          : done
+                            ? "border-tdf-line text-tdf-muted"
+                            : "border-tdf-line/40 text-tdf-muted/40"
+                      }`}
+                    >
+                      {stage}
+                    </span>
+                  );
+                })}
+              </div>
+
+              <div className="w-full h-1 bg-tdf-line overflow-hidden mb-4">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-tdf-magenta to-tdf-purple"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+
               <h2 className="font-display text-xl mb-6">
                 {currentQuestion.texto}
               </h2>
@@ -353,9 +385,16 @@ export default function PersonalityTestSfPage() {
                     key={i}
                     disabled={submitting}
                     onClick={() => onAnswer?.(i)}
-                    className="text-left px-4 py-3 border border-tdf-line hover:border-tdf-magenta hover:bg-tdf-magenta/10 transition-colors disabled:opacity-50 font-body text-sm"
+                    style={{
+                      clipPath:
+                        "polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%)",
+                    }}
+                    className="flex items-center gap-3 text-left px-4 py-3 border border-tdf-line hover:border-tdf-magenta hover:bg-tdf-magenta/10 transition-colors disabled:opacity-50"
                   >
-                    {opcion}
+                    <span className="shrink-0 w-7 h-7 flex items-center justify-center bg-tdf-magenta/10 border border-tdf-magenta font-mono text-xs text-tdf-magenta">
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    <span className="font-body text-sm">{opcion}</span>
                   </button>
                 ))}
               </div>
