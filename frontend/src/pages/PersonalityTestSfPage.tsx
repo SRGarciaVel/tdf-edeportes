@@ -22,7 +22,7 @@ import type {
 } from "../lib/types";
 import { FAMILY_DESCRIPTIONS, FAMILY_LABELS } from "../lib/personalityFamilies";
 
-type Step = "nivel1" | "nivel1_5" | "nivel2" | "era" | "resultado";
+type Step = "intro" | "nivel1" | "nivel1_5" | "nivel2" | "era" | "resultado";
 
 /** Test de personalidad de Street Fighter (Alpha → SF6) — sistema de
  * matching por vectores de 5 rasgos, armado y validado en una sesión
@@ -42,7 +42,7 @@ export default function PersonalityTestSfPage() {
 
   const [questions, setQuestions] = useState<SFQuestionsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>("nivel1");
+  const [step, setStep] = useState<Step>("intro");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -336,70 +336,128 @@ export default function PersonalityTestSfPage() {
         )}
 
         <AnimatePresence mode="wait">
-          {step !== "resultado" && currentQuestion && onAnswer && (
+          {step === "intro" && (
             <motion.div
-              key={`${step}-${questionIndex}`}
+              key="intro"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
               className="hud-frame bg-tdf-charcoal border border-tdf-line p-6"
             >
-              <div className="flex items-center gap-2 mb-4">
-                {STAGES.map((stage, i) => {
-                  const n = i + 1;
-                  const active = n === stageIndex;
-                  const done = n < stageIndex;
-                  return (
-                    <span
-                      key={stage}
-                      className={`font-mono text-[10px] uppercase px-2 py-0.5 border ${
-                        active
-                          ? "border-tdf-magenta text-tdf-magenta"
-                          : done
-                            ? "border-tdf-line text-tdf-muted"
-                            : "border-tdf-line/40 text-tdf-muted/40"
-                      }`}
-                    >
-                      {stage}
-                    </span>
-                  );
-                })}
+              <p className="font-mono text-xs uppercase text-tdf-magenta mb-4">
+                Cómo funciona
+              </p>
+
+              <div className="flex flex-col gap-4 mb-6">
+                <div className="flex gap-3">
+                  <span className="shrink-0 font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta px-2 py-0.5 h-fit">
+                    Familia
+                  </span>
+                  <p className="font-body text-sm text-tdf-muted">
+                    Primero te ubicamos en uno de 5 arquetipos amplios: cómo
+                    encaras la vida en general, todavía no de qué personaje se
+                    trata.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="shrink-0 font-mono text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-0.5 h-fit">
+                    Personaje
+                  </span>
+                  <p className="font-body text-sm text-tdf-muted">
+                    Dentro de esa familia, afinamos hasta encontrar el personaje
+                    específico que más se parece a tu forma de ser.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="shrink-0 font-mono text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-0.5 h-fit">
+                    Era
+                  </span>
+                  <p className="font-body text-sm text-tdf-muted">
+                    Solo para 5 personajes con un cambio de personalidad real
+                    documentado en el lore (Ryu, Ken, Chun-Li, Sagat, Karin),
+                    una última pregunta decide en qué momento de su historia
+                    calzas más.
+                  </p>
+                </div>
               </div>
 
-              <div className="w-full h-1 bg-tdf-line overflow-hidden mb-4">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-tdf-magenta to-tdf-purple"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPercent}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-
-              <h2 className="font-display text-xl mb-6">
-                {currentQuestion.texto}
-              </h2>
-              <div className="flex flex-col gap-3">
-                {currentQuestion.opciones.map((opcion, i) => (
-                  <button
-                    key={i}
-                    disabled={submitting}
-                    onClick={() => onAnswer?.(i)}
-                    style={{
-                      clipPath:
-                        "polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%)",
-                    }}
-                    className="flex items-center gap-3 text-left px-4 py-3 border border-tdf-line hover:border-tdf-magenta hover:bg-tdf-magenta/10 transition-colors disabled:opacity-50"
-                  >
-                    <span className="shrink-0 w-7 h-7 flex items-center justify-center bg-tdf-magenta/10 border border-tdf-magenta font-mono text-xs text-tdf-magenta">
-                      {String.fromCharCode(65 + i)}
-                    </span>
-                    <span className="font-body text-sm">{opcion}</span>
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => setStep("nivel1")}
+                className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white"
+              >
+                Empezar el test
+              </button>
             </motion.div>
           )}
+
+          {step !== "resultado" &&
+            step !== "intro" &&
+            currentQuestion &&
+            onAnswer && (
+              <motion.div
+                key={`${step}-${questionIndex}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="hud-frame bg-tdf-charcoal border border-tdf-line p-6"
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  {STAGES.map((stage, i) => {
+                    const n = i + 1;
+                    const active = n === stageIndex;
+                    const done = n < stageIndex;
+                    return (
+                      <span
+                        key={stage}
+                        className={`font-mono text-[10px] uppercase px-2 py-0.5 border ${
+                          active
+                            ? "border-tdf-magenta text-tdf-magenta"
+                            : done
+                              ? "border-tdf-line text-tdf-muted"
+                              : "border-tdf-line/40 text-tdf-muted/40"
+                        }`}
+                      >
+                        {stage}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                <div className="w-full h-1 bg-tdf-line overflow-hidden mb-4">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-tdf-magenta to-tdf-purple"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+
+                <h2 className="font-display text-xl mb-6">
+                  {currentQuestion.texto}
+                </h2>
+                <div className="flex flex-col gap-3">
+                  {currentQuestion.opciones.map((opcion, i) => (
+                    <button
+                      key={i}
+                      disabled={submitting}
+                      onClick={() => onAnswer?.(i)}
+                      style={{
+                        clipPath:
+                          "polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%)",
+                      }}
+                      className="flex items-center gap-3 text-left px-4 py-3 border border-tdf-line hover:border-tdf-magenta hover:bg-tdf-magenta/10 transition-colors disabled:opacity-50"
+                    >
+                      <span className="shrink-0 w-7 h-7 flex items-center justify-center bg-tdf-magenta/10 border border-tdf-magenta font-mono text-xs text-tdf-magenta">
+                        {String.fromCharCode(65 + i)}
+                      </span>
+                      <span className="font-body text-sm">{opcion}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
           {step === "resultado" && finalResult && (
             <motion.div
