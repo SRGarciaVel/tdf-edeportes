@@ -6,6 +6,13 @@ import Layout from "../components/Layout";
 import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import { getCharacterImage } from "../lib/characterImages";
+
+// imagen aparte del roster -- pedido de Seba (22-09-2026): Ken con su
+// familia real (esposa e hijo), no el retrato de selección que ya
+// usa el roster para su resultado. Todavía no subida; mientras no
+// exista el archivo, la tarjeta de Familia cae al mismo respaldo con
+// el logo de TDF que usa el resto del sitio cuando falta una imagen.
+const INTRO_FAMILIA_IMAGE = "/characters/intro-familia-ken.webp";
 import {
   getSfPersonalityQuestions,
   getSfPersonalityStats,
@@ -58,6 +65,9 @@ export default function PersonalityTestSfPage() {
   const [shareCopied, setShareCopied] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
+  const [introFamiliaFailed, setIntroFamiliaFailed] = useState(false);
+  const [introPersonajeFailed, setIntroPersonajeFailed] = useState(false);
+  const [introEraFailed, setIntroEraFailed] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -315,7 +325,9 @@ export default function PersonalityTestSfPage() {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto px-4 py-16">
+      <div
+        className={`mx-auto px-4 py-16 ${step === "intro" ? "max-w-4xl" : "max-w-2xl"}`}
+      >
         <SectionLabel index="01">Test de personalidad SF</SectionLabel>
         <div className="flex items-start justify-between gap-4 mb-8">
           <h1 className="font-display font-bold uppercase text-3xl">
@@ -343,51 +355,123 @@ export default function PersonalityTestSfPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="hud-frame bg-tdf-charcoal border border-tdf-line p-6"
             >
-              <p className="font-mono text-xs uppercase text-tdf-magenta mb-4">
+              <p className="font-mono text-xs uppercase text-tdf-magenta mb-4 text-center">
                 Cómo funciona
               </p>
 
-              <div className="flex flex-col gap-4 mb-6">
-                <div className="flex gap-3">
-                  <span className="shrink-0 font-mono text-xs uppercase text-tdf-magenta border border-tdf-magenta px-2 py-0.5 h-fit">
-                    Familia
-                  </span>
-                  <p className="font-body text-sm text-tdf-muted">
-                    Primero te ubicamos en uno de 5 arquetipos amplios: cómo
-                    encaras la vida en general, todavía no de qué personaje se
-                    trata.
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_1.3fr_1fr] gap-4 mb-6 items-start">
+                {/* Familia -- tarjeta normal, a la izquierda */}
+                <div className="hud-frame bg-tdf-charcoal border border-tdf-line overflow-hidden">
+                  <div className="h-40 bg-tdf-dark flex items-center justify-center">
+                    {!introFamiliaFailed ? (
+                      <img
+                        src={INTRO_FAMILIA_IMAGE}
+                        alt="Familia"
+                        onError={() => setIntroFamiliaFailed(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="font-display font-bold text-3xl text-tdf-magenta/40">
+                        TDF
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="font-mono text-xs uppercase text-tdf-magenta mb-2">
+                      Familia
+                    </p>
+                    <p className="font-body text-sm text-tdf-muted">
+                      Primero te ubicamos en uno de 5 arquetipos amplios: cómo
+                      encaras la vida en general, todavía no de qué personaje se
+                      trata.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <span className="shrink-0 font-mono text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-0.5 h-fit">
-                    Personaje
-                  </span>
-                  <p className="font-body text-sm text-tdf-muted">
-                    Dentro de esa familia, afinamos hasta encontrar el personaje
-                    específico que más se parece a tu forma de ser.
-                  </p>
+
+                {/* Era -- tarjeta grande, al medio, con el corte diagonal
+                    entre las 2 versiones de Ryu */}
+                <div className="hud-frame bg-tdf-charcoal border border-tdf-magenta overflow-hidden md:-mt-3">
+                  <div className="h-52 bg-tdf-dark relative overflow-hidden">
+                    {!introEraFailed ? (
+                      <>
+                        <img
+                          src={
+                            getCharacterImage("Ryu (Alpha-SF5)") ?? undefined
+                          }
+                          alt="Ryu, era temprana"
+                          onError={() => setIntroEraFailed(true)}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          style={{
+                            clipPath: "polygon(0 0, 58% 0, 42% 100%, 0 100%)",
+                          }}
+                        />
+                        <img
+                          src={getCharacterImage("Ryu (SF6)") ?? undefined}
+                          alt="Ryu, era tardía"
+                          onError={() => setIntroEraFailed(true)}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          style={{
+                            clipPath:
+                              "polygon(58% 0, 100% 0, 100% 100%, 42% 100%)",
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <span className="absolute inset-0 flex items-center justify-center font-display font-bold text-4xl text-tdf-magenta/40">
+                        TDF
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="font-mono text-xs uppercase text-tdf-magenta mb-2">
+                      Era
+                    </p>
+                    <p className="font-body text-sm text-tdf-muted">
+                      Solo para 5 personajes con un cambio de personalidad real
+                      documentado en el lore (Ryu, Ken, Chun-Li, Sagat, Karin),
+                      una última pregunta decide en qué momento de su historia
+                      calzas más.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-3">
-                  <span className="shrink-0 font-mono text-xs uppercase text-tdf-muted border border-tdf-line px-2 py-0.5 h-fit">
-                    Era
-                  </span>
-                  <p className="font-body text-sm text-tdf-muted">
-                    Solo para 5 personajes con un cambio de personalidad real
-                    documentado en el lore (Ryu, Ken, Chun-Li, Sagat, Karin),
-                    una última pregunta decide en qué momento de su historia
-                    calzas más.
-                  </p>
+
+                {/* Personaje -- tarjeta normal, a la derecha */}
+                <div className="hud-frame bg-tdf-charcoal border border-tdf-line overflow-hidden">
+                  <div className="h-40 bg-tdf-dark flex items-center justify-center">
+                    {!introPersonajeFailed && getCharacterImage("Luke") ? (
+                      <img
+                        src={getCharacterImage("Luke") ?? undefined}
+                        alt="Personaje"
+                        onError={() => setIntroPersonajeFailed(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="font-display font-bold text-3xl text-tdf-magenta/40">
+                        TDF
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p className="font-mono text-xs uppercase text-tdf-magenta mb-2">
+                      Personaje
+                    </p>
+                    <p className="font-body text-sm text-tdf-muted">
+                      Dentro de esa familia, afinamos hasta encontrar el
+                      personaje específico que más se parece a tu forma de ser.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <button
-                onClick={() => setStep("nivel1")}
-                className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white"
-              >
-                Empezar el test
-              </button>
+              <div className="text-center">
+                <button
+                  onClick={() => setStep("nivel1")}
+                  className="bg-tdf-magenta hover:bg-tdf-purple transition-colors px-4 py-2 font-mono text-xs uppercase text-white"
+                >
+                  Empezar el test
+                </button>
+              </div>
             </motion.div>
           )}
 
