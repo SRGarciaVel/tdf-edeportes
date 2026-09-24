@@ -7,12 +7,16 @@ import SectionLabel from "../components/SectionLabel";
 import Skeleton from "../components/Skeleton";
 import { getCharacterImage } from "../lib/characterImages";
 
-// imagen aparte del roster -- pedido de Seba (22-09-2026): Ken con su
-// familia real (esposa e hijo), no el retrato de selección que ya
-// usa el roster para su resultado. Todavía no subida; mientras no
-// exista el archivo, la tarjeta de Familia cae al mismo respaldo con
-// el logo de TDF que usa el resto del sitio cuando falta una imagen.
+// imágenes propias de la intro, distintas al retrato de selección
+// que usa el roster para el resultado final -- pedido de Seba
+// (22-09-2026): Ken con su familia real (esposa e hijo) para
+// "Familia", una escena dinámica de Luke para "Personaje", y el
+// contraste Ryu clásico/SF6 para "Era" (imagen ya armada por Seba con
+// ayuda de otra IA, con el corte diagonal incluido -- no hace falta
+// generarlo con CSS).
 const INTRO_FAMILIA_IMAGE = "/characters/intro-familia-ken.webp";
+const INTRO_PERSONAJE_IMAGE = "/characters/intro-personaje-luke.webp";
+const INTRO_ERA_IMAGE = "/characters/intro-era-ryu.webp";
 import {
   getSfPersonalityQuestions,
   getSfPersonalityStats,
@@ -389,34 +393,18 @@ export default function PersonalityTestSfPage() {
                   </div>
                 </div>
 
-                {/* Era -- tarjeta grande, al medio, con el corte diagonal
-                    entre las 2 versiones de Ryu */}
+                {/* Era -- tarjeta grande, al medio, con la imagen del
+                    contraste Ryu clásico/SF6 que Seba ya armó con el
+                    corte diagonal incluido (no hace falta CSS) */}
                 <div className="hud-frame bg-tdf-charcoal border border-tdf-magenta overflow-hidden md:-mt-3">
-                  <div className="h-52 bg-tdf-dark relative overflow-hidden">
+                  <div className="h-64 bg-tdf-dark relative overflow-hidden">
                     {!introEraFailed ? (
-                      <>
-                        <img
-                          src={
-                            getCharacterImage("Ryu (Alpha-SF5)") ?? undefined
-                          }
-                          alt="Ryu, era temprana"
-                          onError={() => setIntroEraFailed(true)}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          style={{
-                            clipPath: "polygon(0 0, 58% 0, 42% 100%, 0 100%)",
-                          }}
-                        />
-                        <img
-                          src={getCharacterImage("Ryu (SF6)") ?? undefined}
-                          alt="Ryu, era tardía"
-                          onError={() => setIntroEraFailed(true)}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          style={{
-                            clipPath:
-                              "polygon(58% 0, 100% 0, 100% 100%, 42% 100%)",
-                          }}
-                        />
-                      </>
+                      <img
+                        src={INTRO_ERA_IMAGE}
+                        alt="Era"
+                        onError={() => setIntroEraFailed(true)}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
                     ) : (
                       <span className="absolute inset-0 flex items-center justify-center font-display font-bold text-4xl text-tdf-magenta/40">
                         TDF
@@ -439,9 +427,9 @@ export default function PersonalityTestSfPage() {
                 {/* Personaje -- tarjeta normal, a la derecha */}
                 <div className="hud-frame bg-tdf-charcoal border border-tdf-line overflow-hidden">
                   <div className="h-40 bg-tdf-dark flex items-center justify-center">
-                    {!introPersonajeFailed && getCharacterImage("Luke") ? (
+                    {!introPersonajeFailed ? (
                       <img
-                        src={getCharacterImage("Luke") ?? undefined}
+                        src={INTRO_PERSONAJE_IMAGE}
                         alt="Personaje"
                         onError={() => setIntroPersonajeFailed(true)}
                         className="w-full h-full object-cover"
