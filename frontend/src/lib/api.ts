@@ -23,6 +23,8 @@ import type {
   TierListTemplateSummaryData,
   MetaSnapshot,
   PatchNote,
+  SF6CharacterFrameData,
+  SF6CharacterSummary,
   TwitchLiveStatus,
   ChannelLiveStatus,
   SFQuestionsResponse,
@@ -886,6 +888,24 @@ export async function getLatestPatchNote(): Promise<PatchNote> {
 export async function listPatchNotes(): Promise<PatchNote[]> {
   const res = await fetch(`${API_URL}/sf6/patch-notes`);
   return parseOrThrow<PatchNote[]>(res);
+}
+
+// Frame Data / Command List oficiales de Capcom por personaje --
+// idea de Chubi (22-09-2026), fuente streetfighter.com/6/character.
+// Público, sin auth. 404 si scripts/refresh_sf6_frame_data.py todavía
+// no corrió para ese personaje.
+export async function listSf6Characters(): Promise<SF6CharacterSummary[]> {
+  const res = await fetch(`${API_URL}/sf6/characters`);
+  return parseOrThrow<SF6CharacterSummary[]>(res);
+}
+
+export async function getSf6CharacterFrameData(
+  characterSlug: string,
+): Promise<SF6CharacterFrameData> {
+  const res = await fetch(
+    `${API_URL}/sf6/characters/${characterSlug}/frame-data`,
+  );
+  return parseOrThrow<SF6CharacterFrameData>(res);
 }
 
 // estado real del canal de Twitch de TDF — público, sin auth, cacheado

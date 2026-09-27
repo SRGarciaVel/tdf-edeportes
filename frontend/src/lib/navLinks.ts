@@ -12,6 +12,7 @@ import {
   Star,
   Swords,
   Target,
+  Timer,
   Trophy,
   Users,
 } from "lucide-react";
@@ -46,6 +47,7 @@ export const ACTIVIDAD_LINKS = [
 
 export const SF6_LINKS = [
   { to: "/sf6/meta", label: "Meta actual", Icon: Gamepad2 },
+  { to: "/sf6/frame-data", label: "Frame Data", Icon: Timer },
   { to: "/sf6/patch-notes", label: "Notas de parche", Icon: FileText },
 ];
 

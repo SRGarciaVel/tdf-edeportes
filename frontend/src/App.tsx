@@ -16,6 +16,7 @@ import LogrosPage from "./pages/LogrosPage";
 import PuntosPage from "./pages/PuntosPage";
 import RecopilacionesPage from "./pages/RecopilacionesPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Sf6FrameDataPage from "./pages/Sf6FrameDataPage";
 import Sf6MetaPage from "./pages/Sf6MetaPage";
 import Sf6PatchNotesPage from "./pages/Sf6PatchNotesPage";
 import PersonalityRankingPage from "./pages/PersonalityRankingPage";
@@ -39,6 +40,8 @@ export default function App() {
           <Route path="/personajes" element={<PersonajesPage />} />
           <Route path="/perfil" element={<PerfilPage />} />
           <Route path="/sf6/meta" element={<Sf6MetaPage />} />
+          <Route path="/sf6/frame-data" element={<Sf6FrameDataPage />} />
+          <Route path="/sf6/frame-data/:slug" element={<Sf6FrameDataPage />} />
           <Route path="/sf6/patch-notes" element={<Sf6PatchNotesPage />} />
           <Route
             path="/staff/cfn"

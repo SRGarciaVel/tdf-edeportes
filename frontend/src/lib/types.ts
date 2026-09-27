@@ -460,6 +460,33 @@ export interface PatchNote {
   data: PatchNoteData;
 }
 
+// Frame Data / Command List oficiales de Capcom -- cada fila es una
+// sección de la tabla (ej. "Normal Moves"), texto plano celda por
+// celda tal como lo publica Capcom (ver comentario de
+// sf6_frame_data.py sobre por qué no se tipa startup/recovery/etc.
+// como números separados)
+export interface SF6FrameDataSection {
+  title: string;
+  rows: string[][];
+}
+
+export interface SF6FrameDataTable {
+  headers: string[];
+  sections: SF6FrameDataSection[];
+}
+
+export interface SF6CharacterSummary {
+  character_slug: string;
+  display_name: string;
+}
+
+export interface SF6CharacterFrameData {
+  character_slug: string;
+  display_name: string;
+  frame_data: SF6FrameDataTable;
+  move_list: SF6FrameDataTable;
+}
+
 export interface TwitchLiveStatus {
   is_live: boolean;
   title: string | null;

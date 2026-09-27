@@ -12,6 +12,7 @@ from app.models.notification import Notification
 from app.models.profile_comment import ProfileComment
 from app.models.quarterly_goal import QuarterlyGoal
 from app.models.role import Role, user_roles
+from app.models.sf6_character_frame_data import SF6CharacterFrameData
 from app.models.sf6_meta_snapshot import SF6MetaSnapshot
 from app.models.sf6_patch_note import SF6PatchNote
 from app.models.sf_personality_result import SFPersonalityResult
@@ -34,6 +35,7 @@ __all__ = [
     "ProfileComment",
     "QuarterlyGoal",
     "Role",
+    "SF6CharacterFrameData",
     "SF6MetaSnapshot",
     "SF6PatchNote",
     "SFPersonalityResult",
