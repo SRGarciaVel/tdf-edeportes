@@ -13,6 +13,7 @@ intento anda perfecto).
 """
 
 import logging
+import re
 
 import httpx
 from bs4 import BeautifulSoup, Tag
@@ -77,6 +78,100 @@ def _headers(character_slug: str, page: str) -> dict[str, str]:
     }
 
 
+# El Command List (movelist) de Capcom no usa una tabla -- cada
+# movimiento es un <li> con una miniatura, el nombre, y el input
+# representado como una secuencia de <img> (flechas y botones), no
+# texto. Este mapeo convierte el nombre de archivo del ícono (sin
+# carpeta ni extensión) a un símbolo de notación estándar de FGC.
+# Confirmado contra la página real de Ryu, 27-09-2026 -- puede faltar
+# algún ícono de otro personaje que todavía no se vio (ej. iconos de
+# carga específicos de un personaje puntual), en ese caso ese ícono
+# se ignora en vez de romper el parseo entero.
+_INPUT_ICON_SYMBOLS: dict[str, str] = {
+    "key-d": "↓",
+    "key-dr": "↘",
+    "key-dl": "↙",
+    "key-l": "←",
+    "key-r": "→",
+    "key-u": "↑",
+    "key-ur": "↗",
+    "key-ul": "↖",
+    "key-plus": "+",
+    "key-or": "/",
+    "key-nutral": "N",
+    # movimientos de carga (Guile, Blanka, etc.) -- Capcom usa un
+    # ícono distinto al de la flecha normal para indicar "mantené
+    # apretada esta dirección un rato antes de soltar", confirmado
+    # por el nombre de archivo (Seba, 27-09-2026) pero sin ver el
+    # ícono en sí todavía -- revisar si el símbolo visual calza una
+    # vez que se pruebe contra un personaje de carga real
+    "key-dc": "[mantener ↓]",
+    "key-lc": "[mantener ←]",
+    "arrow_3": "→",
+    "icon_punch": "P",
+    "icon_punch_l": "LP",
+    "icon_punch_m": "MP",
+    "icon_punch_h": "HP",
+    "icon_kick": "K",
+    "icon_kick_l": "LK",
+    "icon_kick_m": "MK",
+    "icon_kick_h": "HK",
+}
+
+
+def _icon_stem(img: Tag) -> str:
+    src = img.get("src", "")
+    return src.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+
+
+def _parse_movelist(soup: BeautifulSoup) -> dict:
+    """Secciones = encabezados <h3>/<h4> ("Special Moves", "Super
+    Arts", etc.), filas = un <li> por movimiento dentro de la lista
+    que sigue a cada encabezado. Cada fila tiene 2 columnas: nombre
+    (+ notas entre paréntesis, tal como las escribe Capcom) y el
+    input reconstruido a partir de los íconos reconocidos -- los que
+    no están en _INPUT_ICON_SYMBOLS (miniaturas, iconos de costo de
+    Drive Gauge) se ignoran en silencio en vez de ensuciar la
+    columna."""
+    headings = soup.find_all(["h3", "h4"])
+    sections: list[dict] = []
+
+    for heading in headings:
+        title = heading.get_text(" ", strip=True)
+        if not title:
+            continue
+        list_el = heading.find_next(["ul", "ol"])
+        if list_el is None:
+            continue
+
+        rows: list[list[str]] = []
+        for li in list_el.find_all("li", recursive=False):
+            name_text = li.get_text(" ", strip=True)
+            # sacar el texto que ya viene de los iconos de input (los
+            # nombres de archivo no aparecen en get_text, así que el
+            # texto real es todo lo que NO es una imagen -- se separa
+            # el nombre de las notas entre paréntesis si las hay
+            match = re.match(r"^([^(]+?)(\s*\(.+\))?$", name_text)
+            move_name = match.group(1).strip() if match else name_text
+            notes = (match.group(2) or "").strip() if match else ""
+
+            symbols = [
+                _INPUT_ICON_SYMBOLS[stem]
+                for img in li.find_all("img")
+                if (stem := _icon_stem(img)) in _INPUT_ICON_SYMBOLS
+            ]
+            notation = " ".join(symbols)
+
+            display_name = f"{move_name} {notes}".strip() if notes else move_name
+            if display_name:
+                rows.append([display_name, notation])
+
+        if rows:
+            sections.append({"title": title, "rows": rows})
+
+    return {"headers": ["Movimiento", "Comando"], "sections": sections}
+
+
 def _find_main_table(soup: BeautifulSoup) -> Tag | None:
     """La tabla con más filas de <tr> en toda la página -- Frame Data
     y Command List tienen una sola tabla grande de datos, rodeada de
@@ -129,14 +224,27 @@ def _parse_table(table: Tag) -> dict:
 
 
 def fetch_character_page(character_slug: str, page: str) -> dict:
-    """page es "frame" o "movelist". Devuelve la tabla ya parseada;
-    tira httpx.HTTPStatusError si Capcom devuelve algo que no sea
-    200 (ej. si cambiaron la URL o el anti-bot bloquea el pedido)."""
+    """page es "frame" (tabla) o "movelist" (lista de íconos, ver
+    _parse_movelist) -- son estructuras de página completamente
+    distintas en el sitio de Capcom, cada una con su propio parser.
+    Tira httpx.HTTPStatusError si Capcom devuelve algo que no sea 200
+    (ej. si cambiaron la URL o el anti-bot bloquea el pedido)."""
     url = f"{BASE_URL}/{character_slug}/{page}"
     with httpx.Client(timeout=30) as client:
         res = client.get(url, headers=_headers(character_slug, page))
         res.raise_for_status()
     soup = BeautifulSoup(res.text, "html.parser")
+
+    if page == "movelist":
+        result = _parse_movelist(soup)
+        if not result["sections"]:
+            raise ValueError(
+                f"No se encontró ninguna sección de movimientos en {url} -- "
+                "probablemente Capcom cambió el diseño de la página, hay "
+                "que revisar el parser a mano"
+            )
+        return result
+
     table = _find_main_table(soup)
     if table is None:
         raise ValueError(

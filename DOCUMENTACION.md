@@ -6,7 +6,7 @@ decisión explícita. Complementa (no reemplaza) `SPECS.md`, `ROADMAP.md` y
 `CODESTYLE.md` del repositorio, que cubren el detalle técnico de
 implementación.
 
-**Última actualización:** 30-08-2026. Ver [Changelog](#changelog) al final.
+**Última actualización:** 27-09-2026. Ver [Changelog](#changelog) al final.
 
 ---
 
@@ -31,20 +31,21 @@ implementación.
 17. [FODA de la comunidad](#17-foda-de-la-comunidad)
 18. [Streams destacados y chat](#18-streams-destacados-y-chat)
 19. ["Nosotros"](#19-nosotros)
-20. [Flujos principales](#20-flujos-principales)
-21. [Estados de cada entidad](#21-estados-de-cada-entidad)
-22. [Reglas de negocio](#22-reglas-de-negocio)
-23. [Dependencias externas](#23-dependencias-externas)
-24. [Parámetros técnicos y frecuencias](#24-parámetros-técnicos-y-frecuencias)
-25. [Comportamiento ante fallos](#25-comportamiento-ante-fallos)
-26. [Seguridad y moderación](#26-seguridad-y-moderación)
-27. [Infraestructura](#27-infraestructura)
-28. [Funcionalidades implementadas vs. planificadas](#28-funcionalidades-implementadas-vs-planificadas)
-29. [Prioridades](#29-prioridades)
-30. [Fuera de alcance por decisión](#30-fuera-de-alcance-por-decisión)
-31. [Propuestas a evaluar (no implementadas)](#31-propuestas-a-evaluar-no-implementadas)
-32. [Glosario](#32-glosario)
-33. [Changelog](#changelog)
+20. [Test de personalidad SF](#20-test-de-personalidad-sf)
+21. [Flujos principales](#21-flujos-principales)
+22. [Estados de cada entidad](#22-estados-de-cada-entidad)
+23. [Reglas de negocio](#23-reglas-de-negocio)
+24. [Dependencias externas](#24-dependencias-externas)
+25. [Parámetros técnicos y frecuencias](#25-parámetros-técnicos-y-frecuencias)
+26. [Comportamiento ante fallos](#26-comportamiento-ante-fallos)
+27. [Seguridad y moderación](#27-seguridad-y-moderación)
+28. [Infraestructura](#28-infraestructura)
+29. [Funcionalidades implementadas vs. planificadas](#29-funcionalidades-implementadas-vs-planificadas)
+30. [Prioridades](#30-prioridades)
+31. [Fuera de alcance por decisión](#31-fuera-de-alcance-por-decisión)
+32. [Propuestas a evaluar (no implementadas)](#32-propuestas-a-evaluar-no-implementadas)
+33. [Glosario](#33-glosario)
+34. [Changelog](#changelog)
 
 ---
 
@@ -152,10 +153,12 @@ registro con email/contraseña propio del sitio.
 
 ## 4. Estructura de navegación
 
-- **Directos:** Inicio, Calendario, Jugadores.
-- **Comunidad ▾:** Torneos, Objetivos, Nosotros, Puntos, Tier List,
-  Recopilaciones, FODA.
-- **SF6 ▾:** Meta Actual, Notas de Parche.
+- **Directos:** Inicio.
+- **Jugadores ▾:** Jugadores, Personajes, Logros.
+- **Actividad ▾:** Calendario, Torneos, Tier List, Recopilaciones, Test de
+  personalidad SF.
+- **Comunidad ▾:** Nosotros, Objetivos, FODA, Puntos.
+- **SF6 ▾:** Meta Actual, Frame Data, Notas de Parche.
 - **Buscador:** filtra en tiempo real sobre jugadores del roster y páginas
   del sitio.
 - **Notificaciones:** ícono independiente, visible solo con sesión
@@ -183,7 +186,7 @@ automatizado programado.
 
 Cualquier cuenta autenticada puede solicitar sumarse indicando su CFN ID
 numérico. La solicitud queda pendiente hasta revisión de Staff (ver
-[estados](#21-estados-de-cada-entidad)). Al aprobar, Staff puede ajustar el
+[estados](#22-estados-de-cada-entidad)). Al aprobar, Staff puede ajustar el
 nombre público, marcar la afiliación al club y agregar un enlace externo de
 perfil competitivo.
 
@@ -228,7 +231,7 @@ Editable únicamente por la propia cuenta, con registro de CFN aprobado.
 Los tres campos de imagen admiten GIF animado. Dado que el procesamiento
 estándar de imágenes (recorte automático vía canvas) no puede preservar
 animación, los archivos GIF se almacenan sin ese procesamiento, con un
-límite de tamaño propio (ver [reglas de negocio](#22-reglas-de-negocio)).
+límite de tamaño propio (ver [reglas de negocio](#23-reglas-de-negocio)).
 
 ---
 
@@ -313,6 +316,13 @@ comunidad.
 
 - **Meta Actual:** estadísticas de uso de personajes y matchups a nivel
   global, con vista general y de rango alto, actualizadas periódicamente.
+- **Frame Data:** datos oficiales de Capcom (startup, active, recovery,
+  ventaja en golpe/bloqueo, daño) y Command List (lista de movimientos con
+  su input), uno por personaje, con selector y 2 pestañas calcando el
+  diseño del sitio oficial. Se obtienen por scraping de
+  streetfighter.com/6 (mismo dominio ya usado para Meta Actual, no un
+  proveedor externo), corrido a mano después de cada parche de balance —
+  no hay cron automático porque los parches no salen en fecha fija.
 - **Notas de Parche:** resumen de cada actualización del juego. Contenido
   disponible en inglés; la traducción combinada (términos técnicos en
   inglés, prosa en español) está pendiente de definición de mecanismo.
@@ -361,7 +371,48 @@ sumarse.
 
 ---
 
-## 20. Flujos principales
+## 20. Test de personalidad SF
+
+Test de personalidad ambientado en Street Fighter: a partir de un set de
+preguntas de opción múltiple, cada persona recibe como resultado el
+personaje del roster (Alpha a SF6) con la forma de ser más parecida a la
+suya.
+
+- **Matching por vector de rasgos, en 3 niveles.** Primero se resuelve la
+  **familia** (uno de 5 arquetipos amplios: Disciplinados en Paz,
+  Atormentados, Protectores Modernos, Ambiciosos Calculadores, Libres —
+  esta última se subdivide en Cercanos y Solitarios con una pregunta
+  extra). Dentro de la familia resuelta se afina hasta el **personaje**
+  específico. Para 5 personajes con un cambio de personalidad real
+  documentado en distintas eras del lore (Ryu, Ken, Chun-Li, Sagat,
+  Karin), una pregunta final decide la **era** exacta.
+- **81 personajes posibles** (el roster excluye deliberadamente a Twelve,
+  diseñado sin personalidad propia).
+- **Resultado con retrato.** Cuando existe una imagen subida para ese
+  personaje, se muestra junto al nombre; si no, cae a un respaldo con el
+  logo del club — nunca se rompe por faltar una imagen. Confirmado viable
+  por fair use tras consulta aparte del club, mismo criterio que Tier List
+  no extiende (ver [sección 31](#31-fuera-de-alcance-por-decisión)).
+- **"También te pareces a…"** — junto al resultado principal, se muestran
+  los 2 personajes más cercanos del roster completo (no solo de la misma
+  familia), calculados por la misma distancia vectorial.
+- **El resultado se guarda para cualquiera que termine el test**, con
+  cuenta o sin ella — no depende de tener sesión iniciada. Si la persona
+  tiene cuenta, el resultado queda asociado a su perfil y se actualiza si
+  repite el test; si no tiene cuenta, cada resultado se guarda como una
+  entrada nueva, sin intento de identificar si es la misma persona entre
+  visitas.
+- **Ranking de la comunidad** — página pública con el conteo de qué
+  personaje sacó cada quien, con podio destacado (medalla y retrato más
+  grande) para los 3 resultados más repetidos.
+- **Compartir resultado** — genera una tarjeta como imagen real (retrato +
+  nombre + descripción), no solo un link; usa la cámara nativa de
+  compartir del dispositivo cuando está disponible, con respaldo de copiar
+  la imagen al portapapeles o descargarla.
+
+---
+
+## 21. Flujos principales
 
 ### 20.1 Registro y aprobación de jugador
 
@@ -451,7 +502,7 @@ recuperable después
 
 ---
 
-## 21. Estados de cada entidad
+## 22. Estados de cada entidad
 
 | Entidad | Estados posibles |
 |---|---|
@@ -463,7 +514,7 @@ recuperable después
 
 ---
 
-## 22. Reglas de negocio
+## 23. Reglas de negocio
 
 | Regla | Valor |
 |---|---|
@@ -484,7 +535,7 @@ recuperable después
 
 ---
 
-## 23. Dependencias externas
+## 24. Dependencias externas
 
 | Servicio | Uso en la plataforma |
 |---|---|
@@ -498,7 +549,7 @@ recuperable después
 
 ---
 
-## 24. Parámetros técnicos y frecuencias
+## 25. Parámetros técnicos y frecuencias
 
 | Parámetro | Valor |
 |---|---|
@@ -511,7 +562,7 @@ recuperable después
 
 ---
 
-## 25. Comportamiento ante fallos
+## 26. Comportamiento ante fallos
 
 | Situación | Comportamiento actual |
 |---|---|
@@ -525,12 +576,12 @@ recuperable después
 
 ---
 
-## 26. Seguridad y moderación
+## 27. Seguridad y moderación
 
 - Toda imagen subida se valida en el servidor como archivo de imagen real
   en formato admitido; no se acepta una URL externa arbitraria.
 - Los endpoints públicos de escritura sin cuenta tienen límite de
-  solicitudes por hora (ver [reglas de negocio](#22-reglas-de-negocio)).
+  solicitudes por hora (ver [reglas de negocio](#23-reglas-de-negocio)).
 - El backend no arranca en el entorno de producción si detecta que la
   clave de firma de sesión sigue en su valor por defecto.
 - El nivel de administrador no puede otorgarse desde ningún endpoint;
@@ -542,29 +593,37 @@ recuperable después
 
 ---
 
-## 27. Infraestructura
+## 28. Infraestructura
 
 | Capa | Tecnología |
 |---|---|
 | Backend | FastAPI (Python), PostgreSQL, SQLAlchemy, Alembic, JWT |
 | Frontend | React + Vite + TypeScript, Tailwind CSS |
 | Base de datos | Supabase (PostgreSQL administrado) |
-| Alojamiento backend | Render |
+| Alojamiento backend | Railway (temporal) — ver nota abajo |
 | Alojamiento frontend | Vercel |
 | Obtención de datos de jugadores | Automatización basada en navegador headless, programada por hora |
 | Autenticación | Twitch OAuth exclusivamente |
 
+**Nota sobre el backend (22-09-2026):** el alojamiento original en Render
+agotó la banda ancha incluida del plan gratuito a mitad de mes, dejando el
+backend inaccesible hasta el siguiente ciclo de facturación. Como puente
+temporal sin costo, el backend se migró a Railway (mismo `Dockerfile`, sin
+cambios de código). Es una solución de paso, no una decisión definitiva de
+infraestructura — puede volver a Render, quedarse en Railway, o migrar a
+otra cosa según cómo evolucione el uso del sitio.
+
 ---
 
-## 28. Funcionalidades implementadas vs. planificadas
+## 29. Funcionalidades implementadas vs. planificadas
 
 ### Implementadas y en producción
 
 Autenticación, roster de Jugadores, perfil de jugador completo,
 comentarios de perfil, notificaciones, calendario, torneos, objetivos
-trimestrales, Panel de Administración, Tier List, hub SF6 (Meta Actual y
-Notas de Parche), Recopilaciones de Instagram, FODA de la comunidad,
-streams destacados y chat multicanal.
+trimestrales, Panel de Administración, Tier List, hub SF6 (Meta Actual,
+Frame Data y Notas de Parche), Recopilaciones de Instagram, FODA de la
+comunidad, streams destacados y chat multicanal, Test de personalidad SF.
 
 ### Con maqueta visual, sin mecánica funcional
 
@@ -587,11 +646,11 @@ streams destacados y chat multicanal.
 - Hub de estadísticas para Third Strike: la fuente de datos pública
   correspondiente presenta una restricción de acceso automatizado por
   parte del proveedor, sin fecha de resolución conocida (ver
-  [sección 30](#30-fuera-de-alcance-por-decisión)).
+  [sección 31](#31-fuera-de-alcance-por-decisión)).
 
 ---
 
-## 29. Prioridades
+## 30. Prioridades
 
 | Nivel | Funcionalidades |
 |---|---|
@@ -601,7 +660,7 @@ streams destacados y chat multicanal.
 
 ---
 
-## 30. Fuera de alcance por decisión
+## 31. Fuera de alcance por decisión
 
 - **Roster de personajes propio del sitio:** no existe para ningún juego,
   por consideración de derechos de autor sobre el material visual de los
@@ -619,7 +678,7 @@ streams destacados y chat multicanal.
 
 ---
 
-## 31. Propuestas a evaluar (no implementadas)
+## 32. Propuestas a evaluar (no implementadas)
 
 Lista de mejoras sugeridas para evaluación futura — ninguna está
 implementada todavía:
@@ -637,11 +696,12 @@ implementada todavía:
 
 ---
 
-## 32. Glosario
+## 33. Glosario
 
 | Término | Significado |
 |---|---|
 | CFN | Capcom Fighters Network — identificador de cuenta de jugador de Street Fighter 6 |
+| Frame Data | Datos técnicos de cada movimiento de un personaje (cuadros de arranque, activos y de recuperación, ventaja en golpe o bloqueo) — usado para evaluar qué tan bueno es un movimiento en la práctica |
 | LP | Puntos de Liga — puntuación de progreso dentro de un rango en SF6 |
 | MR | Master Rating — puntuación numérica una vez alcanzado el rango más alto |
 | Buckler's Boot Camp | Sitio oficial de Capcom donde vive el perfil competitivo de cada jugador de SF6 |
@@ -660,6 +720,14 @@ implementada todavía:
 Registro por fecha de los cambios funcionales más relevantes. No sigue un
 esquema de versionado numérico formal.
 
+- **27-09-2026** — Frame Data y Command List oficiales de Capcom en el hub
+  SF6. Backend migrado temporalmente de Render a Railway (banda ancha
+  gratuita de Render agotada a mitad de mes, ver
+  [sección 28](#28-infraestructura)).
+- **22-09-2026** — Test de personalidad SF (matching por vector de rasgos
+  en 3 niveles, ranking de la comunidad, tarjeta de resultado
+  compartible). El resultado ahora se guarda para cualquiera que termine
+  el test, no solo con sesión iniciada.
 - **30-08-2026** — Documentación funcional reestructurada: índice,
   diagrama de arquitectura, flujos, estados de entidades, reglas de
   negocio consolidadas, glosario y este changelog.

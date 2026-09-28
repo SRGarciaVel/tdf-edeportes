@@ -27,8 +27,13 @@ entrada técnica: cómo correr el proyecto y de qué está hecho.
 - **Tier List** de la comunidad (100% basada en plantillas subidas por
   usuarios, sin roster de personajes propio por consideración de derechos
   de autor).
-- **Hub de Street Fighter 6** — meta de personajes actual y notas de
-  parche, con datos reales de Capcom.
+- **Hub de Street Fighter 6** — meta de personajes actual, Frame Data y
+  Command List oficiales de Capcom por personaje, y notas de parche, con
+  datos reales de Capcom.
+- **Test de personalidad SF** — matching por vector de rasgos en 3
+  niveles (familia → personaje → era) sobre 81 personajes del roster
+  (Alpha a SF6), con ranking de la comunidad y tarjeta de resultado
+  compartible como imagen real.
 - **Recopilaciones de Instagram** curadas por staff, con embed oficial de
   Meta.
 - **FODA de la comunidad** — herramienta colaborativa de análisis, pública
@@ -52,7 +57,7 @@ restricción de acceso automatizado de la fuente de datos externa (ver
 | Obtención de datos externos | Playwright (scraping de perfil de Capcom), automatizado por GitHub Actions |
 | Infra local | Docker + docker-compose |
 | Base de datos (producción) | Supabase (PostgreSQL) |
-| Hosting (producción) | Render (backend) + Vercel (frontend) |
+| Hosting (producción) | Railway (backend, temporal — ver `DOCUMENTACION.md` §28) + Vercel (frontend) |
 | Auth | Twitch OAuth (Authorization Code flow) |
 
 ## Estructura del proyecto
@@ -74,7 +79,7 @@ tdf-edeportes/
 │   │   ├── schemas/           # schemas Pydantic
 │   │   └── services/          # lógica de negocio (Twitch OAuth, scraping de Capcom, Discord)
 │   ├── alembic/               # migraciones
-│   └── scripts/               # scripts de refresco de datos (CFN, meta de SF6)
+│   └── scripts/               # scripts de refresco de datos (CFN, meta y frame data de SF6)
 ├── frontend/
 │   └── src/
 │       ├── components/        # piezas reusables (cards, embeds, editores)
